@@ -1,5 +1,5 @@
 import { View, Text, StyleSheet } from 'react-native';
-import MonthGridCluster from './MonthGridCluster';
+import MonthGridCluster from './MonthCluster';
 
 type MonthGridViewProps = {
   clusters: Array<{
@@ -7,9 +7,10 @@ type MonthGridViewProps = {
     isCurrent: boolean;
   }>;
   onSelectYear: (year: number) => void;
+  onLongPress?: (year: number, month?: number, week?: number, position?: { x: number, y: number }) => void;
 };
 
-export default function MonthGridView({ clusters, onSelectYear }: MonthGridViewProps) {
+export default function MonthGridView({ clusters, onSelectYear, onLongPress }: MonthGridViewProps) {
   return (
     <View style={styles.container}>
       <View style={styles.ageLabels}>
@@ -29,6 +30,7 @@ export default function MonthGridView({ clusters, onSelectYear }: MonthGridViewP
                 year={cluster.year}
                 isCurrent={cluster.isCurrent}
                 onPress={() => onSelectYear(cluster.year)}
+                onLongPress={(position) => onLongPress && onLongPress(cluster.year, undefined, undefined, position)}
               />
             ))}
           </View>

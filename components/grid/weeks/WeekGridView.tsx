@@ -6,9 +6,11 @@ type WeekGridViewProps = {
     year: number;
     isCurrent: boolean;
   }>;
+  onCellPress?: (year: number, month?: number, week?: number) => void;
+  onLongPress?: (year: number, month?: number, week?: number, position?: { x: number, y: number }) => void;
 };
 
-export default function WeekGridView({ clusters }: WeekGridViewProps) {
+export default function WeekGridView({ clusters, onCellPress, onLongPress }: WeekGridViewProps) {
   const currentWeek = 36 * 52 + 20; // Example: 36 years and 20 weeks
 
   return (
@@ -23,12 +25,14 @@ export default function WeekGridView({ clusters }: WeekGridViewProps) {
       
       <View style={styles.gridContent}>
         {Array.from({ length: Math.ceil(clusters.length / 5) }, (_, rowIndex) => (
-          <View key={rowIndex} style={styles.yearRow}>
+          <View key={rowIndex} style={styles.gridRow}>
             {clusters.slice(rowIndex * 5, (rowIndex + 1) * 5).map((cluster) => (
               <WeekCluster
                 key={cluster.year}
                 year={cluster.year}
-                currentWeek={currentWeek}
+                isCurrent={cluster.isCurrent}
+                onCellPress={onCellPress ? (week) => onCellPress(cluster.year, undefined, week) : undefined}
+                onLongPress={(week, position) => onLongPress && onLongPress(cluster.year, undefined, week, position)}
               />
             ))}
           </View>
@@ -59,7 +63,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingRight: 20,
   },
-  yearRow: {
+  gridRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 20,

@@ -1,44 +1,58 @@
 import { View, StyleSheet } from 'react-native';
 import WeekCell from './WeekCell';
+import { useGridNavigation } from '../../../app/hooks/useGridNavigation';
 
 type WeekClusterProps = {
   year: number;
-  currentWeek: number;
+  isCurrent: boolean;
+  onCellPress?: (week: number) => void;
+  onLongPress?: (week: number, position: { x: number, y: number }) => void;
 };
 
-const WEEKS_PER_YEAR = 52;
-const ROWS_PER_CLUSTER = 13;
-const CELLS_PER_ROW = 4;
+export default function WeekCluster({ year, isCurrent, onCellPress, onLongPress }: WeekClusterProps) {
+  const { handleCellPress } = useGridNavigation();
 
-export default function WeekCluster({ year, currentWeek }: WeekClusterProps) {
+  const handleWeekPress = (week: number) => {
+    handleCellPress(year, undefined, week);
+    if (onCellPress) {
+      onCellPress(week);
+    }
+  };
+
   return (
-    <View style={styles.cluster}>
-      {Array.from({ length: ROWS_PER_CLUSTER }, (_, clusterRow) => (
-        <View key={clusterRow} style={styles.clusterRow}>
-          {Array.from({ length: CELLS_PER_ROW }, (_, cellIndex) => {
-            const weekNumber = year * WEEKS_PER_YEAR + clusterRow * CELLS_PER_ROW + cellIndex;
-            return (
-              <WeekCell
-                key={cellIndex}
-                filled={weekNumber < currentWeek}
-                isCurrent={weekNumber === currentWeek}
-              />
-            );
-          })}
-        </View>
-      ))}
+    <View style={styles.container}>
+      <View style={styles.grid}>
+        {Array.from({ length: 13 }, (_, rowIndex) => (
+          <View key={rowIndex} style={styles.row}>
+            {Array.from({ length: 4 }, (_, colIndex) => {
+              const week = rowIndex * 4 + colIndex;
+              return (
+                <WeekCell
+                  key={week}
+                  year={year}
+                  week={week}
+                  onPress={() => handleWeekPress(week)}
+                  onLongPress={(position) => onLongPress && onLongPress(week, position)}
+                />
+              );
+            })}
+          </View>
+        ))}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  cluster: {
-    width: '19%',
-    gap: 1,
+  container: {
+    width: '20%',
   },
-  clusterRow: {
+  grid: {
+    flex: 1,
+  },
+  row: {
     flexDirection: 'row',
-    gap: 1,
+    justifyContent: 'space-between',
     marginBottom: 1,
   },
 });

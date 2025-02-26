@@ -1,26 +1,50 @@
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { MotiView } from 'moti';
 import MonthCell from './MonthCell';
+import { useGridNavigation } from '../../../app/hooks/useGridNavigation';
 
 type MonthClusterProps = {
   year: number;
   isCurrent: boolean;
   expanded?: boolean;
   onPress?: () => void;
+  onLongPress?: (position: { x: number, y: number }) => void;
 };
 
-export default function MonthCluster({ year, isCurrent, expanded, onPress }: MonthClusterProps) {
-  const months = Array.from({ length: 12 }, (_, i) => ({
-    month: i,
-    filled: year < 23 || (year === 23 && i <= 4),
-  }));
-
+export default function MonthCluster({ year, isCurrent, expanded, onPress, onLongPress }: MonthClusterProps) {
+  const { handleCellPress } = useGridNavigation();
   const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+  const handleLongPress = (event: any) => {
+    if (onLongPress) {
+      // Get the position of the press for the quick add menu
+      const position = {
+        x: event.nativeEvent.pageX - 100,
+        y: event.nativeEvent.pageY - 50
+      };
+      onLongPress(position);
+    }
+  };
+
+  const handleCellClick = (month: number) => {
+    if (expanded) {
+      handleCellPress(year, month);
+    }
+  };
+
+  const handleCellLongPress = (month: number, position: { x: number, y: number }) => {
+    if (expanded && onLongPress) {
+      onLongPress(position);
+      handleCellPress(year, month);
+    }
+  };
 
   return (
     <Pressable 
       style={[styles.container]}
       onPress={onPress}
+      onLongPress={handleLongPress}
+      delayLongPress={500}
     >
       <MotiView
         style={styles.cluster}
@@ -28,70 +52,81 @@ export default function MonthCluster({ year, isCurrent, expanded, onPress }: Mon
           scale: expanded ? 1.02 : 1,
         }}
         transition={{
-          type: 'timing',
           duration: 200,
         }}>
         {expanded && (
           <View style={styles.monthLabels}>
-            {months.slice(0, 3).map((_, i) => (
-              <Text key={i} style={styles.monthLabel}>{monthNames[i]}</Text>
+            {monthNames.slice(0, 3).map((name, i) => (
+              <Text key={i} style={styles.monthLabel}>{name}</Text>
             ))}
           </View>
         )}
         <View style={[styles.row, expanded && styles.rowExpanded]}>
-          {months.slice(0, 3).map((month) => (
+          {Array.from({ length: 3 }, (_, i) => (
             <MonthCell 
-              key={month.month} 
-              filled={month.filled}
+              key={i} 
+              year={year}
+              month={i}
               expanded={expanded}
+              onPress={() => handleCellClick(i)}
+              onLongPress={(position) => handleCellLongPress(i, position)}
             />
           ))}
         </View>
         {expanded && (
           <View style={styles.monthLabels}>
-            {months.slice(3, 6).map((_, i) => (
-              <Text key={i} style={styles.monthLabel}>{monthNames[i + 3]}</Text>
+            {monthNames.slice(3, 6).map((name, i) => (
+              <Text key={i} style={styles.monthLabel}>{name}</Text>
             ))}
           </View>
         )}
         <View style={[styles.row, expanded && styles.rowExpanded]}>
-          {months.slice(3, 6).map((month) => (
+          {Array.from({ length: 3 }, (_, i) => (
             <MonthCell 
-              key={month.month} 
-              filled={month.filled}
+              key={i} 
+              year={year}
+              month={i + 3}
               expanded={expanded}
+              onPress={() => handleCellClick(i + 3)}
+              onLongPress={(position) => handleCellLongPress(i + 3, position)}
             />
           ))}
         </View>
         {expanded && (
           <View style={styles.monthLabels}>
-            {months.slice(6, 9).map((_, i) => (
-              <Text key={i} style={styles.monthLabel}>{monthNames[i + 6]}</Text>
+            {monthNames.slice(6, 9).map((name, i) => (
+              <Text key={i} style={styles.monthLabel}>{name}</Text>
             ))}
           </View>
         )}
         <View style={[styles.row, expanded && styles.rowExpanded]}>
-          {months.slice(6, 9).map((month) => (
+          {Array.from({ length: 3 }, (_, i) => (
             <MonthCell 
-              key={month.month} 
-              filled={month.filled}
+              key={i} 
+              year={year}
+              month={i + 6}
               expanded={expanded}
+              onPress={() => handleCellClick(i + 6)}
+              onLongPress={(position) => handleCellLongPress(i + 6, position)}
             />
           ))}
         </View>
         {expanded && (
           <View style={styles.monthLabels}>
-            {months.slice(9, 12).map((_, i) => (
-              <Text key={i} style={styles.monthLabel}>{monthNames[i + 9]}</Text>
+            {monthNames.slice(9, 12).map((name, i) => (
+              <Text key={i} style={styles.monthLabel}>{name}</Text>
             ))}
           </View>
         )}
         <View style={[styles.row, expanded && styles.rowExpanded]}>
-          {months.slice(9, 12).map((month) => (
+          {Array.from({ length: 3 }, (_, i) => (
             <MonthCell 
-              key={month.month} 
-              filled={month.filled}
+              key={i} 
+              year={year}
+              month={i + 9}
               expanded={expanded}
+              onPress={() => handleCellClick(i + 9)}
+              onLongPress={(position) => handleCellLongPress(i + 9, position)}
             />
           ))}
         </View>
@@ -103,7 +138,6 @@ export default function MonthCluster({ year, isCurrent, expanded, onPress }: Mon
 const styles = StyleSheet.create({
   container: {
     width: '20%',
-    cursor: 'pointer',
   },
   containerExpanded: {
     width: '100%',
