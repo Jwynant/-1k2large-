@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { useAppContext } from '../context/AppContext';
+import { ViewMode, ViewState, SelectedCell } from '../types';
 
 /**
  * Custom hook for handling grid navigation and selection
@@ -23,17 +24,15 @@ export function useGridNavigation() {
   
   // Handle cell press
   const handleCellPress = useCallback((year: number, month?: number, week?: number) => {
-    // Only handle cell press in expanded cluster view or week view
-    if (state.viewState === 'cluster' || state.viewMode === 'weeks') {
-      dispatch({ 
-        type: 'SELECT_CELL', 
-        payload: { year, month, week } 
-      });
-    }
-  }, [state.viewState, state.viewMode, dispatch]);
+    // Handle cell press in all view modes
+    dispatch({ 
+      type: 'SELECT_CELL', 
+      payload: { year, month, week } 
+    });
+  }, [dispatch]);
   
   // Handle view mode change
-  const setViewMode = useCallback((mode: 'weeks' | 'months' | 'years') => {
+  const setViewMode = useCallback((mode: ViewMode) => {
     dispatch({ type: 'SET_VIEW_MODE', payload: mode });
   }, [dispatch]);
   

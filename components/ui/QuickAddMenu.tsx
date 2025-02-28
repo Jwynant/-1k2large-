@@ -1,6 +1,7 @@
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
-import { ContentType } from '../../app/context/AppContext';
+import { ContentType, SelectedCell } from '../../app/types';
+import { Ionicons } from '@expo/vector-icons';
 
 type QuickAddMenuProps = {
   visible: boolean;
@@ -37,6 +38,22 @@ export default function QuickAddMenu({ visible, position, onClose, selectedCell 
     router.push(`/content/${type}?${params.toString()}`);
   };
 
+  // Get icon name for each content type
+  const getContentTypeIcon = (type: ContentType) => {
+    switch (type) {
+      case 'memory':
+        return 'image-outline';
+      case 'lesson':
+        return 'book-outline';
+      case 'goal':
+        return 'flag-outline';
+      case 'reflection':
+        return 'document-text-outline';
+      default:
+        return 'add-circle-outline';
+    }
+  };
+
   return (
     <View style={styles.quickAddOverlay}>
       <Pressable style={styles.quickAddBackdrop} onPress={onClose} />
@@ -53,24 +70,28 @@ export default function QuickAddMenu({ visible, position, onClose, selectedCell 
           style={[styles.quickAddButton, styles.memoryButton]}
           onPress={() => handleAddContent('memory')}
         >
+          <Ionicons name={getContentTypeIcon('memory')} size={16} color="#FFFFFF" style={styles.buttonIcon} />
           <Text style={styles.quickAddButtonText}>Memory</Text>
         </Pressable>
         <Pressable 
           style={[styles.quickAddButton, styles.lessonButton]}
           onPress={() => handleAddContent('lesson')}
         >
+          <Ionicons name={getContentTypeIcon('lesson')} size={16} color="#FFFFFF" style={styles.buttonIcon} />
           <Text style={styles.quickAddButtonText}>Lesson</Text>
         </Pressable>
         <Pressable 
           style={[styles.quickAddButton, styles.goalButton]}
           onPress={() => handleAddContent('goal')}
         >
+          <Ionicons name={getContentTypeIcon('goal')} size={16} color="#FFFFFF" style={styles.buttonIcon} />
           <Text style={styles.quickAddButtonText}>Goal</Text>
         </Pressable>
         <Pressable 
           style={[styles.quickAddButton, styles.reflectionButton]}
           onPress={() => handleAddContent('reflection')}
         >
+          <Ionicons name={getContentTypeIcon('reflection')} size={16} color="#FFFFFF" style={styles.buttonIcon} />
           <Text style={styles.quickAddButtonText}>Reflection</Text>
         </Pressable>
       </View>
@@ -97,7 +118,7 @@ const styles = StyleSheet.create({
   },
   quickAddMenu: {
     position: 'absolute',
-    backgroundColor: '#fff',
+    backgroundColor: '#1C1C1E', // iOS dark gray
     borderRadius: 12,
     padding: 16,
     width: 200,
@@ -106,28 +127,35 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,
+    borderWidth: 1,
+    borderColor: '#2C2C2E', // iOS system gray 6
   },
   quickAddButton: {
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 8,
     marginBottom: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  buttonIcon: {
+    marginRight: 8,
   },
   quickAddButtonText: {
-    color: '#fff',
+    color: '#FFFFFF',
     fontWeight: '600',
     textAlign: 'center',
   },
   memoryButton: {
-    backgroundColor: '#4A90E2',
+    backgroundColor: '#0A84FF', // iOS blue
   },
   lessonButton: {
-    backgroundColor: '#50C878',
+    backgroundColor: '#30D158', // iOS green
   },
   goalButton: {
-    backgroundColor: '#FF9500',
+    backgroundColor: '#FF9F0A', // iOS orange
   },
   reflectionButton: {
-    backgroundColor: '#9B59B6',
+    backgroundColor: '#BF5AF2', // iOS purple
   },
 }); 

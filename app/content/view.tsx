@@ -1,155 +1,151 @@
 import React, { useEffect, useState } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  ScrollView, 
-  Pressable, 
-  SafeAreaView 
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
+
+import { ContentItem } from '../types';
 import { useContentManagement } from '../hooks/useContentManagement';
-import { useDateCalculations } from '../hooks/useDateCalculations';
-import { ContentItem } from '../context/AppContext';
+import { useAppContext } from '../context/AppContext';
 
 export default function ContentViewScreen() {
   const router = useRouter();
-  const { getCellContent } = useContentManagement();
-  const { formatDate } = useDateCalculations();
-  const [content, setContent] = useState<ContentItem | null>(null);
+  const params = useLocalSearchParams<{ id: string }>();
+  const { contentItems } = useAppContext().state;
   
-  const params = useLocalSearchParams<{ 
-    year: string;
-    month?: string;
-    week?: string;
-    id: string;
-  }>();
+  const [contentItem, setContentItem] = useState<ContentItem | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   
-  // Parse parameters
-  const selectedCell = {
-    year: parseInt(params.year || '0', 10),
-    month: params.month ? parseInt(params.month, 10) : undefined,
-    week: params.week ? parseInt(params.week, 10) : undefined,
+  useEffect(() => {
+    if (params.id) {
+      setIsLoading(true);
+      
+      // Find the content item with the given ID
+      const foundItem = contentItems.find((item: ContentItem) => item.id === params.id) || null;
+      
+      setContentItem(foundItem);
+      setIsLoading(false);
+    }
+  }, [params.id, contentItems]);
+  
+  const handleGoBack = () => {
+    router.back();
   };
   
-  const contentId = params.id;
-  
-  // Load content on mount
-  useEffect(() => {
-    if (selectedCell.year > 0 && contentId) {
-      const cellContent = getCellContent(
-        selectedCell.year, 
-        selectedCell.month, 
-        selectedCell.week
-      );
-      
-      const foundContent = cellContent.find(item => item.id === contentId);
-      if (foundContent) {
-        setContent(foundContent);
-      }
+  const handleEdit = () => {
+    // Navigate to the edit screen
+    if (contentItem) {
+      router.push({
+        pathname: `/content/${contentItem.type}`,
+        params: { id: contentItem.id, edit: 'true' }
+      });
     }
-  }, [selectedCell, contentId, getCellContent]);
+  };
   
-  // Get content type details
-  const getContentTypeDetails = (type: string) => {
+  const getContentTypeIcon = (type: string) => {
     switch (type) {
       case 'memory':
-        return {
-          title: 'Memory',
-          icon: 'camera',
-          color: '#4A90E2',
-        };
+        return 'image-outline';
       case 'lesson':
-        return {
-          title: 'Lesson',
-          icon: 'school',
-          color: '#50C878',
-        };
+        return 'bulb-outline';
       case 'goal':
-        return {
-          title: 'Goal',
-          icon: 'flag',
-          color: '#FF9500',
-        };
+        return 'flag-outline';
       case 'reflection':
-        return {
-          title: 'Reflection',
-          icon: 'sparkles',
-          color: '#9B59B6',
-        };
+        return 'journal-outline';
       default:
-        return {
-          title: 'Content',
-          icon: 'document',
-          color: '#999',
-        };
+        return 'document-outline';
     }
   };
   
-  if (!content) {
+  const getContentTypeColor = (type: string) => {
+    switch (type) {
+      case 'memory':
+        return '#4A90E2';
+      case 'lesson':
+        return '#50E3C2';
+      case 'goal':
+        return '#F5A623';
+      case 'reflection':
+        return '#9013FE';
+      default:
+        return '#999';
+    }
+  };
+  
+  if (isLoading) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <Pressable style={styles.backButton} onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color="#007AFF" />
-          </Pressable>
-          <Text style={styles.headerTitle}>Content</Text>
-          <View style={styles.placeholder} />
-        </View>
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>Content not found</Text>
-        </View>
+      <SafeAreaView style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#4A90E2" />
       </SafeAreaView>
     );
   }
   
-  const contentDetails = getContentTypeDetails(content.type);
+  if (!contentItem) {
+    return (
+      <SafeAreaView style={styles.errorContainer}>
+        <Text style={styles.errorText}>Content not found</Text>
+        <TouchableOpacity style={styles.backButton} onPress={handleGoBack}>
+          <Text style={styles.backButtonText}>Go Back</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    );
+  }
+  
+  const formattedDate = new Date(contentItem.date).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
   
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+      <StatusBar style="dark" />
+      
       <View style={styles.header}>
-        <Pressable style={styles.backButton} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color="#007AFF" />
-        </Pressable>
-        <Text style={styles.headerTitle}>{contentDetails.title}</Text>
-        <View style={styles.placeholder} />
+        <TouchableOpacity onPress={handleGoBack} style={styles.backButton}>
+          <Ionicons name="chevron-back" size={24} color="#333" />
+          <Text style={styles.backText}>Back</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity onPress={handleEdit} style={styles.editButton}>
+          <Ionicons name="create-outline" size={24} color="#4A90E2" />
+        </TouchableOpacity>
       </View>
       
-      <ScrollView style={styles.scrollContainer}>
-        <View style={styles.contentContainer}>
-          <View style={styles.titleContainer}>
-            <Text style={styles.title}>{content.title}</Text>
-            {content.emoji && (
-              <Text style={styles.emoji}>{content.emoji}</Text>
-            )}
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+        <View style={styles.contentHeader}>
+          <View style={[styles.typeTag, { backgroundColor: getContentTypeColor(contentItem.type) }]}>
+            <Ionicons name={getContentTypeIcon(contentItem.type)} size={16} color="#fff" />
+            <Text style={styles.typeText}>{contentItem.type.charAt(0).toUpperCase() + contentItem.type.slice(1)}</Text>
           </View>
-          
-          <View style={styles.dateContainer}>
-            <Ionicons name="calendar-outline" size={16} color="#666" />
-            <Text style={styles.date}>{formatDate(content.date)}</Text>
-          </View>
-          
-          <View style={[styles.typeBadge, { backgroundColor: contentDetails.color }]}>
-            <Ionicons name={contentDetails.icon as any} size={14} color="#fff" />
-            <Text style={styles.typeText}>{contentDetails.title}</Text>
-          </View>
-          
-          {content.notes && (
-            <View style={styles.notesContainer}>
-              <Text style={styles.notes}>{content.notes}</Text>
-            </View>
-          )}
-          
-          {content.media && content.media.length > 0 && (
-            <View style={styles.mediaContainer}>
-              <Text style={styles.sectionTitle}>Media</Text>
-              <Text style={styles.mediaPlaceholder}>
-                Media attachments will be displayed here
-              </Text>
-            </View>
-          )}
+          <Text style={styles.date}>{formattedDate}</Text>
         </View>
+        
+        <View style={styles.titleContainer}>
+          {contentItem.emoji && (
+            <Text style={styles.emoji}>{contentItem.emoji}</Text>
+          )}
+          <Text style={styles.title}>{contentItem.title}</Text>
+        </View>
+        
+        {contentItem.notes && (
+          <Text style={styles.notes}>{contentItem.notes}</Text>
+        )}
+        
+        {contentItem.media && contentItem.media.length > 0 && (
+          <View style={styles.mediaContainer}>
+            {contentItem.media.map((mediaUrl, index) => (
+              <Image
+                key={index}
+                source={{ uri: mediaUrl }}
+                style={styles.mediaImage}
+                resizeMode="cover"
+              />
+            ))}
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -158,125 +154,108 @@ export default function ContentViewScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f8f8',
+    backgroundColor: '#fff',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    padding: 20,
+  },
+  errorText: {
+    fontSize: 18,
+    color: '#FF3B30',
+    marginBottom: 20,
   },
   header: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
   },
   backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  backText: {
+    fontSize: 16,
+    color: '#333',
+    marginLeft: 4,
+  },
+  editButton: {
     padding: 8,
   },
-  headerTitle: {
-    fontSize: 18,
+  backButtonText: {
+    fontSize: 16,
+    color: '#4A90E2',
     fontWeight: '600',
-    color: '#333',
   },
-  placeholder: {
-    width: 40,
-  },
-  scrollContainer: {
+  scrollView: {
     flex: 1,
   },
-  contentContainer: {
-    padding: 16,
+  scrollContent: {
+    padding: 20,
   },
-  titleContainer: {
+  contentHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#333',
-    flex: 1,
-  },
-  emoji: {
-    fontSize: 32,
-    marginLeft: 12,
-  },
-  dateContainer: {
-    flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 16,
+  },
+  typeTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  typeText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 6,
   },
   date: {
     fontSize: 14,
     color: '#666',
-    marginLeft: 6,
   },
-  typeBadge: {
-    flexDirection: 'row',
+  titleContainer: {
+    marginBottom: 20,
     alignItems: 'center',
-    alignSelf: 'flex-start',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 16,
-    marginBottom: 20,
   },
-  typeText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#fff',
-    marginLeft: 4,
+  emoji: {
+    fontSize: 48,
+    marginBottom: 12,
   },
-  notesContainer: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#333',
+    textAlign: 'center',
   },
   notes: {
     fontSize: 16,
-    lineHeight: 24,
     color: '#333',
+    lineHeight: 24,
+    marginBottom: 20,
   },
   mediaContainer: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    marginTop: 20,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
+  mediaImage: {
+    width: '100%',
+    height: 200,
+    borderRadius: 8,
     marginBottom: 12,
-  },
-  mediaPlaceholder: {
-    fontSize: 14,
-    color: '#999',
-    fontStyle: 'italic',
-    textAlign: 'center',
-    padding: 20,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  emptyText: {
-    fontSize: 16,
-    color: '#999',
-    textAlign: 'center',
   },
 }); 

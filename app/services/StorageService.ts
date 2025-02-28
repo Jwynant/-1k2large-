@@ -1,110 +1,45 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { ContentItem, Season } from '../context/AppContext';
+import { ContentItem, Season } from '../types';
 
 // Storage keys
 const STORAGE_KEYS = {
-  CONTENT: '@1000Months:content',
-  SEASONS: '@1000Months:seasons',
-  USER_BIRTH_DATE: '@1000Months:userBirthDate',
-  VIEW_MODE: '@1000Months:viewMode',
+  USER_DATA: '@1000Months:userData',
 };
+
+// User data interface
+interface UserData {
+  userBirthDate?: string | null;
+  accentColor?: string;
+  contentItems?: ContentItem[];
+  seasons?: Season[];
+  theme?: 'dark' | 'light' | 'system';
+}
 
 /**
  * Service for handling data persistence using AsyncStorage
  */
 export class StorageService {
   /**
-   * Save content data to AsyncStorage
+   * Save all user data to AsyncStorage
    */
-  static async saveContent(content: Record<string, ContentItem[]>): Promise<void> {
+  static async saveUserData(userData: UserData): Promise<void> {
     try {
-      const jsonValue = JSON.stringify(content);
-      await AsyncStorage.setItem(STORAGE_KEYS.CONTENT, jsonValue);
+      const jsonValue = JSON.stringify(userData);
+      await AsyncStorage.setItem(STORAGE_KEYS.USER_DATA, jsonValue);
     } catch (error) {
-      console.error('Error saving content:', error);
+      console.error('Error saving user data:', error);
     }
   }
 
   /**
-   * Load content data from AsyncStorage
+   * Load all user data from AsyncStorage
    */
-  static async loadContent(): Promise<Record<string, ContentItem[]> | null> {
+  static async getUserData(): Promise<UserData | null> {
     try {
-      const jsonValue = await AsyncStorage.getItem(STORAGE_KEYS.CONTENT);
+      const jsonValue = await AsyncStorage.getItem(STORAGE_KEYS.USER_DATA);
       return jsonValue != null ? JSON.parse(jsonValue) : null;
     } catch (error) {
-      console.error('Error loading content:', error);
-      return null;
-    }
-  }
-
-  /**
-   * Save seasons data to AsyncStorage
-   */
-  static async saveSeasons(seasons: Season[]): Promise<void> {
-    try {
-      const jsonValue = JSON.stringify(seasons);
-      await AsyncStorage.setItem(STORAGE_KEYS.SEASONS, jsonValue);
-    } catch (error) {
-      console.error('Error saving seasons:', error);
-    }
-  }
-
-  /**
-   * Load seasons data from AsyncStorage
-   */
-  static async loadSeasons(): Promise<Season[] | null> {
-    try {
-      const jsonValue = await AsyncStorage.getItem(STORAGE_KEYS.SEASONS);
-      return jsonValue != null ? JSON.parse(jsonValue) : null;
-    } catch (error) {
-      console.error('Error loading seasons:', error);
-      return null;
-    }
-  }
-
-  /**
-   * Save user birth date to AsyncStorage
-   */
-  static async saveUserBirthDate(birthDate: string): Promise<void> {
-    try {
-      await AsyncStorage.setItem(STORAGE_KEYS.USER_BIRTH_DATE, birthDate);
-    } catch (error) {
-      console.error('Error saving user birth date:', error);
-    }
-  }
-
-  /**
-   * Load user birth date from AsyncStorage
-   */
-  static async loadUserBirthDate(): Promise<string | null> {
-    try {
-      return await AsyncStorage.getItem(STORAGE_KEYS.USER_BIRTH_DATE);
-    } catch (error) {
-      console.error('Error loading user birth date:', error);
-      return null;
-    }
-  }
-
-  /**
-   * Save view mode to AsyncStorage
-   */
-  static async saveViewMode(viewMode: string): Promise<void> {
-    try {
-      await AsyncStorage.setItem(STORAGE_KEYS.VIEW_MODE, viewMode);
-    } catch (error) {
-      console.error('Error saving view mode:', error);
-    }
-  }
-
-  /**
-   * Load view mode from AsyncStorage
-   */
-  static async loadViewMode(): Promise<string | null> {
-    try {
-      return await AsyncStorage.getItem(STORAGE_KEYS.VIEW_MODE);
-    } catch (error) {
-      console.error('Error loading view mode:', error);
+      console.error('Error loading user data:', error);
       return null;
     }
   }

@@ -1,79 +1,62 @@
 import React, { createContext, useContext, useReducer, ReactNode, useEffect } from 'react';
 import { StorageService } from '../services/StorageService';
+import { 
+  AppState, 
+  AppAction, 
+  ContentItem, 
+  Season, 
+  ViewMode, 
+  ViewState, 
+  SelectedCell 
+} from '../types';
 
-// Define types for our content items
-export type ContentType = 'memory' | 'lesson' | 'goal' | 'reflection';
-
-export type ContentItem = {
-  id: string;
-  title: string;
-  date: string;
-  type: ContentType;
-  notes?: string;
-  emoji?: string;
-  media?: string[];
-};
-
-export type Season = {
-  id: string;
-  title: string;
-  startDate: string;
-  endDate: string;
-  description: string;
-  memories: number;
-};
-
-// Define view modes
-export type ViewMode = 'weeks' | 'months' | 'years';
-export type ViewState = 'grid' | 'cluster';
-
-// Define the state shape
-type AppState = {
-  viewMode: ViewMode;
-  viewState: ViewState;
-  selectedYear: number | null;
-  selectedMonth: number | null;
-  selectedWeek: number | null;
-  selectedCell: { year: number; month?: number; week?: number } | null;
-  content: Record<string, ContentItem[]>;
-  seasons: Season[];
-  userBirthDate: string | null;
-  userAge: number;
-  isLoading: boolean;
-};
-
-// Define action types
-type Action =
-  | { type: 'SET_VIEW_MODE'; payload: ViewMode }
-  | { type: 'SET_VIEW_STATE'; payload: ViewState }
-  | { type: 'SELECT_YEAR'; payload: number | null }
-  | { type: 'SELECT_MONTH'; payload: number | null }
-  | { type: 'SELECT_WEEK'; payload: number | null }
-  | { type: 'SELECT_CELL'; payload: { year: number; month?: number; week?: number } | null }
-  | { type: 'ADD_CONTENT'; payload: { key: string; item: ContentItem } }
-  | { type: 'SET_BIRTH_DATE'; payload: string }
-  | { type: 'SET_CONTENT'; payload: Record<string, ContentItem[]> }
-  | { type: 'SET_SEASONS'; payload: Season[] }
-  | { type: 'SET_LOADING'; payload: boolean };
+// Create the context
+const AppContext = createContext<{
+  state: AppState;
+  dispatch: React.Dispatch<AppAction>;
+}>({
+  state: {
+    isLoading: true,
+    userBirthDate: null,
+    accentColor: '#007AFF',
+    viewMode: 'months',
+    viewState: 'grid',
+    selectedYear: null,
+    selectedMonth: null,
+    selectedWeek: null,
+    selectedCell: null,
+    contentItems: [],
+    seasons: [],
+    theme: 'dark',
+  },
+  dispatch: () => null,
+});
 
 // Initial state
 const initialState: AppState = {
+  isLoading: true,
+  userBirthDate: null,
+  accentColor: '#007AFF',
   viewMode: 'months',
   viewState: 'grid',
   selectedYear: null,
   selectedMonth: null,
   selectedWeek: null,
   selectedCell: null,
-  content: {},
+  contentItems: [],
   seasons: [],
-  userBirthDate: null,
-  userAge: 36, // Default age until birth date is set
-  isLoading: true,
+  theme: 'dark',
 };
 
 // Reducer function
-function appReducer(state: AppState, action: Action): AppState {
+function appReducer(state: AppState, action: AppAction): AppState {
   switch (action.type) {
+    case 'SET_LOADING':
+      return { ...state, isLoading: action.payload };
+    case 'SET_USER_BIRTH_DATE':
+      return { ...state, userBirthDate: action.payload };
+    case 'SET_ACCENT_COLOR':
+      return { ...state, accentColor: action.payload };
     case 'SET_VIEW_MODE':
       return { ...state, viewMode: action.payload };
     case 'SET_VIEW_STATE':
@@ -86,108 +69,108 @@ function appReducer(state: AppState, action: Action): AppState {
       return { ...state, selectedWeek: action.payload };
     case 'SELECT_CELL':
       return { ...state, selectedCell: action.payload };
-    case 'ADD_CONTENT': {
-      const { key, item } = action.payload;
-      const existingContent = state.content[key] || [];
-      const newContent = {
-        ...state.content,
-        [key]: [...existingContent, item],
+    case 'SET_THEME':
+      return { ...state, theme: action.payload };
+    case 'ADD_CONTENT_ITEM':
+      return { 
+        ...state, 
+        contentItems: [...state.contentItems, action.payload] 
       };
-      
-      // Save to storage
-      StorageService.saveContent(newContent);
-      
-      return {
-        ...state,
-        content: newContent,
+    case 'UPDATE_CONTENT_ITEM':
+      return { 
+        ...state, 
+        contentItems: state.contentItems.map(item => 
+          item.id === action.payload.id ? action.payload : item
+        ) 
       };
-    }
-    case 'SET_BIRTH_DATE': {
-      // Calculate age based on birth date
-      const birthDate = new Date(action.payload);
-      const today = new Date();
-      let age = today.getFullYear() - birthDate.getFullYear();
-      const m = today.getMonth() - birthDate.getMonth();
-      if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-        age--;
-      }
-      
-      // Save to storage
-      StorageService.saveUserBirthDate(action.payload);
-      
-      return {
-        ...state,
-        userBirthDate: action.payload,
-        userAge: age,
+    case 'DELETE_CONTENT_ITEM':
+      return { 
+        ...state, 
+        contentItems: state.contentItems.filter(item => item.id !== action.payload) 
       };
-    }
-    case 'SET_CONTENT':
-      return { ...state, content: action.payload };
-    case 'SET_SEASONS':
-      return { ...state, seasons: action.payload };
-    case 'SET_LOADING':
-      return { ...state, isLoading: action.payload };
+    case 'ADD_SEASON':
+      return { 
+        ...state, 
+        seasons: [...state.seasons, action.payload] 
+      };
+    case 'UPDATE_SEASON':
+      return { 
+        ...state, 
+        seasons: state.seasons.map(season => 
+          season.id === action.payload.id ? action.payload : season
+        ) 
+      };
+    case 'DELETE_SEASON':
+      return { 
+        ...state, 
+        seasons: state.seasons.filter(season => season.id !== action.payload) 
+      };
+    case 'LOAD_DATA':
+      return { 
+        ...state, 
+        contentItems: action.payload.contentItems,
+        seasons: action.payload.seasons,
+        isLoading: false
+      };
     default:
       return state;
   }
 }
 
-// Create context
-type AppContextType = {
-  state: AppState;
-  dispatch: React.Dispatch<Action>;
-};
-
-const AppContext = createContext<AppContextType | undefined>(undefined);
-
 // Provider component
 export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(appReducer, initialState);
-
-  // Load data from storage on initial mount
+  
+  // Load data from storage on initial render
   useEffect(() => {
-    const loadData = async () => {
-      dispatch({ type: 'SET_LOADING', payload: true });
-      
+    async function loadData() {
       try {
-        // Load content
-        const content = await StorageService.loadContent();
-        if (content) {
-          dispatch({ type: 'SET_CONTENT', payload: content });
+        const userData = await StorageService.getUserData();
+        if (userData) {
+          dispatch({ 
+            type: 'LOAD_DATA', 
+            payload: { 
+              contentItems: userData.contentItems || [], 
+              seasons: userData.seasons || [] 
+            } 
+          });
+          
+          if (userData.userBirthDate) {
+            dispatch({ type: 'SET_USER_BIRTH_DATE', payload: userData.userBirthDate });
+          }
+          
+          if (userData.accentColor) {
+            dispatch({ type: 'SET_ACCENT_COLOR', payload: userData.accentColor });
+          }
+          
+          if (userData.theme) {
+            dispatch({ type: 'SET_THEME', payload: userData.theme });
+          }
         }
         
-        // Load seasons
-        const seasons = await StorageService.loadSeasons();
-        if (seasons) {
-          dispatch({ type: 'SET_SEASONS', payload: seasons });
-        }
-        
-        // Load birth date
-        const birthDate = await StorageService.loadUserBirthDate();
-        if (birthDate) {
-          dispatch({ type: 'SET_BIRTH_DATE', payload: birthDate });
-        }
-        
-        // Load view mode
-        const viewMode = await StorageService.loadViewMode();
-        if (viewMode && (viewMode === 'weeks' || viewMode === 'months' || viewMode === 'years')) {
-          dispatch({ type: 'SET_VIEW_MODE', payload: viewMode as ViewMode });
-        }
+        dispatch({ type: 'SET_LOADING', payload: false });
       } catch (error) {
         console.error('Error loading data:', error);
-      } finally {
         dispatch({ type: 'SET_LOADING', payload: false });
       }
-    };
+    }
     
     loadData();
   }, []);
   
-  // Save view mode when it changes
+  // Save data to storage when state changes
   useEffect(() => {
-    StorageService.saveViewMode(state.viewMode);
-  }, [state.viewMode]);
-
+    if (!state.isLoading) {
+      StorageService.saveUserData({
+        userBirthDate: state.userBirthDate,
+        accentColor: state.accentColor,
+        contentItems: state.contentItems,
+        seasons: state.seasons,
+        theme: state.theme,
+      });
+    }
+  }, [state.userBirthDate, state.accentColor, state.contentItems, state.seasons, state.theme, state.isLoading]);
+  
   return (
     <AppContext.Provider value={{ state, dispatch }}>
       {children}
@@ -195,10 +178,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   );
 }
 
-// Custom hook for using the context
+// Custom hook to use the context
 export function useAppContext() {
   const context = useContext(AppContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useAppContext must be used within an AppProvider');
   }
   return context;

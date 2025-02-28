@@ -33,19 +33,32 @@ People struggle to visualize their life trajectory, leading to reactive decision
 
 ##### Week View
 - Each cell represents one week
-- Organized in 4x13 grids (one year per cluster)
-- Users tap a cluster to expand a detailed year view
-- Current week highlighted with an accent color
+- Cells are organized in 4×13 clusters (52 weeks per year)
+- Clusters show simplified versions of cells inside from the default view (for performance)
+- Clusters represent years
+- 5 clusters fit in a row
+- Rows of clusters are labeled with the user age at the start of that row (counting by 5s)
+- Total number of clusters is equal to the user's set lifespan (83 by default)
+- Current week cell is empty with an accent color as a border
+- Users can tap a cluster to expand it into a close view of the cluster
+- From this close up cluster view, users can interact with individual week cells to open a detailed week cell view
 
-##### Month View (Default)
+##### Month View (Default when opening the app)
 - Each cell represents a month
-- Organized in 3x4 grids per year
-- Users tap clusters to expand into a yearly view
+- Cells are organized in 3×4 grids (12 months per year)
+- Clusters show simplified versions of cells inside from the default view (for performance)
+- Clusters represent years
+- 5 clusters fit in a row
+- Rows of clusters are labeled with the user age at the start of that row (counting by 5s)
+- Current month cell is empty with an accent color as a border
+- Users can tap a cluster to expand it into a close view of the cluster
+- From this close up cluster view, users can interact with individual month cells to open a detailed month cell view
 
 ##### Year View
-- Each cell represents a year
-- Organized in rows of 5 years
-- Tapping a year opens a detailed view
+- Each cell represents an entire year
+- Current year is empty with an accent color border
+- Organized in rows of 10 years
+- Tapping a year opens a detailed view of that individual year
 
 #### Grid Interactions
 
@@ -62,6 +75,19 @@ People struggle to visualize their life trajectory, leading to reactive decision
 
 ##### Long Press Action
 - Opens quick-add menu for new content
+
+#### Visual Representation
+- Past cells are filled, current cell is empty with an accent color border, future cells are empty with a regular border
+
+### Technical Considerations
+#### Performance
+- From the default grid view in weeks and months view modes, clusters should use simplified versions of the cells within simply showing the cells (past, present, future) state for better performance
+- Memoization for preventing unnecessary re-renders
+
+#### Visual Design
+- Blue/teal gradient accent color for highlighting
+- Light/Dark mode support (dark mode by default)
+- Clear visual hierarchy for different time scales
 
 ### 2.2 Content Types
 

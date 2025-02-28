@@ -1,7 +1,9 @@
 import { View, StyleSheet, Pressable } from 'react-native';
+import { memo, useCallback } from 'react';
 import { MotiView } from 'moti';
 import { useDateCalculations } from '../../../app/hooks/useDateCalculations';
 import { useContentManagement } from '../../../app/hooks/useContentManagement';
+import CellContentIndicator from '../CellContentIndicator';
 
 type MonthCellProps = {
   year: number;
@@ -11,14 +13,15 @@ type MonthCellProps = {
   onLongPress?: (position: { x: number, y: number }) => void;
 };
 
-export default function MonthCell({ year, month, expanded, onPress, onLongPress }: MonthCellProps) {
+function MonthCell({ year, month, expanded, onPress, onLongPress }: MonthCellProps) {
   const { isMonthInPast } = useDateCalculations();
-  const { hasContent } = useContentManagement();
+  const { getCellContent, hasContent } = useContentManagement();
   
   const filled = isMonthInPast(year, month);
   const contentExists = hasContent(year, month);
+  const cellContent = contentExists ? getCellContent(year, month) : [];
   
-  const handleLongPress = (event: any) => {
+  const handleLongPress = useCallback((event: any) => {
     if (onLongPress) {
       // Get the position of the press for the quick add menu
       onLongPress({
@@ -26,7 +29,7 @@ export default function MonthCell({ year, month, expanded, onPress, onLongPress 
         y: event.nativeEvent.pageY
       });
     }
-  };
+  }, [onLongPress]);
 
   return (
     <Pressable 
@@ -42,7 +45,10 @@ export default function MonthCell({ year, month, expanded, onPress, onLongPress 
         ]} 
       >
         {contentExists && (
-          <View style={[styles.contentIndicator, expanded && styles.contentIndicatorExpanded]} />
+          <CellContentIndicator 
+            content={cellContent} 
+            size={expanded ? 'medium' : 'small'} 
+          />
         )}
       </MotiView>
     </Pressable>
@@ -53,43 +59,37 @@ const styles = StyleSheet.create({
   cell: {
     width: 16,
     height: 16,
-    borderRadius: 3,
-    margin: 0,
+    borderRadius: 2,
+    margin: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 1,
-    elevation: 1,
   },
   cellExpanded: {
-    width: 48,
-    height: 48,
-    borderRadius: 8,
+    width: 32,
+    height: 32,
+    borderRadius: 4,
+    margin: 2,
   },
   filled: {
-    backgroundColor: '#000',
+    backgroundColor: '#e0e0e0',
   },
   empty: {
+    backgroundColor: '#f5f5f5',
     borderWidth: 1,
-    borderColor: '#000',
-    backgroundColor: '#fff',
+    borderColor: '#e0e0e0',
   },
   contentIndicator: {
-    position: 'absolute',
-    bottom: -2,
-    right: -2,
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#007AFF',
+    backgroundColor: '#4A90E2',
   },
   contentIndicatorExpanded: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    bottom: -4,
-    right: -4,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
   },
 });
+
+// Memoize the component to prevent unnecessary re-renders
+export default memo(MonthCell);

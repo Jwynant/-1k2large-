@@ -1,22 +1,32 @@
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { StyleSheet, Pressable, View, Text } from 'react-native';
 import { useState } from 'react';
 import { MotiView } from 'moti';
-import { useDateCalculations } from '../../../app/hooks/useDateCalculations';
 import { useContentManagement } from '../../../app/hooks/useContentManagement';
+import CellContentIndicator from '../CellContentIndicator';
 
 type YearCellProps = {
   year: number;
+  age?: number;
+  isPast: boolean;
+  isCurrent: boolean;
+  hasContent: boolean;
   onPress?: () => void;
   onLongPress?: (position: { x: number, y: number }) => void;
 };
 
-export default function YearCell({ year, onPress, onLongPress }: YearCellProps) {
+export default function YearCell({ 
+  year, 
+  age,
+  isPast, 
+  isCurrent, 
+  hasContent, 
+  onPress, 
+  onLongPress 
+}: YearCellProps) {
   const [isPressed, setIsPressed] = useState(false);
-  const { userAge } = useDateCalculations();
-  const { hasContent } = useContentManagement();
+  const { getCellContent } = useContentManagement();
   
-  const isCurrent = year === userAge;
-  const contentExists = hasContent(year);
+  const cellContent = hasContent ? getCellContent(year) : [];
 
   const handleLongPress = (event: any) => {
     if (onLongPress) {
@@ -41,22 +51,30 @@ export default function YearCell({ year, onPress, onLongPress }: YearCellProps) 
       <MotiView
         style={[
           styles.cell,
-          isCurrent && styles.currentCell
+          isPast ? styles.filledCell : styles.emptyCell,
+          isCurrent && styles.currentCell,
+          isPressed && styles.pressedCell
         ]}
         animate={{
           scale: isPressed ? 0.95 : 1,
-          backgroundColor: isPressed ? '#f0f0f0' : '#fff',
         }}
         transition={{
           duration: 150
         }}
       >
-        <Text style={styles.yearText}>{year}</Text>
-        {contentExists && (
-          <View style={styles.contentIndicatorContainer}>
-            <View style={styles.contentIndicator}>
-              <Text style={styles.contentIndicatorText}>•</Text>
-            </View>
+        <Text style={[
+          styles.yearText,
+          isPast ? styles.pastYearText : styles.futureYearText
+        ]}>
+          {age !== undefined ? age : year}
+        </Text>
+        
+        {hasContent && (
+          <View style={styles.indicatorContainer}>
+            <CellContentIndicator 
+              content={cellContent} 
+              size="small" 
+            />
           </View>
         )}
       </MotiView>
@@ -66,51 +84,47 @@ export default function YearCell({ year, onPress, onLongPress }: YearCellProps) 
 
 const styles = StyleSheet.create({
   container: {
-    width: '18%',
-    aspectRatio: 1,
-    padding: 2,
+    padding: 0,
+    margin: 0,
+    width: '10%', // Set to exactly 10% of parent width
   },
   cell: {
-    flex: 1,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    backgroundColor: '#fff',
+    width: 30,
+    height: 30,
+    borderRadius: 4,
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+  },
+  filledCell: {
+    backgroundColor: '#fee', // Light pink for filled cells
+  },
+  emptyCell: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: '#fee', // Light pink border
   },
   currentCell: {
-    borderColor: '#007AFF',
     borderWidth: 2,
+    borderColor: '#0366d6', // Accent color
+    backgroundColor: 'transparent',
+  },
+  pressedCell: {
+    opacity: 0.7,
   },
   yearText: {
-    fontSize: 16,
+    fontSize: 12,
     fontWeight: '600',
-    color: '#333',
   },
-  contentIndicatorContainer: {
+  pastYearText: {
+    color: '#000', // Black text for past cells
+  },
+  futureYearText: {
+    color: '#fff', // White text for current and future cells
+  },
+  indicatorContainer: {
     position: 'absolute',
-    bottom: 6,
-    width: '100%',
-    alignItems: 'center',
-  },
-  contentIndicator: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#007AFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  contentIndicatorText: {
-    fontSize: 8,
-    color: '#fff',
-    textAlign: 'center',
-  },
+    bottom: 1,
+    right: 1,
+  }
 });

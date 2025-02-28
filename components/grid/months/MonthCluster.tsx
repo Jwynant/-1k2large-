@@ -1,135 +1,124 @@
+import React, { memo, useCallback, useMemo, useRef } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { MotiView } from 'moti';
 import MonthCell from './MonthCell';
-import { useGridNavigation } from '../../../app/hooks/useGridNavigation';
+import { useDateCalculations } from '../../../app/hooks/useDateCalculations';
 
 type MonthClusterProps = {
   year: number;
   isCurrent: boolean;
-  expanded?: boolean;
-  onPress?: () => void;
-  onLongPress?: (position: { x: number, y: number }) => void;
+  onPress: (position: { x: number, y: number, width: number, height: number }) => void;
+  onCellPress: (month: number) => void;
+  onLongPress: (month: number, position: { x: number, y: number }) => void;
+  hasContent: (year: number, month?: number, week?: number) => boolean;
 };
 
-export default function MonthCluster({ year, isCurrent, expanded, onPress, onLongPress }: MonthClusterProps) {
-  const { handleCellPress } = useGridNavigation();
-  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+function MonthCluster({ 
+  year, 
+  isCurrent, 
+  onPress,
+  onCellPress, 
+  onLongPress,
+  hasContent
+}: MonthClusterProps) {
+  const { isCurrentMonth, isMonthInPast } = useDateCalculations();
+  const clusterRef = useRef<View>(null);
 
-  const handleLongPress = (event: any) => {
+  const handleMonthPress = useCallback((month: number) => {
+    if (onCellPress) {
+      onCellPress(month);
+    }
+  }, [onCellPress]);
+
+  const handlePress = useCallback(() => {
+    if (onPress && clusterRef.current) {
+      clusterRef.current.measure((x, y, width, height, pageX, pageY) => {
+        onPress({
+          x: pageX,
+          y: pageY,
+          width,
+          height
+        });
+      });
+    }
+  }, [onPress]);
+
+  const handleLongPress = useCallback((event: any) => {
     if (onLongPress) {
-      // Get the position of the press for the quick add menu
       const position = {
-        x: event.nativeEvent.pageX - 100,
-        y: event.nativeEvent.pageY - 50
+        x: event.nativeEvent.pageX,
+        y: event.nativeEvent.pageY
       };
-      onLongPress(position);
+      // Use January as default when long-pressing the cluster
+      onLongPress(0, position);
     }
-  };
+  }, [onLongPress]);
 
-  const handleCellClick = (month: number) => {
-    if (expanded) {
-      handleCellPress(year, month);
+  // Render simplified grid view for better performance
+  const simplifiedGridLayout = useMemo(() => {
+    // Create a simplified visual representation of the months in a 3x4 grid
+    const rows = [];
+    const currentYear = new Date().getFullYear();
+    const currentMonth = new Date().getMonth();
+    
+    for (let rowIndex = 0; rowIndex < 4; rowIndex++) {
+      const rowMonths = [];
+      for (let colIndex = 0; colIndex < 3; colIndex++) {
+        const month = rowIndex * 3 + colIndex;
+        const isPast = isMonthInPast(year, month);
+        const hasContentForMonth = hasContent(year, month);
+        const isCurrent = year === currentYear && month === currentMonth;
+        
+        rowMonths.push(
+          <View 
+            key={month} 
+            style={[
+              styles.simplifiedCell,
+              isPast ? styles.simplifiedCellFilled : styles.simplifiedCellEmpty,
+              isCurrent && styles.simplifiedCellCurrent,
+              hasContentForMonth && styles.simplifiedCellWithContent
+            ]} 
+          />
+        );
+      }
+      rows.push(
+        <View key={rowIndex} style={styles.simplifiedRow}>
+          {rowMonths}
+        </View>
+      );
     }
-  };
-
-  const handleCellLongPress = (month: number, position: { x: number, y: number }) => {
-    if (expanded && onLongPress) {
-      onLongPress(position);
-      handleCellPress(year, month);
-    }
-  };
+    
+    return (
+      <View style={styles.simplifiedGrid}>
+        <View style={styles.monthGrid}>
+          {rows}
+        </View>
+      </View>
+    );
+  }, [year, isMonthInPast, hasContent]);
 
   return (
     <Pressable 
-      style={[styles.container]}
-      onPress={onPress}
+      style={styles.container}
+      onPress={handlePress}
       onLongPress={handleLongPress}
       delayLongPress={500}
     >
-      <MotiView
-        style={styles.cluster}
+      <MotiView 
+        ref={clusterRef}
+        style={[
+          styles.cluster,
+          isCurrent && styles.currentCluster
+        ]}
         animate={{
-          scale: expanded ? 1.02 : 1,
+          scale: 1,
         }}
         transition={{
+          type: 'timing',
           duration: 200,
-        }}>
-        {expanded && (
-          <View style={styles.monthLabels}>
-            {monthNames.slice(0, 3).map((name, i) => (
-              <Text key={i} style={styles.monthLabel}>{name}</Text>
-            ))}
-          </View>
-        )}
-        <View style={[styles.row, expanded && styles.rowExpanded]}>
-          {Array.from({ length: 3 }, (_, i) => (
-            <MonthCell 
-              key={i} 
-              year={year}
-              month={i}
-              expanded={expanded}
-              onPress={() => handleCellClick(i)}
-              onLongPress={(position) => handleCellLongPress(i, position)}
-            />
-          ))}
-        </View>
-        {expanded && (
-          <View style={styles.monthLabels}>
-            {monthNames.slice(3, 6).map((name, i) => (
-              <Text key={i} style={styles.monthLabel}>{name}</Text>
-            ))}
-          </View>
-        )}
-        <View style={[styles.row, expanded && styles.rowExpanded]}>
-          {Array.from({ length: 3 }, (_, i) => (
-            <MonthCell 
-              key={i} 
-              year={year}
-              month={i + 3}
-              expanded={expanded}
-              onPress={() => handleCellClick(i + 3)}
-              onLongPress={(position) => handleCellLongPress(i + 3, position)}
-            />
-          ))}
-        </View>
-        {expanded && (
-          <View style={styles.monthLabels}>
-            {monthNames.slice(6, 9).map((name, i) => (
-              <Text key={i} style={styles.monthLabel}>{name}</Text>
-            ))}
-          </View>
-        )}
-        <View style={[styles.row, expanded && styles.rowExpanded]}>
-          {Array.from({ length: 3 }, (_, i) => (
-            <MonthCell 
-              key={i} 
-              year={year}
-              month={i + 6}
-              expanded={expanded}
-              onPress={() => handleCellClick(i + 6)}
-              onLongPress={(position) => handleCellLongPress(i + 6, position)}
-            />
-          ))}
-        </View>
-        {expanded && (
-          <View style={styles.monthLabels}>
-            {monthNames.slice(9, 12).map((name, i) => (
-              <Text key={i} style={styles.monthLabel}>{name}</Text>
-            ))}
-          </View>
-        )}
-        <View style={[styles.row, expanded && styles.rowExpanded]}>
-          {Array.from({ length: 3 }, (_, i) => (
-            <MonthCell 
-              key={i} 
-              year={year}
-              month={i + 9}
-              expanded={expanded}
-              onPress={() => handleCellClick(i + 9)}
-              onLongPress={(position) => handleCellLongPress(i + 9, position)}
-            />
-          ))}
-        </View>
+        } as any}
+      >
+        {simplifiedGridLayout}
       </MotiView>
     </Pressable>
   );
@@ -137,36 +126,50 @@ export default function MonthCluster({ year, isCurrent, expanded, onPress, onLon
 
 const styles = StyleSheet.create({
   container: {
-    width: '20%',
-  },
-  containerExpanded: {
-    width: '100%',
-    maxWidth: 600,
+    width: 65,
+    margin: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   cluster: {
-    borderRadius: 6,
-    padding: 0.25,
+    padding: 3,
+    width: '100%',
   },
-  monthLabels: {
+  currentCluster: {
+    borderColor: '#0366d6', // Accent color
+    borderWidth: 1,
+    borderRadius: 8,
+  },
+  // Simplified grid styles for better performance
+  simplifiedGrid: {
+    padding: 2,
+    width: '100%',
+  },
+  monthGrid: {
+    width: '100%',
+  },
+  simplifiedRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingHorizontal: 4,
-    marginBottom: 4,
+    marginBottom: 2,
   },
-  monthLabel: {
-    fontSize: 12,
-    color: '#666',
-    flex: 1,
-    textAlign: 'center',
+  simplifiedCell: {
+    width: 16,
+    height: 16,
+    borderRadius: 2,
+    margin: 1,
   },
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 1.5,
-    marginBottom: 1,
-    marginHorizontal: 0,
+  simplifiedCellEmpty: {
+    borderWidth: 1,
+    borderColor: '#fee', // Dark mode border
+    backgroundColor: 'transparent',
   },
-  rowExpanded: {
-    marginHorizontal: 20,
+  simplifiedCellFilled: {
+    backgroundColor: '#fee', // Dark mode filled cell
+  },
+  simplifiedCellCurrent: {
+    backgroundColor: '#007AFF',
   },
 });
+
+export default memo(MonthCluster);

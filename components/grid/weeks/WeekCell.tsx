@@ -1,8 +1,9 @@
 import { View, StyleSheet, Pressable } from 'react-native';
-import { useState } from 'react';
+import { useState, useCallback, memo } from 'react';
 import { MotiView } from 'moti';
 import { useDateCalculations } from '../../../app/hooks/useDateCalculations';
 import { useContentManagement } from '../../../app/hooks/useContentManagement';
+import CellContentIndicator from '../CellContentIndicator';
 
 type WeekCellProps = {
   year: number;
@@ -11,13 +12,14 @@ type WeekCellProps = {
   onLongPress?: (position: { x: number, y: number }) => void;
 };
 
-export default function WeekCell({ year, week, onPress, onLongPress }: WeekCellProps) {
+function WeekCell({ year, week, onPress, onLongPress }: WeekCellProps) {
   const [isPressed, setIsPressed] = useState(false);
   const { isWeekInPast, getWeekNumber } = useDateCalculations();
-  const { hasContent } = useContentManagement();
+  const { getCellContent, hasContent } = useContentManagement();
   
-  const filled = isWeekInPast(year, week);
+  const isPast = isWeekInPast(year, week);
   const contentExists = hasContent(year, undefined, week);
+  const cellContent = contentExists ? getCellContent(year, undefined, week) : [];
   
   // Check if this is the current week
   const today = new Date();
@@ -25,7 +27,7 @@ export default function WeekCell({ year, week, onPress, onLongPress }: WeekCellP
   const currentWeek = getWeekNumber(today);
   const isCurrent = year === currentYear && week === currentWeek;
 
-  const handleLongPress = (event: any) => {
+  const handleLongPress = useCallback((event: any) => {
     if (onLongPress) {
       // Get the position of the press for the quick add menu
       const position = {
@@ -34,30 +36,32 @@ export default function WeekCell({ year, week, onPress, onLongPress }: WeekCellP
       };
       onLongPress(position);
     }
-  };
+  }, [onLongPress]);
+
+  const handlePressIn = useCallback(() => setIsPressed(true), []);
+  const handlePressOut = useCallback(() => setIsPressed(false), []);
 
   return (
     <Pressable 
       onPress={onPress}
-      onPressIn={() => setIsPressed(true)}
-      onPressOut={() => setIsPressed(false)}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
       onLongPress={handleLongPress}
       delayLongPress={500}
     >
       <MotiView 
         style={[
           styles.cell,
-          filled ? styles.filled : styles.empty,
+          isPast ? styles.filled : styles.empty,
           isCurrent && styles.current,
-          isPressed && !filled && styles.pressed
+          isPressed && styles.pressed,
         ]} 
-        animate={{
-          scale: isPressed ? 0.8 : 1,
-        }}
-        transition={{ duration: 50 }}
       >
         {contentExists && (
-          <View style={styles.contentIndicator} />
+          <CellContentIndicator 
+            content={cellContent} 
+            size="small" 
+          />
         )}
       </MotiView>
     </Pressable>
@@ -66,34 +70,35 @@ export default function WeekCell({ year, week, onPress, onLongPress }: WeekCellP
 
 const styles = StyleSheet.create({
   cell: {
-    width: 6,
-    height: 6,
-    borderRadius: 1,
-    position: 'relative',
+    width: 12,
+    height: 12,
+    borderRadius: 2,
     margin: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   filled: {
-    backgroundColor: '#000',
+    backgroundColor: '#888', // Light gray for dark mode
   },
   empty: {
-    borderWidth: 0.5,
-    borderColor: '#000',
-    backgroundColor: '#fff',
+    backgroundColor: '#2A2A2A', // Dark gray for dark mode
+    borderWidth: 1,
+    borderColor: '#444', // Darker border for dark mode
   },
   current: {
-    borderColor: '#007AFF',
-    borderWidth: 1,
+    borderColor: '#007AFF', // iOS blue
+    borderWidth: 2,
   },
   pressed: {
-    backgroundColor: '#f0f0f0',
+    opacity: 0.7,
   },
   contentIndicator: {
-    position: 'absolute',
-    top: -1,
-    right: -1,
-    width: 3,
-    height: 3,
-    borderRadius: 1.5,
-    backgroundColor: '#007AFF',
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#007AFF', // iOS blue
   },
 });
+
+// Memoize the component to prevent unnecessary re-renders
+export default memo(WeekCell);

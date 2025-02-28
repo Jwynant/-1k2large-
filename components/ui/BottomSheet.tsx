@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { ReactNode } from 'react';
 import { View, Text, StyleSheet, Pressable, Modal, ScrollView, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { ContentItem } from '../../app/context/AppContext';
+import { ContentItem } from '../../app/types';
 import { useDateCalculations } from '../../app/hooks/useDateCalculations';
 import { useRef, useEffect } from 'react';
 import { useRouter } from 'expo-router';
@@ -9,22 +9,59 @@ import { useRouter } from 'expo-router';
 type BottomSheetProps = {
   visible: boolean;
   onClose: () => void;
-  content: ContentItem[];
+  content: ContentItem[] | ReactNode;
+  title?: string;
   selectedCell?: { year: number; month?: number; week?: number };
 };
 
-export default function BottomSheet({ visible, onClose, content, selectedCell }: BottomSheetProps) {
+export default function BottomSheet({ visible, onClose, content, title, selectedCell }: BottomSheetProps) {
   const { formatDate } = useDateCalculations();
   const router = useRouter();
   const translateY = useRef(new Animated.Value(300)).current;
   const opacity = useRef(new Animated.Value(0)).current;
 
+  // Helper functions for content type styling
+  const getContentTypeIcon = (type: string) => {
+    switch (type) {
+      case 'memory':
+        return 'image-outline';
+      case 'lesson':
+        return 'bulb-outline';
+      case 'goal':
+        return 'flag-outline';
+      case 'reflection':
+        return 'journal-outline';
+      default:
+        return 'document-outline';
+    }
+  };
+  
+  const getContentTypeColor = (type: string) => {
+    switch (type) {
+      case 'memory':
+        return '#4A90E2';
+      case 'lesson':
+        return '#50E3C2';
+      case 'goal':
+        return '#F5A623';
+      case 'reflection':
+        return '#9013FE';
+      default:
+        return '#999';
+    }
+  };
+
   // Generate title based on the first content item's date
   const getTitle = () => {
-    if (content.length === 0) return 'No Content';
+    if (title) return title;
     
-    const firstItem = content[0];
-    return formatDate(firstItem.date);
+    if (Array.isArray(content)) {
+      if (content.length === 0) return 'No Content';
+      const firstItem = content[0];
+      return formatDate(new Date(firstItem.date));
+    }
+    
+    return 'Content';
   };
 
   useEffect(() => {
@@ -99,46 +136,47 @@ export default function BottomSheet({ visible, onClose, content, selectedCell }:
             </View>
             
             <ScrollView style={styles.scrollContent}>
-              {content.length > 0 ? (
-                content.map(item => (
-                  <Pressable 
-                    key={item.id} 
-                    style={styles.contentItem}
-                    onPress={() => handleContentPress(item)}
-                  >
-                    <View style={styles.contentHeader}>
-                      <Text style={styles.contentTitle}>{item.title}</Text>
-                      <View style={[styles.contentBadge, 
-                        item.type === 'memory' && styles.memoryBadge,
-                        item.type === 'lesson' && styles.lessonBadge,
-                        item.type === 'goal' && styles.goalBadge,
-                        item.type === 'reflection' && styles.reflectionBadge,
-                      ]}>
-                        <Text style={styles.contentBadgeText}>{item.type}</Text>
+              {Array.isArray(content) ? (
+                content.length > 0 ? (
+                  content.map(item => (
+                    <Pressable 
+                      key={item.id} 
+                      style={styles.contentItem}
+                      onPress={() => handleContentPress(item)}
+                    >
+                      <View style={styles.contentHeader}>
+                        <View style={[styles.contentTypeTag, { backgroundColor: getContentTypeColor(item.type) }]}>
+                          <Ionicons name={getContentTypeIcon(item.type)} size={14} color="#fff" />
+                          <Text style={styles.contentTypeText}>{item.type.charAt(0).toUpperCase() + item.type.slice(1)}</Text>
+                        </View>
+                        <Text style={styles.contentDate}>{formatDate(new Date(item.date))}</Text>
                       </View>
-                    </View>
-                    <Text style={styles.contentDate}>{formatDate(item.date)}</Text>
-                    {item.notes && (
-                      <Text 
-                        style={styles.contentNotes}
-                        numberOfLines={2}
-                        ellipsizeMode="tail"
-                      >
-                        {item.notes}
-                      </Text>
-                    )}
-                  </Pressable>
-                ))
+                      <Text style={styles.contentTitle}>{item.title}</Text>
+                      {item.notes && (
+                        <Text 
+                          style={styles.contentNotes}
+                          numberOfLines={2}
+                          ellipsizeMode="tail"
+                        >
+                          {item.notes}
+                        </Text>
+                      )}
+                    </Pressable>
+                  ))
+                ) : (
+                  <View style={styles.emptyContent}>
+                    <Text style={styles.emptyText}>No content for this time period</Text>
+                    <Pressable 
+                      style={styles.addContentButton}
+                      onPress={onClose}
+                    >
+                      <Text style={styles.addContentButtonText}>Close</Text>
+                    </Pressable>
+                  </View>
+                )
               ) : (
-                <View style={styles.emptyContent}>
-                  <Text style={styles.emptyText}>No content for this time period</Text>
-                  <Pressable 
-                    style={styles.addContentButton}
-                    onPress={onClose}
-                  >
-                    <Text style={styles.addContentButtonText}>Close</Text>
-                  </Pressable>
-                </View>
+                // Render ReactNode content directly
+                content
               )}
             </ScrollView>
           </Pressable>
@@ -209,33 +247,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 8,
   },
-  contentTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    flex: 1,
-  },
-  contentBadge: {
+  contentTypeTag: {
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
-    marginLeft: 8,
+    marginRight: 8,
   },
-  contentBadgeText: {
+  contentTypeText: {
     fontSize: 12,
     fontWeight: '600',
     color: '#fff',
   },
-  memoryBadge: {
-    backgroundColor: '#4A90E2',
-  },
-  lessonBadge: {
-    backgroundColor: '#50C878',
-  },
-  goalBadge: {
-    backgroundColor: '#FF9500',
-  },
-  reflectionBadge: {
-    backgroundColor: '#9B59B6',
+  contentTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    flex: 1,
   },
   contentDate: {
     fontSize: 14,
