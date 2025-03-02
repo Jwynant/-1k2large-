@@ -6,6 +6,9 @@ import { useDateCalculations } from '../../../app/hooks/useDateCalculations';
 import { useAppContext } from '../../../app/context/AppContext';
 import WeekExpandedView from './WeekExpandedView';
 
+// Define a cluster type for better type safety
+type Cluster = { year: number; isCurrent: boolean } | null;
+
 export type WeekGridViewProps = {
   clusters: { year: number; isCurrent: boolean }[];
   onCellPress: (year: number, month?: number, week?: number) => void;
@@ -21,57 +24,60 @@ function WeekGridView({
   onClusterPress,
   hasContent
 }: WeekGridViewProps) {
-  const { userAge } = useDateCalculations();
+  const { getAgeForYear } = useDateCalculations();
   const { state } = useAppContext();
   const [expandedCluster, setExpandedCluster] = useState<number | null>(null);
   
-  // Group clusters into rows for easier rendering
+  // Always use exactly 5 clusters per row
+  const CLUSTERS_PER_ROW = 5;
+  
+  // Group clusters into rows with exactly 5 clusters in each row
   const clusterRows = useMemo(() => {
-    const rows = [];
+    if (clusters.length === 0) return [] as Cluster[][];
     
-    // Group by 5-year periods based on absolute years, not user age
-    // This ensures consistent grid structure regardless of birth date
-    let currentRow = [];
-    let rowStartYear = Math.floor(clusters[0]?.year / 5) * 5;
+    // Sort clusters by year
+    const sortedClusters = [...clusters].sort((a, b) => a.year - b.year);
     
-    for (let i = 0; i < clusters.length; i++) {
-      const cluster = clusters[i];
-      const yearGroup = Math.floor(cluster.year / 5) * 5;
-      
-      // Start a new row when we reach a new 5-year block
-      if (yearGroup !== rowStartYear && currentRow.length > 0) {
-        rows.push(currentRow);
-        currentRow = [];
-        rowStartYear = yearGroup;
-      }
-      
+    const rows: Cluster[][] = [];
+    let currentRow: Cluster[] = [];
+    
+    // Distribute clusters into rows of exactly 5
+    sortedClusters.forEach((cluster, index) => {
       currentRow.push(cluster);
       
-      // Push the last row if we're at the end
-      if (i === clusters.length - 1 && currentRow.length > 0) {
-        rows.push(currentRow);
+      // When we have 5 clusters or it's the last cluster, add the row
+      if (currentRow.length === CLUSTERS_PER_ROW || index === sortedClusters.length - 1) {
+        // If it's the last row and not full, pad it with null values to maintain layout
+        while (currentRow.length < CLUSTERS_PER_ROW) {
+          currentRow.push(null);
+        }
+        
+        rows.push([...currentRow]);
+        currentRow = [];
       }
-    }
+    });
     
     return rows;
   }, [clusters]);
   
-  // Generate age labels for each row
+  // Generate age labels by increments of 5
   const ageLabels = useMemo(() => {
-    const birthYear = state.userBirthDate 
-      ? new Date(state.userBirthDate).getFullYear() 
-      : new Date().getFullYear() - 30;
+    if (clusterRows.length === 0) return [] as string[];
     
-    return clusterRows.map((row) => {
-      if (row.length === 0) return "";
+    return clusterRows.map((row, index) => {
+      // Find the first valid cluster in the row
+      const firstValidCluster = row.find((c): c is { year: number; isCurrent: boolean } => c !== null);
+      if (!firstValidCluster) return "";
       
-      const firstYearInRow = row[0]?.year || 0;
-      const age = firstYearInRow - birthYear;
+      // Calculate the age for the first year in the row
+      const age = getAgeForYear(firstValidCluster.year);
+      if (age === null) return "";
       
-      // Only show age label if it's a positive number
-      return age >= 0 ? `${age}` : "";
+      // For proper alignment, return the age that represents the start of this row
+      // (which is always a multiple of 5)
+      return `${Math.floor(age / 5) * 5}`;
     });
-  }, [clusterRows, state.userBirthDate]);
+  }, [clusterRows, getAgeForYear]);
 
   const handleClusterPress = (year: number, position: { x: number, y: number, width: number, height: number }) => {
     onClusterPress(year, position);
@@ -99,25 +105,12 @@ function WeekGridView({
     );
   }
 
+  // Fallback if no rows were calculated
   if (clusterRows.length === 0) {
     return (
       <ScrollView style={styles.container}>
         <View style={styles.grid}>
-          <View style={styles.row}>
-            {clusters.map((cluster) => (
-              <WeekCluster 
-                key={cluster.year} 
-                year={cluster.year} 
-                isCurrent={cluster.isCurrent}
-                onPress={(position) => handleClusterPress(cluster.year, position)}
-                onCellPress={(week: number) => onCellPress(cluster.year, undefined, week)}
-                onLongPress={(week: number, position: { x: number, y: number }) => 
-                  onLongPress(cluster.year, undefined, week, position)
-                }
-                hasContent={hasContent}
-              />
-            ))}
-          </View>
+          <Text style={styles.emptyText}>No weeks available</Text>
         </View>
       </ScrollView>
     );
@@ -147,19 +140,26 @@ function WeekGridView({
                 // Reduce bottom margin for the last row
                 rowIndex === clusterRows.length - 1 && styles.lastRow
               ]}>
-                {row.map((cluster) => (
-                  <WeekCluster 
-                    key={cluster.year} 
-                    year={cluster.year} 
-                    isCurrent={cluster.isCurrent}
-                    onPress={(position) => handleClusterPress(cluster.year, position)}
-                    onCellPress={(week: number) => onCellPress(cluster.year, undefined, week)}
-                    onLongPress={(week: number, position: { x: number, y: number }) => 
-                      onLongPress(cluster.year, undefined, week, position)
-                    }
-                    hasContent={hasContent}
-                  />
-                ))}
+                {row.map((cluster: Cluster, colIndex: number) => {
+                  if (cluster === null) {
+                    // Render an empty placeholder to maintain grid structure
+                    return <View key={`empty-${rowIndex}-${colIndex}`} style={styles.emptyCluster} />;
+                  }
+                  
+                  return (
+                    <WeekCluster 
+                      key={cluster.year} 
+                      year={cluster.year} 
+                      isCurrent={cluster.isCurrent}
+                      onPress={(position) => handleClusterPress(cluster.year, position)}
+                      onCellPress={(week: number) => onCellPress(cluster.year, undefined, week)}
+                      onLongPress={(week: number, position: { x: number, y: number }) => 
+                        onLongPress(cluster.year, undefined, week, position)
+                      }
+                      hasContent={hasContent}
+                    />
+                  );
+                })}
               </View>
             ))}
           </View>
@@ -182,17 +182,17 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   ageLabelsContainer: {
-    width: 30,
-    paddingTop: 10, // Match the grid padding
+    width: 25,
+    paddingTop: 40, // Match the grid padding
     alignItems: 'center',
   },
   ageLabel: {
-    fontSize: 14,
+    fontSize: 16,
     color: '#aaa', // Light gray for dark mode
     fontWeight: '500',
-    height: 135, // Updated to match the new cluster height + marginBottom
+    height: 150, // Height to match a row of clusters
     textAlignVertical: 'center',
-    lineHeight: 85, // Match the height of the cluster
+    lineHeight: 50, // Center text vertically
   },
   gridContainer: {
     flex: 1,
@@ -204,11 +204,24 @@ const styles = StyleSheet.create({
   },
   row: {
     flexDirection: 'row',
-    marginBottom: 50, // Keep the larger spacing between 5-year groupings
+    marginBottom: 20,
+    justifyContent: 'flex-start',
+    alignItems: 'center',
   },
   lastRow: {
     marginBottom: 5, // Minimal margin for the last row
   },
+  emptyCluster: {
+    width: 90, // Match the width of WeekCluster
+    height: 90, // Match the height of WeekCluster
+    margin: 5,
+  },
+  emptyText: {
+    color: '#ffffff',
+    textAlign: 'center',
+    marginTop: 20,
+    fontSize: 16,
+  }
 });
 
 export default memo(WeekGridView);

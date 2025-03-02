@@ -37,7 +37,13 @@ export default function GridContainer() {
   } = useGridNavigation();
   
   const { getCellContent, hasContent } = useContentManagement();
-  const { isCurrentYear, isCurrentMonth, isCurrentWeek, userAge } = useDateCalculations();
+  const { 
+    isCurrentYear, 
+    isCurrentMonth, 
+    isCurrentWeek, 
+    getPreciseAge,
+    getLifeProgress
+  } = useDateCalculations();
   
   // Local state
   const [detailSheetVisible, setDetailSheetVisible] = useState(false);
@@ -57,15 +63,21 @@ export default function GridContainer() {
   const gridWidth = windowWidth;
   const gridHeight = windowHeight - 100; // Further reduced to give more space to the grid
   
+  // Calculate current age with precision
+  const { state } = useAppContext();
+  
   // Generate clusters based on current year and user lifespan
   const clusters = useMemo(() => {
     const currentYear = new Date().getFullYear();
     const lifespan = 83; // Default lifespan, could be from settings
     
-    // Use a fixed starting point for grid structure (age 0)
-    // This ensures grid structure doesn't change when birth date changes
-    const startYear = currentYear - 40; // Show some history
-    const endYear = currentYear + 60; // Show future up to typical lifespan
+    // Get the user's birth year from the birth date
+    const birthDate = state.userBirthDate ? new Date(state.userBirthDate) : null;
+    const birthYear = birthDate ? birthDate.getFullYear() : currentYear;
+    
+    // Start from birth year and show future up to typical lifespan
+    const startYear = birthYear; // Start from birth year
+    const endYear = birthYear + lifespan; // Show future up to typical lifespan
     
     const clusterArray: Cluster[] = [];
     for (let year = startYear; year <= endYear; year++) {
@@ -75,7 +87,7 @@ export default function GridContainer() {
       });
     }
     return clusterArray;
-  }, []);
+  }, [state.userBirthDate]);
   
   // Handle view mode toggle
   const toggleViewMode = useCallback(() => {
@@ -221,80 +233,20 @@ export default function GridContainer() {
     return null;
   }, [detailSheetVisible, selectedCell, handleCellDetailClose]);
   
-  // Calculate current age with precision
-  const { state } = useAppContext();
-  
+  // Use the centralized age calculation
   const preciseAge = useMemo(() => {
-    if (!state.userBirthDate) return "Age not set";
-    
-    const birthDate = new Date(state.userBirthDate);
-    const now = new Date();
-    
-    // Get difference in milliseconds
-    const diffMs = now.getTime() - birthDate.getTime();
-    
-    // Calculate years
-    const years = now.getFullYear() - birthDate.getFullYear();
-    
-    // Calculate months (adjust if birthday hasn't occurred yet this year)
-    let months = now.getMonth() - birthDate.getMonth();
-    if (now.getDate() < birthDate.getDate()) {
-      months--;
-    }
-    // Adjust for negative months (birthday hasn't occurred yet this year)
-    months = (months < 0) ? months + 12 : months;
-    
-    // Calculate days remaining after accounting for years and months
-    const tempDate = new Date(birthDate);
-    tempDate.setFullYear(tempDate.getFullYear() + years);
-    tempDate.setMonth(tempDate.getMonth() + months);
-    
-    // Get days difference
-    let days = now.getDate() - tempDate.getDate();
-    if (days < 0) {
-      // Get days in previous month
-      const lastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
-      days += lastMonth.getDate();
-    }
-    
-    // Calculate weeks and remaining days
-    const weeks = Math.floor(days / 7);
-    const remainingDays = days % 7;
-    
-    // Build the age string
-    let ageString = `${years} ${years === 1 ? 'Year' : 'Years'}`;
-    ageString += `, ${months} ${months === 1 ? 'Month' : 'Months'}`;
-    ageString += `, ${weeks} ${weeks === 1 ? 'Week' : 'Weeks'}`;
-    ageString += `, ${remainingDays} ${remainingDays === 1 ? 'Day' : 'Days'}`;
-    
-    return ageString;
-  }, [state.userBirthDate]);
+    return getPreciseAge();
+  }, [getPreciseAge]);
   
   // Format current date
   const formattedDate = useMemo(() => {
     return format(new Date(), 'MMMM d, yyyy');
   }, []);
   
-  // Calculate life progress percentage
+  // Calculate life progress percentage using centralized method
   const lifeProgressPercentage = useMemo(() => {
-    if (!state.userBirthDate) return 0;
-    
-    const birthDate = new Date(state.userBirthDate);
-    const now = new Date();
-    
-    // Default lifespan in years
-    const lifespanYears = 80;
-    
-    // Calculate total milliseconds in the expected lifespan
-    const lifespanMs = lifespanYears * 365.25 * 24 * 60 * 60 * 1000;
-    
-    // Calculate how much time has been lived so far
-    const livedMs = now.getTime() - birthDate.getTime();
-    
-    // Calculate the percentage (capped at 100%)
-    const percentage = (livedMs / lifespanMs) * 100;
-    return Math.min(100, Math.max(0, percentage));
-  }, [state.userBirthDate]);
+    return getLifeProgress(80); // 80 years as default life expectancy
+  }, [getLifeProgress]);
   
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>

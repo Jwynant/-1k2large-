@@ -4,6 +4,9 @@ import MonthCluster from './MonthCluster';
 import { useDateCalculations } from '../../../app/hooks/useDateCalculations';
 import { useAppContext } from '../../../app/context/AppContext';
 
+// Define a cluster type for better type safety
+type Cluster = { year: number; isCurrent: boolean } | null;
+
 export type MonthGridViewProps = {
   clusters: { year: number; isCurrent: boolean }[];
   onCellPress: (year: number, month?: number, week?: number) => void;
@@ -19,80 +22,66 @@ function MonthGridView({
   onClusterPress,
   hasContent
 }: MonthGridViewProps) {
-  const { userAge } = useDateCalculations();
+  const { getYearLabel, getAgeForYear } = useDateCalculations();
   const { state } = useAppContext();
   
-  // Calculate how many clusters to display per row
+  // Always use exactly 5 clusters per row
   const CLUSTERS_PER_ROW = 5;
   
-  // Group clusters into rows for easier rendering
+  // Group clusters into rows with exactly 5 clusters in each row
   const clusterRows = useMemo(() => {
-    const rows = [];
+    if (clusters.length === 0) return [] as Cluster[][];
     
-    // Group by 5-year periods based on absolute years, not user age
-    // This ensures consistent grid structure regardless of birth date
-    let currentRow = [];
-    let rowStartYear = Math.floor(clusters[0]?.year / 5) * 5;
+    // Sort clusters by year
+    const sortedClusters = [...clusters].sort((a, b) => a.year - b.year);
     
-    for (let i = 0; i < clusters.length; i++) {
-      const cluster = clusters[i];
-      const yearGroup = Math.floor(cluster.year / 5) * 5;
-      
-      // Start a new row when we reach a new 5-year block
-      if (yearGroup !== rowStartYear && currentRow.length > 0) {
-        rows.push(currentRow);
-        currentRow = [];
-        rowStartYear = yearGroup;
-      }
-      
+    const rows: Cluster[][] = [];
+    let currentRow: Cluster[] = [];
+    
+    // Distribute clusters into rows of exactly 5
+    sortedClusters.forEach((cluster, index) => {
       currentRow.push(cluster);
       
-      // Push the last row if we're at the end
-      if (i === clusters.length - 1 && currentRow.length > 0) {
-        rows.push(currentRow);
+      // When we have 5 clusters or it's the last cluster, add the row
+      if (currentRow.length === CLUSTERS_PER_ROW || index === sortedClusters.length - 1) {
+        // If it's the last row and not full, pad it with null values to maintain layout
+        while (currentRow.length < CLUSTERS_PER_ROW) {
+          currentRow.push(null);
+        }
+        
+        rows.push([...currentRow]);
+        currentRow = [];
       }
-    }
+    });
     
     return rows;
   }, [clusters]);
   
-  // Generate age labels for each row
+  // Generate age labels by increments of 5
   const ageLabels = useMemo(() => {
-    const birthYear = state.userBirthDate 
-      ? new Date(state.userBirthDate).getFullYear() 
-      : new Date().getFullYear() - 30;
+    if (clusterRows.length === 0) return [] as string[];
     
-    return clusterRows.map((row) => {
-      if (row.length === 0) return "";
+    return clusterRows.map((row, index) => {
+      // Find the first valid cluster in the row
+      const firstValidCluster = row.find((c): c is { year: number; isCurrent: boolean } => c !== null);
+      if (!firstValidCluster) return "";
       
-      const firstYearInRow = row[0]?.year || 0;
-      const age = firstYearInRow - birthYear;
+      // Calculate the age for the first year in the row
+      const age = getAgeForYear(firstValidCluster.year);
+      if (age === null) return "";
       
-      // Only show age label if it's a positive number
-      return age >= 0 ? `${age}` : "";
+      // For proper alignment, return the age that represents the start of this row
+      // (which is always a multiple of 5)
+      return `${Math.floor(age / 5) * 5}`;
     });
-  }, [clusterRows, state.userBirthDate]);
+  }, [clusterRows, getAgeForYear]);
 
   // Fallback if no rows were calculated
   if (clusterRows.length === 0) {
     return (
       <ScrollView style={styles.container}>
         <View style={styles.grid}>
-          <View style={styles.row}>
-            {clusters.map((cluster) => (
-              <MonthCluster 
-                key={cluster.year} 
-                year={cluster.year} 
-                isCurrent={cluster.isCurrent}
-                onPress={(position) => onClusterPress(cluster.year, position)}
-                onCellPress={(month: number) => onCellPress(cluster.year, month)}
-                onLongPress={(month: number, position: { x: number, y: number }) => 
-                  onLongPress(cluster.year, month, undefined, position)
-                }
-                hasContent={hasContent}
-              />
-            ))}
-          </View>
+          <Text style={styles.emptyText}>No months available</Text>
         </View>
       </ScrollView>
     );
@@ -118,19 +107,26 @@ function MonthGridView({
           <View style={styles.grid}>
             {clusterRows.map((row, rowIndex) => (
               <View key={`row-${rowIndex}`} style={styles.row}>
-                {row.map((cluster) => (
-                  <MonthCluster 
-                    key={cluster.year} 
-                    year={cluster.year} 
-                    isCurrent={cluster.isCurrent}
-                    onPress={(position) => onClusterPress(cluster.year, position)}
-                    onCellPress={(month: number) => onCellPress(cluster.year, month)}
-                    onLongPress={(month: number, position: { x: number, y: number }) => 
-                      onLongPress(cluster.year, month, undefined, position)
-                    }
-                    hasContent={hasContent}
-                  />
-                ))}
+                {row.map((cluster: Cluster, colIndex: number) => {
+                  if (cluster === null) {
+                    // Render an empty placeholder to maintain grid structure
+                    return <View key={`empty-${rowIndex}-${colIndex}`} style={styles.emptyCluster} />;
+                  }
+                  
+                  return (
+                    <MonthCluster 
+                      key={cluster.year} 
+                      year={cluster.year} 
+                      isCurrent={cluster.isCurrent}
+                      onPress={(position) => onClusterPress(cluster.year, position)}
+                      onCellPress={(month: number) => onCellPress(cluster.year, month)}
+                      onLongPress={(month: number, position: { x: number, y: number }) => 
+                        onLongPress(cluster.year, month, undefined, position)
+                      }
+                      hasContent={hasContent}
+                    />
+                  );
+                })}
               </View>
             ))}
           </View>
@@ -154,16 +150,16 @@ const styles = StyleSheet.create({
   },
   ageLabelsContainer: {
     width: 20,
-    paddingTop: 80, // Match the grid padding
+    paddingTop: 40, // Match the grid padding
     alignItems: 'center',
   },
   ageLabel: {
     fontSize: 14,
     color: '#aaa', // Light gray for dark mode
     fontWeight: '500',
-    height: 80, // Height to match a row of clusters
+    height: 100, // Increased height to match a row of clusters
     textAlignVertical: 'center',
-    lineHeight: 40, // Center text vertically
+    lineHeight: 30, // Center text vertically
   },
   gridContainer: {
     flex: 1,
@@ -175,8 +171,21 @@ const styles = StyleSheet.create({
   },
   row: {
     flexDirection: 'row',
-    marginBottom: 10,
+    marginBottom: 8,
+    justifyContent: 'flex-start',
+    alignItems: 'center',
   },
+  emptyCluster: {
+    width: 90, // Match the width of MonthCluster
+    height: 90, // Match the height of MonthCluster
+    margin: 5,
+  },
+  emptyText: {
+    color: '#ffffff',
+    textAlign: 'center',
+    marginTop: 20,
+    fontSize: 16,
+  }
 });
 
 export default memo(MonthGridView);

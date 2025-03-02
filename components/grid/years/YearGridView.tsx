@@ -2,6 +2,7 @@ import { View, StyleSheet, ScrollView, Text, useWindowDimensions } from 'react-n
 import { memo, useMemo } from 'react';
 import YearCell from './YearCell';
 import { useAppContext } from '../../../app/context/AppContext';
+import { useDateCalculations } from '../../../app/hooks/useDateCalculations';
 
 export type YearGridViewProps = {
   clusters: { year: number; isCurrent: boolean }[];
@@ -20,14 +21,10 @@ function YearGridView({
 }: YearGridViewProps) {
   const { width } = useWindowDimensions();
   const { state } = useAppContext();
+  const { getAgeForYear, isUserBirthYear } = useDateCalculations();
   
   // Get the current year to determine which cells should be filled
   const currentYear = new Date().getFullYear();
-  
-  // Get birth year for age calculation
-  const birthYear = state.userBirthDate 
-    ? new Date(state.userBirthDate).getFullYear() 
-    : new Date().getFullYear() - 30;
 
   // Process all years into rows of exactly 10
   const yearRows = useMemo(() => {
@@ -74,7 +71,8 @@ function YearGridView({
                 const isPast = year < currentYear;
                 const isCurrent = year === currentYear;
                 const hasContentForYear = hasContent(year);
-                const age = year - birthYear;
+                const age = getAgeForYear(year);
+                const isBirthYear = isUserBirthYear(year);
                 
                 return (
                   <YearCell 
@@ -83,6 +81,7 @@ function YearGridView({
                     age={age}
                     isPast={isPast}
                     isCurrent={isCurrent}
+                    isBirthYear={isBirthYear}
                     hasContent={hasContentForYear}
                     onPress={() => onCellPress(year)}
                     onLongPress={(position) => 

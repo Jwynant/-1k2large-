@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { SelectedCell } from '../types';
 
@@ -8,14 +8,122 @@ import { SelectedCell } from '../types';
 export function useDateCalculations() {
   const { state } = useAppContext();
   
-  // Calculate user's age for a given year
-  const userAge = useCallback((year: number) => {
+  // Get the user's birth date or null if not set
+  const getBirthDate = useCallback((): Date | null => {
     if (!state.userBirthDate) return null;
-    
-    const birthDate = new Date(state.userBirthDate);
-    const birthYear = birthDate.getFullYear();
-    return year - birthYear;
+    return new Date(state.userBirthDate);
   }, [state.userBirthDate]);
+  
+  // Calculate user's current age in years (integer)
+  const getUserAge = useCallback((): number | null => {
+    const birthDate = getBirthDate();
+    if (!birthDate) return null;
+    
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    
+    // Adjust if birthday hasn't occurred yet this year
+    const hasBirthdayOccurredThisYear = 
+      today.getMonth() > birthDate.getMonth() || 
+      (today.getMonth() === birthDate.getMonth() && today.getDate() >= birthDate.getDate());
+      
+    if (!hasBirthdayOccurredThisYear) {
+      age--;
+    }
+    
+    return age;
+  }, [getBirthDate]);
+  
+  // Calculate user's age for a given year (0-based)
+  const getAgeForYear = useCallback((year: number): number | null => {
+    const birthDate = getBirthDate();
+    if (!birthDate) return null;
+    
+    const birthYear = birthDate.getFullYear();
+    const age = year - birthYear;
+    
+    // Return null for pre-birth years
+    return age >= 0 ? age : null;
+  }, [getBirthDate]);
+  
+  // Get appropriate label for year grid
+  const getYearLabel = useCallback((year: number): string => {
+    const age = getAgeForYear(year);
+    return age !== null ? `${age}` : "";
+  }, [getAgeForYear]);
+  
+  // Calculate precise age with years, months, weeks, days
+  const getPreciseAge = useCallback((): string => {
+    const birthDate = getBirthDate();
+    if (!birthDate) return "Age not set";
+    
+    const now = new Date();
+    
+    // Calculate years
+    let years = now.getFullYear() - birthDate.getFullYear();
+    
+    // Calculate months (adjust if birthday hasn't occurred yet this year)
+    let months = now.getMonth() - birthDate.getMonth();
+    if (now.getDate() < birthDate.getDate()) {
+      months--;
+    }
+    // Adjust for negative months (birthday hasn't occurred yet this year)
+    if (months < 0) {
+      years--;
+      months += 12;
+    }
+    
+    // Calculate days remaining after accounting for years and months
+    const tempDate = new Date(birthDate);
+    tempDate.setFullYear(tempDate.getFullYear() + years);
+    tempDate.setMonth(tempDate.getMonth() + months);
+    
+    // Get days difference
+    let days = now.getDate() - tempDate.getDate();
+    if (days < 0) {
+      // Get days in previous month
+      const lastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+      days += lastMonth.getDate();
+    }
+    
+    // Calculate weeks and remaining days
+    const weeks = Math.floor(days / 7);
+    const remainingDays = days % 7;
+    
+    // Build the age string
+    let ageString = `${years} ${years === 1 ? 'Year' : 'Years'}`;
+    ageString += `, ${months} ${months === 1 ? 'Month' : 'Months'}`;
+    ageString += `, ${weeks} ${weeks === 1 ? 'Week' : 'Weeks'}`;
+    ageString += `, ${remainingDays} ${remainingDays === 1 ? 'Day' : 'Days'}`;
+    
+    return ageString;
+  }, [getBirthDate]);
+  
+  // Calculate life progress percentage
+  const getLifeProgress = useCallback((lifeExpectancy: number = 80): number => {
+    const birthDate = getBirthDate();
+    if (!birthDate) return 0;
+    
+    const now = new Date();
+    
+    // Calculate total milliseconds in the expected lifespan
+    const lifespanMs = lifeExpectancy * 365.25 * 24 * 60 * 60 * 1000;
+    
+    // Calculate how much time has been lived so far
+    const livedMs = now.getTime() - birthDate.getTime();
+    
+    // Calculate the percentage (capped at 100%)
+    const percentage = (livedMs / lifespanMs) * 100;
+    return Math.min(100, Math.max(0, percentage));
+  }, [getBirthDate]);
+  
+  // Check if a year is the user's birth year
+  const isUserBirthYear = useCallback((year: number): boolean => {
+    const birthDate = getBirthDate();
+    if (!birthDate) return false;
+    
+    return birthDate.getFullYear() === year;
+  }, [getBirthDate]);
   
   // Calculate if a month is in the past
   const isMonthInPast = useCallback((year: number, month: number) => {
@@ -134,7 +242,16 @@ export function useDateCalculations() {
     getMonthDateRange,
     getWeekDateRange,
     formatDate,
-    userAge,
     formatDateFromCell,
+    // New age calculation methods
+    getBirthDate,
+    getUserAge,
+    getAgeForYear,
+    getYearLabel,
+    getPreciseAge,
+    getLifeProgress,
+    isUserBirthYear,
+    // Legacy method for backward compatibility
+    userAge: getAgeForYear,
   };
 } 

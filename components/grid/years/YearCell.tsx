@@ -6,9 +6,10 @@ import CellContentIndicator from '../CellContentIndicator';
 
 type YearCellProps = {
   year: number;
-  age?: number;
+  age?: number | null;
   isPast: boolean;
   isCurrent: boolean;
+  isBirthYear?: boolean;
   hasContent: boolean;
   onPress?: () => void;
   onLongPress?: (position: { x: number, y: number }) => void;
@@ -18,7 +19,8 @@ export default function YearCell({
   year, 
   age,
   isPast, 
-  isCurrent, 
+  isCurrent,
+  isBirthYear = false,
   hasContent, 
   onPress, 
   onLongPress 
@@ -53,6 +55,7 @@ export default function YearCell({
           styles.cell,
           isPast ? styles.filledCell : styles.emptyCell,
           isCurrent && styles.currentCell,
+          isBirthYear && styles.birthYearCell,
           isPressed && styles.pressedCell
         ]}
         animate={{
@@ -64,9 +67,10 @@ export default function YearCell({
       >
         <Text style={[
           styles.yearText,
-          isPast ? styles.pastYearText : styles.futureYearText
+          isPast ? styles.pastYearText : styles.futureYearText,
+          isBirthYear && styles.birthYearText
         ]}>
-          {age !== undefined ? age : year}
+          {age}
         </Text>
         
         {hasContent && (
@@ -109,6 +113,11 @@ const styles = StyleSheet.create({
     borderColor: '#0366d6', // Accent color
     backgroundColor: 'transparent',
   },
+  birthYearCell: {
+    borderWidth: 2,
+    borderColor: '#00c853', // Green for birth year
+    backgroundColor: 'rgba(0, 200, 83, 0.1)', // Light green background
+  },
   pressedCell: {
     opacity: 0.7,
   },
@@ -121,6 +130,10 @@ const styles = StyleSheet.create({
   },
   futureYearText: {
     color: '#fff', // White text for current and future cells
+  },
+  birthYearText: {
+    color: '#00c853', // Green text for birth year
+    fontWeight: '700',
   },
   indicatorContainer: {
     position: 'absolute',
