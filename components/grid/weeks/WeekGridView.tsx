@@ -182,15 +182,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   ageLabelsContainer: {
-    width: 25,
-    paddingTop: 40, // Match the grid padding
+    width: 30,
+    paddingTop: 60, // Match the grid padding
     alignItems: 'center',
   },
   ageLabel: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#aaa', // Light gray for dark mode
     fontWeight: '500',
-    height: 150, // Height to match a row of clusters
+    height: 188, // Height to match a row of clusters
     textAlignVertical: 'center',
     lineHeight: 50, // Center text vertically
   },
