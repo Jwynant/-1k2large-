@@ -1,234 +1,228 @@
-import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import React, { useState, useCallback, useMemo } from 'react';
+import { 
+  View, 
+  StyleSheet, 
+  ScrollView, 
+  useColorScheme, 
+  useWindowDimensions,
+  StatusBar,
+  SafeAreaView
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-type Priority = {
-  id: string;
-  title: string;
-  isTopPriority: boolean;
-  goals: string[];
-};
+// Import new components and types
+import PrioritySelector from '../components/intentions/PrioritySelector';
+import DashboardSummary from '../components/intentions/DashboardSummary';
+import GoalList from '../components/intentions/GoalList';
+import { FilterOption, Goal, Priority, GoalStats } from '../components/intentions/types';
 
-type Goal = {
-  id: string;
-  title: string;
-  deadline?: string;
-  status: 'active' | 'completed' | 'abandoned';
-};
-
-const priorities: Priority[] = [
-  {
-    id: '1',
-    title: 'Health & Fitness',
-    isTopPriority: true,
-    goals: ['1', '2'],
-  },
-  {
-    id: '2',
-    title: 'Career Growth',
-    isTopPriority: true,
-    goals: ['3'],
-  },
-];
-
-const goals: Goal[] = [
-  {
-    id: '1',
-    title: 'Run a marathon',
-    deadline: '2024-12-31',
-    status: 'active',
-  },
-  {
-    id: '2',
-    title: 'Maintain consistent sleep schedule',
-    status: 'active',
-  },
-  {
-    id: '3',
-    title: 'Learn system design',
-    deadline: '2024-06-30',
-    status: 'active',
-  },
-];
+// Import mock data
+import { goals, priorities } from '../components/intentions/mockData';
 
 export default function IntentionsScreen() {
-  return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Intentions</Text>
-        <Text style={styles.subtitle}>Track your goals and priorities</Text>
-      </View>
+  const colorScheme = useColorScheme();
+  const isDarkMode = colorScheme === 'dark';
+  const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  
+  // State for filtering
+  const [selectedFilter, setSelectedFilter] = useState<FilterOption>('all');
+  
+  // Filter goals based on selected filter
+  const filteredGoals = useMemo(() => {
+    if (selectedFilter === 'all') {
+      return goals;
+    } else if (selectedFilter === 'high' || selectedFilter === 'medium' || selectedFilter === 'low') {
+      // Filter by priority level
+      return goals.filter(goal => {
+        const priority = priorities.find(p => p.id === goal.priorityId);
+        return priority && priority.level === selectedFilter;
+      });
+    } else {
+      // Filter by specific priority ID
+      return goals.filter(goal => goal.priorityId === selectedFilter);
+    }
+  }, [selectedFilter]);
+  
+  // Calculate goals count by priority
+  const goalsCountByPriority = useMemo(() => {
+    return priorities.reduce((counts, priority) => {
+      const activeGoalsCount = goals.filter(
+        goal => goal.priorityId === priority.id && goal.status !== 'completed' && goal.status !== 'abandoned'
+      ).length;
       
-      <ScrollView style={styles.content}>
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Top Priorities</Text>
-            <Pressable style={styles.addButton}>
-              <Ionicons name="add-circle" size={24} color="#007AFF" />
-            </Pressable>
-          </View>
-          
-          {priorities.map(priority => (
-            <Pressable key={priority.id} style={styles.priorityCard}>
-              <View style={styles.priorityHeader}>
-                <Text style={styles.priorityTitle}>{priority.title}</Text>
-                <View style={styles.priorityBadge}>
-                  <Text style={styles.priorityBadgeText}>Top Priority</Text>
-                </View>
-              </View>
-              
-              <View style={styles.goalsList}>
-                {priority.goals.map(goalId => {
-                  const goal = goals.find(g => g.id === goalId);
-                  if (!goal) return null;
-                  
-                  return (
-                    <View key={goal.id} style={styles.goalItem}>
-                      <Ionicons name="checkmark-circle-outline" size={20} color="#666" />
-                      <Text style={styles.goalText}>{goal.title}</Text>
-                      {goal.deadline && (
-                        <Text style={styles.goalDeadline}>{goal.deadline}</Text>
-                      )}
-                    </View>
-                  );
-                })}
-              </View>
-            </Pressable>
-          ))}
-        </View>
+      return {
+        ...counts,
+        [priority.id]: activeGoalsCount
+      };
+    }, {} as Record<string, number>);
+  }, [priorities, goals]);
+  
+  // Calculate stats for the dashboard
+  const stats = useMemo(() => {
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+    
+    const nextWeek = new Date(today);
+    nextWeek.setDate(today.getDate() + 7);
+    
+    const nextMonth = new Date(today);
+    nextMonth.setMonth(today.getMonth() + 1);
+    
+    // Only consider filtered goals for stats
+    const totalGoals = filteredGoals.length;
+    const completedGoals = filteredGoals.filter(goal => goal.status === 'completed').length;
+    const notStartedGoals = filteredGoals.filter(goal => goal.status === 'not_started').length;
+    const inProgressGoals = filteredGoals.filter(goal => goal.status === 'in_progress').length;
+    const abandonedGoals = filteredGoals.filter(goal => goal.status === 'abandoned').length;
+    const activeGoals = notStartedGoals + inProgressGoals;
+    
+    const completionRate = totalGoals > 0 ? Math.round((completedGoals / totalGoals) * 100) : 0;
+    
+    // Calculate goals by deadline
+    const dueToday = filteredGoals.filter(goal => {
+      if (!goal.deadline || goal.status === 'completed' || goal.status === 'abandoned') return false;
+      const deadlineDate = new Date(goal.deadline);
+      return deadlineDate.toDateString() === today.toDateString();
+    }).length;
+    
+    const dueThisWeek = filteredGoals.filter(goal => {
+      if (!goal.deadline || goal.status === 'completed' || goal.status === 'abandoned') return false;
+      const deadlineDate = new Date(goal.deadline);
+      return deadlineDate > today && deadlineDate <= nextWeek;
+    }).length;
+    
+    const dueThisMonth = filteredGoals.filter(goal => {
+      if (!goal.deadline || goal.status === 'completed' || goal.status === 'abandoned') return false;
+      const deadlineDate = new Date(goal.deadline);
+      return deadlineDate > nextWeek && deadlineDate <= nextMonth;
+    }).length;
+    
+    // Calculate goals by priority level
+    const highPriorityGoals = filteredGoals.filter(goal => {
+      if (goal.status === 'completed' || goal.status === 'abandoned') return false;
+      const priority = priorities.find(p => p.id === goal.priorityId);
+      return priority && priority.level === 'high';
+    }).length;
+    
+    const mediumPriorityGoals = filteredGoals.filter(goal => {
+      if (goal.status === 'completed' || goal.status === 'abandoned') return false;
+      const priority = priorities.find(p => p.id === goal.priorityId);
+      return priority && priority.level === 'medium';
+    }).length;
+    
+    const lowPriorityGoals = filteredGoals.filter(goal => {
+      if (goal.status === 'completed' || goal.status === 'abandoned') return false;
+      const priority = priorities.find(p => p.id === goal.priorityId);
+      return priority && priority.level === 'low';
+    }).length;
+    
+    // Calculate goals by impact
+    const highImpactGoals = filteredGoals.filter(goal => 
+      goal.status !== 'completed' && goal.status !== 'abandoned' && goal.impact === 'high'
+    ).length;
+    
+    return {
+      totalGoals,
+      completedGoals,
+      activeGoals,
+      notStartedGoals,
+      inProgressGoals,
+      abandonedGoals,
+      completionRate,
+      dueToday,
+      dueThisWeek,
+      dueThisMonth,
+      highPriorityGoals,
+      mediumPriorityGoals,
+      lowPriorityGoals,
+      highImpactGoals,
+    } as GoalStats;
+  }, [filteredGoals]);
+  
+  // Get info for selected priority if any
+  const selectedPriorityInfo = useMemo(() => {
+    if (selectedFilter !== 'all' && selectedFilter !== 'high' && selectedFilter !== 'medium' && selectedFilter !== 'low') {
+      const priority = priorities.find(p => p.id === selectedFilter);
+      if (priority) {
+        return {
+          title: priority.title,
+          color: priority.color,
+        };
+      }
+    }
+    return undefined;
+  }, [selectedFilter]);
+  
+  // Handle goal press
+  const handleGoalPress = useCallback((goalId: string) => {
+    // TODO: Navigate to goal details or show action sheet
+    console.log('Goal pressed:', goalId);
+  }, []);
+  
+  // Handle the "Focus Now" recommendation press
+  const handleFocusPress = useCallback(() => {
+    // TODO: Implement focus mode or highlight relevant goals
+    console.log('Focus mode activated');
+  }, []);
+
+  return (
+    <SafeAreaView style={[
+      styles.container, 
+      isDarkMode && styles.darkContainer,
+      { paddingTop: insets.top }
+    ]}>
+      <StatusBar
+        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
+        backgroundColor="transparent"
+        translucent
+      />
+      
+      {/* Priority Filter Bar */}
+      <PrioritySelector
+        priorities={priorities}
+        selectedFilter={selectedFilter}
+        onFilterChange={setSelectedFilter}
+        goalsCountByPriority={goalsCountByPriority}
+      />
+      
+      <ScrollView 
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
+        {/* Dashboard Summary */}
+        <DashboardSummary
+          stats={stats}
+          selectedPriorityTitle={selectedPriorityInfo?.title}
+          selectedPriorityColor={selectedPriorityInfo?.color}
+          onFocusPress={handleFocusPress}
+        />
         
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>All Goals</Text>
-            <Pressable style={styles.addButton}>
-              <Ionicons name="add-circle" size={24} color="#007AFF" />
-            </Pressable>
-          </View>
-          
-          {goals.map(goal => (
-            <Pressable key={goal.id} style={styles.goalCard}>
-              <View style={styles.goalCardHeader}>
-                <Text style={styles.goalCardTitle}>{goal.title}</Text>
-                <Ionicons name="chevron-forward" size={20} color="#999" />
-              </View>
-              {goal.deadline && (
-                <Text style={styles.goalCardDeadline}>Due {goal.deadline}</Text>
-              )}
-            </Pressable>
-          ))}
-        </View>
+        {/* Unified Goal List */}
+        <GoalList
+          goals={filteredGoals}
+          priorities={priorities}
+          onGoalPress={handleGoalPress}
+        />
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#F2F2F7', // iOS light background
   },
-  header: {
-    backgroundColor: '#fff',
-    padding: 20,
-    paddingTop: 60,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+  darkContainer: {
+    backgroundColor: '#121212', // Dark background
   },
-  content: {
+  scrollView: {
     flex: 1,
   },
-  section: {
-    marginTop: 20,
-    paddingHorizontal: 20,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 15,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    marginBottom: 10,
-  },
-  subtitle: {
-    fontSize: 18,
-    color: '#666',
-  },
-  addButton: {
-    padding: 4,
-  },
-  priorityCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  priorityHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-  priorityTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  priorityBadge: {
-    backgroundColor: '#007AFF15',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 100,
-  },
-  priorityBadgeText: {
-    color: '#007AFF',
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  goalsList: {
-    gap: 8,
-  },
-  goalItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  goalText: {
-    flex: 1,
-    fontSize: 15,
-    color: '#333',
-  },
-  goalDeadline: {
-    fontSize: 13,
-    color: '#666',
-  },
-  goalCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 8,
-  },
-  goalCardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  goalCardTitle: {
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  goalCardDeadline: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 4,
+  scrollContent: {
+    paddingBottom: 100, // Extra padding for bottom
   },
 });

@@ -55,7 +55,7 @@ export default function GridContainer() {
   
   // Calculate grid dimensions
   const gridWidth = windowWidth;
-  const gridHeight = windowHeight - 150; // Adjust for header/footer
+  const gridHeight = windowHeight - 100; // Further reduced to give more space to the grid
   
   // Generate clusters based on current year and user lifespan
   const clusters = useMemo(() => {
@@ -212,10 +212,9 @@ export default function GridContainer() {
   const renderCellDetailView = useCallback(() => {
     if (detailSheetVisible && selectedCell) {
       return (
-        <BottomSheet
-          visible={detailSheetVisible}
-          onClose={handleCellDetailClose}
-          content={<CellDetailView selectedCell={selectedCell} onClose={handleCellDetailClose} />}
+        <CellDetailView 
+          selectedCell={selectedCell} 
+          onClose={handleCellDetailClose} 
         />
       );
     }
@@ -298,7 +297,7 @@ export default function GridContainer() {
   }, [state.userBirthDate]);
   
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerTopRow}>
@@ -354,67 +353,77 @@ const styles = StyleSheet.create({
     backgroundColor: '#121212', // Dark mode background
   },
   header: {
-    padding: 16,
+    padding: 8, // Further reduced padding
     borderBottomWidth: 1,
     borderBottomColor: '#2C2C2E', // iOS system gray 6
+  },
+  headerTopSection: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4, // Further reduced margin
+  },
+  headerDateAgeContainer: {
+    flex: 1,
   },
   headerTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
   },
   dateText: {
-    fontSize: 16,
+    fontSize: 14, 
     color: '#FFFFFF', // White text
     fontWeight: '500',
   },
   ageText: {
-    fontSize: 14,
+    fontSize: 12, 
     color: '#FFFFFF', // White text
     fontWeight: '500',
-    marginBottom: 12,
+    opacity: 0.8,
+    marginTop: 2,
   },
   progressContainer: {
-    height: 20,
+    height: 12, // Further reduced height
     backgroundColor: '#2C2C2E', // iOS system gray 6
-    borderRadius: 10,
+    borderRadius: 6,
     overflow: 'hidden',
     position: 'relative',
-    marginBottom: 16,
+    marginTop: 6,
+    marginBottom: 0,
   },
   progressBar: {
     height: '100%',
     backgroundColor: '#0A84FF', // iOS blue
-    borderRadius: 10,
+    borderRadius: 6,
   },
   progressBarLabels: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     position: 'absolute',
-    left: 8,
-    right: 8,
+    left: 6,
+    right: 6,
     top: 0,
     bottom: 0,
     alignItems: 'center',
   },
   progressText: {
-    fontSize: 12,
+    fontSize: 9, // Further reduced font size
     color: '#FFFFFF',
     fontWeight: '600',
   },
   progressLifespan: {
-    fontSize: 12,
+    fontSize: 9, // Further reduced font size
     color: '#FFFFFF',
     fontWeight: '500',
     opacity: 0.7,
   },
   toggleContainer: {
-    alignItems: 'center',
-    marginTop: 4,
+    alignItems: 'flex-end',
+    paddingLeft: 8,
   },
   gridContainer: {
     flex: 1,
-    padding: 8,
+    padding: 4, // Reduced padding
   },
 });

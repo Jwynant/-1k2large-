@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, useColorScheme } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 type Lesson = {
@@ -45,36 +45,39 @@ const reflections: Reflection[] = [
 ];
 
 export default function InsightsScreen() {
+  const colorScheme = useColorScheme();
+  const isDarkMode = colorScheme === 'dark';
+  
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Insights</Text>
-        <Text style={styles.subtitle}>Discover patterns and lessons</Text>
+    <View style={[styles.container, isDarkMode && styles.darkContainer]}>
+      <View style={[styles.header, isDarkMode && styles.darkHeader]}>
+        <Text style={[styles.title, isDarkMode && styles.darkText]}>Insights</Text>
+        <Text style={[styles.subtitle, isDarkMode && styles.darkSubtitle]}>Discover patterns and lessons</Text>
       </View>
       
       <ScrollView style={styles.content}>
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Key Lessons</Text>
+            <Text style={[styles.sectionTitle, isDarkMode && styles.darkText]}>Key Lessons</Text>
             <Pressable style={styles.addButton}>
-              <Ionicons name="add-circle" size={24} color="#007AFF" />
+              <Ionicons name="add-circle" size={24} color="#0A84FF" />
             </Pressable>
           </View>
           
           {lessons.map(lesson => (
-            <Pressable key={lesson.id} style={styles.lessonCard}>
+            <Pressable key={lesson.id} style={[styles.lessonCard, isDarkMode && styles.darkCard]}>
               <View style={styles.lessonHeader}>
                 <View style={styles.lessonMeta}>
-                  <Text style={styles.lessonDate}>{lesson.date}</Text>
+                  <Text style={[styles.lessonDate, isDarkMode && styles.darkTertiaryText]}>{lesson.date}</Text>
                   <View style={styles.importanceIndicator}>
                     {Array.from({ length: lesson.importance }).map((_, i) => (
                       <View key={i} style={styles.importanceDot} />
                     ))}
                   </View>
                 </View>
-                <Text style={styles.lessonTitle}>{lesson.title}</Text>
+                <Text style={[styles.lessonTitle, isDarkMode && styles.darkText]}>{lesson.title}</Text>
                 {lesson.source && (
-                  <Text style={styles.lessonSource}>From: {lesson.source}</Text>
+                  <Text style={[styles.lessonSource, isDarkMode && styles.darkTertiaryText]}>From: {lesson.source}</Text>
                 )}
               </View>
             </Pressable>
@@ -83,16 +86,16 @@ export default function InsightsScreen() {
         
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Recent Reflections</Text>
+            <Text style={[styles.sectionTitle, isDarkMode && styles.darkText]}>Recent Reflections</Text>
             <Pressable style={styles.addButton}>
-              <Ionicons name="add-circle" size={24} color="#007AFF" />
+              <Ionicons name="add-circle" size={24} color="#0A84FF" />
             </Pressable>
           </View>
           
           {reflections.map(reflection => (
-            <Pressable key={reflection.id} style={styles.reflectionCard}>
-              <Text style={styles.reflectionDate}>{reflection.date}</Text>
-              <Text style={styles.reflectionText}>{reflection.text}</Text>
+            <Pressable key={reflection.id} style={[styles.reflectionCard, isDarkMode && styles.darkCard]}>
+              <Text style={[styles.reflectionDate, isDarkMode && styles.darkTertiaryText]}>{reflection.date}</Text>
+              <Text style={[styles.reflectionText, isDarkMode && styles.darkSecondaryText]}>{reflection.text}</Text>
             </Pressable>
           ))}
         </View>
@@ -106,12 +109,19 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
+  darkContainer: {
+    backgroundColor: '#121212',
+  },
   header: {
     backgroundColor: '#fff',
     padding: 20,
     paddingTop: 60,
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
+  },
+  darkHeader: {
+    backgroundColor: '#1C1C1E',
+    borderBottomColor: '#2C2C2E',
   },
   content: {
     flex: 1,
@@ -139,6 +149,18 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: '#666',
   },
+  darkText: {
+    color: '#FFFFFF',
+  },
+  darkSubtitle: {
+    color: '#AEAEB2',
+  },
+  darkSecondaryText: {
+    color: '#EBEBF5',
+  },
+  darkTertiaryText: {
+    color: '#8E8E93',
+  },
   addButton: {
     padding: 4,
   },
@@ -152,6 +174,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 2,
+  },
+  darkCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderWidth: 1,
+    shadowOpacity: 0.2,
   },
   lessonHeader: {
     gap: 8,
@@ -173,7 +201,7 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#007AFF',
+    backgroundColor: '#0A84FF',
   },
   lessonTitle: {
     fontSize: 17,

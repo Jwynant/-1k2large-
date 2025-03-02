@@ -124,7 +124,10 @@ function WeekGridView({
   }
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView 
+      style={styles.container}
+      contentContainerStyle={styles.scrollContentContainer}
+    >
       <View style={styles.contentContainer}>
         {/* Age labels column */}
         <View style={styles.ageLabelsContainer}>
@@ -139,7 +142,11 @@ function WeekGridView({
         <View style={styles.gridContainer}>
           <View style={styles.grid}>
             {clusterRows.map((row, rowIndex) => (
-              <View key={`row-${rowIndex}`} style={styles.row}>
+              <View key={`row-${rowIndex}`} style={[
+                styles.row,
+                // Reduce bottom margin for the last row
+                rowIndex === clusterRows.length - 1 && styles.lastRow
+              ]}>
                 {row.map((cluster) => (
                   <WeekCluster 
                     key={cluster.year} 
@@ -166,6 +173,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#121212', // Dark mode
+  },
+  scrollContentContainer: {
+    paddingBottom: 5, // Minimal bottom padding
   },
   contentContainer: {
     flexDirection: 'row',
@@ -195,6 +205,9 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     marginBottom: 50, // Keep the larger spacing between 5-year groupings
+  },
+  lastRow: {
+    marginBottom: 5, // Minimal margin for the last row
   },
 });
 

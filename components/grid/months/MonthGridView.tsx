@@ -99,7 +99,10 @@ function MonthGridView({
   }
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView 
+      style={styles.container}
+      contentContainerStyle={styles.scrollContentContainer}
+    >
       <View style={styles.contentContainer}>
         {/* Age labels column */}
         <View style={styles.ageLabelsContainer}>
@@ -141,6 +144,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#121212', // Dark mode
+  },
+  scrollContentContainer: {
+    paddingBottom: 5, // Minimal bottom padding
   },
   contentContainer: {
     flexDirection: 'row',
