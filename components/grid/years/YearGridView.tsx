@@ -104,7 +104,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#121212', // Dark mode
   },
   contentContainer: {
-    paddingTop: 15,
+    paddingTop: 55,
     paddingBottom: 5, // Reduced bottom padding
     paddingHorizontal: 15,
   },

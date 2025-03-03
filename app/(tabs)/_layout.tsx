@@ -40,24 +40,17 @@ export default function TabLayout() {
         tabBarInactiveTintColor: isDarkMode ? '#8E8E93' : '#8E8E93', // iOS gray for both modes
       }}>
       <Tabs.Screen
+        name="home"
+        options={{
+          title: 'Home',
+          tabBarIcon: ({ color }) => <Ionicons name="home" size={24} color={color} />,
+        }}
+      />
+      <Tabs.Screen
         name="index"
         options={{
           title: 'Life Grid',
           tabBarIcon: ({ color }) => <Ionicons name="grid" size={24} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="intentions"
-        options={{
-          title: 'Intentions',
-          tabBarIcon: ({ color }) => <Ionicons name="flag" size={24} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="insights"
-        options={{
-          title: 'Insights',
-          tabBarIcon: ({ color }) => <Ionicons name="sparkles" size={24} color={color} />,
         }}
       />
       <Tabs.Screen
