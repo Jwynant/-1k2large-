@@ -1,42 +1,38 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View } from 'react-native';
 import { FilterTabs, FilterOption } from './FilterTabs';
+import { useStyles } from '../../hooks';
+import { useTheme } from '../../theme';
 
 interface HomeHeaderProps {
   selectedFilter: FilterOption;
   onSelectFilter: (filter: FilterOption) => void;
-  isDarkMode: boolean;
 }
 
 export const HomeHeader: React.FC<HomeHeaderProps> = ({
   selectedFilter,
   onSelectFilter,
-  isDarkMode,
 }) => {
+  const theme = useTheme();
+  const styles = useStyles(theme => ({
+    header: {
+      backgroundColor: theme.colors.background.primary,
+      padding: theme.spacing.lg,
+      paddingTop: theme.spacing.lg,
+      paddingBottom: theme.spacing.md,
+      borderBottomWidth: theme.borders.width.thin,
+      borderBottomColor: theme.colors.border.light,
+    },
+  }));
+
   return (
-    <View style={[styles.header, isDarkMode && styles.darkHeader]}>
+    <View style={styles.header}>
       <FilterTabs
         selectedFilter={selectedFilter}
         onSelectFilter={onSelectFilter}
-        isDarkMode={isDarkMode}
       />
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  header: {
-    backgroundColor: '#fff',
-    padding: 20,
-    paddingTop: 20,
-    paddingBottom: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E5EA',
-  },
-  darkHeader: {
-    backgroundColor: '#1C1C1E',
-    borderBottomColor: '#2C2C2E',
-  },
-});
 
 export default HomeHeader; 

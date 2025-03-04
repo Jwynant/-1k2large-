@@ -1,6 +1,7 @@
 import { Stack, useRouter } from 'expo-router';
 import { useEffect } from 'react';
 import { AppProvider, useAppContext } from './context/AppContext';
+import { ThemeProvider } from './theme/ThemeContext';
 import LoadingScreen from '../components/ui/LoadingScreen';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -33,7 +34,10 @@ function AppContent() {
   }
 
   return (
-    <Stack screenOptions={{ headerShown: false }} />
+    <ThemeProvider>
+      <StatusBar style={state.theme === 'dark' ? 'light' : 'dark'} />
+      <Stack screenOptions={{ headerShown: false }} />
+    </ThemeProvider>
   );
 }
 
@@ -43,7 +47,6 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <AppProvider>
         <AppContent />
-        <StatusBar style="auto" />
       </AppProvider>
     </GestureHandlerRootView>
   );

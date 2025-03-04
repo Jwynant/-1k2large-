@@ -1,73 +1,60 @@
 import React from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useStyles } from '../../../hooks';
+import { useTheme } from '../../../theme';
+import { Button } from '../../ui/Button';
 
-interface EmptyLessonsProps {
-  isDarkMode: boolean;
-}
+export const EmptyLessons: React.FC = () => {
+  const theme = useTheme();
+  const styles = useStyles(theme => ({
+    emptyStateContainer: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: theme.spacing.xl,
+      backgroundColor: 'transparent',
+    },
+    emptyStateIconContainer: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+      backgroundColor: theme.colors.background.secondary,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: theme.spacing.md,
+    },
+    emptyStateTitle: {
+      fontSize: theme.typography.sizes.lg,
+      fontWeight: theme.typography.weights.semibold,
+      color: theme.colors.text.primary,
+      marginBottom: theme.spacing.sm,
+      textAlign: 'center',
+    },
+    emptyStateDescription: {
+      fontSize: theme.typography.sizes.md,
+      color: theme.colors.text.secondary,
+      textAlign: 'center',
+      marginBottom: theme.spacing.lg,
+      paddingHorizontal: theme.spacing.md,
+    },
+  }));
 
-export const EmptyLessons: React.FC<EmptyLessonsProps> = ({ isDarkMode }) => (
-  <View style={styles.emptyStateContainer}>
-    <View style={[styles.emptyStateIconContainer, isDarkMode && { backgroundColor: '#2C2C2E' }]}>
-      <Ionicons name="sparkles" size={40} color={isDarkMode ? '#BF5AF2' : '#AF52DE'} />
+  return (
+    <View style={styles.emptyStateContainer}>
+      <View style={styles.emptyStateIconContainer}>
+        <Ionicons name="sparkles" size={40} color={theme.colors.accent} />
+      </View>
+      <Text style={styles.emptyStateTitle}>No Lessons Yet</Text>
+      <Text style={styles.emptyStateDescription}>
+        Document insights and lessons learned throughout your experiences.
+      </Text>
+      <Button 
+        label="Capture Your First Insight"
+        onPress={() => {}}
+        variant="primary"
+      />
     </View>
-    <Text style={[styles.emptyStateTitle, isDarkMode && styles.darkText]}>No Lessons Yet</Text>
-    <Text style={[styles.emptyStateDescription, isDarkMode && styles.darkSecondaryText]}>
-      Document insights and lessons learned throughout your experiences.
-    </Text>
-    <Pressable style={styles.emptyStateButton}>
-      <Text style={styles.emptyStateButtonText}>Capture Your First Insight</Text>
-    </Pressable>
-  </View>
-);
-
-const styles = StyleSheet.create({
-  emptyStateContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 32,
-    backgroundColor: 'transparent',
-  },
-  emptyStateIconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#F2F2F7',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-  },
-  emptyStateTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#000',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  emptyStateDescription: {
-    fontSize: 16,
-    color: '#8E8E93',
-    textAlign: 'center',
-    marginBottom: 24,
-    paddingHorizontal: 16,
-  },
-  emptyStateButton: {
-    backgroundColor: '#007AFF',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-  },
-  emptyStateButtonText: {
-    color: '#FFFFFF',
-    fontWeight: '600',
-    fontSize: 16,
-  },
-  darkText: {
-    color: '#FFFFFF',
-  },
-  darkSecondaryText: {
-    color: '#EBEBF5',
-  },
-});
+  );
+};
 
 export default EmptyLessons; 

@@ -128,4 +128,7 @@ export function useContentForm({
     removeMedia,
     isValid: validateForm,
   };
-} 
+}
+
+// Default export for Expo Router
+export default useContentForm;

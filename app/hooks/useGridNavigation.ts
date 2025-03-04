@@ -48,4 +48,7 @@ export function useGridNavigation() {
     handleCellPress,
     setViewMode,
   };
-} 
+}
+
+// Default export for Expo Router
+export default useGridNavigation; 

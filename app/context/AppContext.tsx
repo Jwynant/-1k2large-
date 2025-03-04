@@ -185,4 +185,6 @@ export function useAppContext() {
     throw new Error('useAppContext must be used within an AppProvider');
   }
   return context;
-} 
+}
+
+export default AppProvider; 

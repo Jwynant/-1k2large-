@@ -109,4 +109,7 @@ export function useContentManagement() {
     getReflections,
     hasContent,
   };
-} 
+}
+
+// Default export for Expo Router
+export default useContentManagement; 

@@ -1,73 +1,60 @@
 import React from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useStyles } from '../../../hooks';
+import { useTheme } from '../../../theme';
+import { Button } from '../../ui/Button';
 
-interface EmptyMemoriesProps {
-  isDarkMode: boolean;
-}
+export const EmptyMemories: React.FC = () => {
+  const theme = useTheme();
+  const styles = useStyles(theme => ({
+    emptyStateContainer: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: theme.spacing.xl,
+      backgroundColor: 'transparent',
+    },
+    emptyStateIconContainer: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+      backgroundColor: theme.colors.background.secondary,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: theme.spacing.md,
+    },
+    emptyStateTitle: {
+      fontSize: theme.typography.sizes.lg,
+      fontWeight: theme.typography.weights.semibold,
+      color: theme.colors.text.primary,
+      marginBottom: theme.spacing.sm,
+      textAlign: 'center',
+    },
+    emptyStateDescription: {
+      fontSize: theme.typography.sizes.md,
+      color: theme.colors.text.secondary,
+      textAlign: 'center',
+      marginBottom: theme.spacing.lg,
+      paddingHorizontal: theme.spacing.md,
+    },
+  }));
 
-export const EmptyMemories: React.FC<EmptyMemoriesProps> = ({ isDarkMode }) => (
-  <View style={styles.emptyStateContainer}>
-    <View style={[styles.emptyStateIconContainer, isDarkMode && { backgroundColor: '#2C2C2E' }]}>
-      <Ionicons name="images" size={40} color={isDarkMode ? '#30D158' : '#34C759'} />
+  return (
+    <View style={styles.emptyStateContainer}>
+      <View style={styles.emptyStateIconContainer}>
+        <Ionicons name="images" size={40} color={theme.colors.positive} />
+      </View>
+      <Text style={styles.emptyStateTitle}>No Memories Yet</Text>
+      <Text style={styles.emptyStateDescription}>
+        Capture and revisit meaningful moments from your life journey.
+      </Text>
+      <Button 
+        label="Record a Memory"
+        onPress={() => {}}
+        variant="primary"
+      />
     </View>
-    <Text style={[styles.emptyStateTitle, isDarkMode && styles.darkText]}>No Memories Yet</Text>
-    <Text style={[styles.emptyStateDescription, isDarkMode && styles.darkSecondaryText]}>
-      Capture and revisit meaningful moments from your life journey.
-    </Text>
-    <Pressable style={styles.emptyStateButton}>
-      <Text style={styles.emptyStateButtonText}>Record a Memory</Text>
-    </Pressable>
-  </View>
-);
-
-const styles = StyleSheet.create({
-  emptyStateContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 32,
-    backgroundColor: 'transparent',
-  },
-  emptyStateIconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#F2F2F7',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-  },
-  emptyStateTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#000',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  emptyStateDescription: {
-    fontSize: 16,
-    color: '#8E8E93',
-    textAlign: 'center',
-    marginBottom: 24,
-    paddingHorizontal: 16,
-  },
-  emptyStateButton: {
-    backgroundColor: '#007AFF',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-  },
-  emptyStateButtonText: {
-    color: '#FFFFFF',
-    fontWeight: '600',
-    fontSize: 16,
-  },
-  darkText: {
-    color: '#FFFFFF',
-  },
-  darkSecondaryText: {
-    color: '#EBEBF5',
-  },
-});
+  );
+};
 
 export default EmptyMemories; 

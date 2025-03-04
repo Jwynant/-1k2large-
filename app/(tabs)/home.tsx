@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { 
   View, 
   Text, 
-  StyleSheet, 
   ScrollView, 
   useColorScheme,
   Platform,
@@ -12,13 +11,15 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppContext } from '../context/AppContext';
+import { useTheme } from '../theme';
+import { useStyles } from '../hooks';
 
 // Import our new components
 import { HomeHeader } from '../components/home/HomeHeader';
-import { FocusAreas } from '../components/home/FocusAreas';
 import { HomeSection } from '../components/home/HomeSection';
 import { FilterOption } from '../components/home/FilterTabs';
 import { ContentForm, ContentType, FormData } from '../components/home/ContentForm';
+import { TimePrioritizedSections } from '../components/home/TimePrioritizedSections';
 
 // Import our content item components
 import { 
@@ -46,8 +47,8 @@ const getGreeting = (): string => {
 export default function HomeScreen() {
   const colorScheme = useColorScheme();
   const { state } = useAppContext();
-  const isDarkMode = state.theme === 'light' ? false : colorScheme === 'dark';
   const insets = useSafeAreaInsets();
+  const theme = useTheme();
   
   // State for filter selection
   const [selectedFilter, setSelectedFilter] = useState<FilterOption>('all');
@@ -64,6 +65,74 @@ export default function HomeScreen() {
   const closeContentForm = () => {
     setIsContentFormVisible(false);
   };
+
+  const styles = useStyles(theme => ({
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.background.primary,
+    },
+    scrollView: {
+      flex: 1,
+    },
+    scrollContent: {
+      paddingBottom: 100, // Space for FAB
+    },
+    greetingContainer: {
+      paddingHorizontal: theme.spacing.screenPadding, // Match HomeSection padding
+      paddingTop: theme.spacing.md,
+      paddingBottom: theme.spacing.xs, // Reduced bottom padding for better flow
+    },
+    greeting: {
+      fontSize: theme.typography.sizes.xl,
+      fontWeight: theme.typography.weights.bold,
+      color: theme.colors.text.primary,
+      marginBottom: theme.spacing.xs,
+    },
+    greetingSubtext: {
+      fontSize: theme.typography.sizes.md,
+      color: theme.colors.text.secondary,
+    },
+    reflectionCard: {
+      backgroundColor: theme.colors.background.secondary,
+      borderRadius: theme.borders.radius.lg,
+      padding: theme.spacing.lg,
+      marginTop: theme.spacing.md,
+    },
+    reflectionPrompt: {
+      fontSize: theme.typography.sizes.md,
+      color: theme.colors.text.secondary,
+      marginBottom: theme.spacing.md,
+      textAlign: 'center',
+      lineHeight: 22,
+    },
+    reflectionButton: {
+      backgroundColor: theme.colors.accent,
+      alignSelf: 'center',
+      paddingVertical: theme.spacing.sm,
+      paddingHorizontal: theme.spacing.lg,
+      borderRadius: theme.borders.radius.md,
+    },
+    reflectionButtonText: {
+      color: theme.colors.text.inverse,
+      fontWeight: theme.typography.weights.semibold,
+      fontSize: theme.typography.sizes.md,
+    },
+    fab: {
+      position: 'absolute',
+      right: theme.spacing.md,
+      width: 56,
+      height: 56,
+      borderRadius: 28,
+      backgroundColor: theme.colors.accent,
+      alignItems: 'center',
+      justifyContent: 'center',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: theme.isDark ? 0.3 : 0.2,
+      shadowRadius: 4,
+      elevation: 5,
+    },
+  }));
 
   // Function to handle saving of content from the form
   const handleSaveContent = (data: FormData, type: ContentType) => {
@@ -241,13 +310,11 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={[
       styles.container, 
-      isDarkMode && styles.darkContainer,
       { paddingTop: Platform.OS === 'android' ? insets.top : 0 }
     ]}>
       <HomeHeader 
         selectedFilter={selectedFilter} 
         onSelectFilter={handleFilterSelect}
-        isDarkMode={isDarkMode}
       />
       
       <ScrollView 
@@ -255,100 +322,103 @@ export default function HomeScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Personalized Greeting and Focus Areas - Only show in All view */}
-        {showAllContent && (
+        {/* Personalized Greeting - Always show this */}
+        <View style={styles.greetingContainer}>
+          <Text style={styles.greeting}>
+            {greeting}, {userName}
+          </Text>
+          <Text style={styles.greetingSubtext}>
+            Focus on what truly matters
+          </Text>
+        </View>
+    
+        {/* All View: Use TimePrioritizedSections component */}
+        {showAllContent ? (
+          <TimePrioritizedSections
+            goals={sampleGoals}
+            memories={sampleMemories}
+            lessons={sampleLessons}
+            priorities={samplePriorities}
+            onManagePriorities={() => console.log('Manage priorities')}
+            onSeeAllGoals={() => console.log('See all goals')}
+            onSeeAllMemories={() => console.log('See all memories')}
+            onSeeAllLessons={() => console.log('See all lessons')}
+            onStartReflection={() => console.log('Start reflection')}
+          />
+        ) : (
+          // Filtered Views: Show regular sections
           <>
-            <View style={styles.greetingContainer}>
-              <Text style={[styles.greeting, isDarkMode && styles.darkText]}>
-                {greeting}, {userName}
-              </Text>
-              <Text style={[styles.greetingSubtext, isDarkMode && styles.darkSecondaryText]}>
-                Focus on what truly matters
-              </Text>
-            </View>
-
-            {/* Focus Areas Section */}
-            <FocusAreas 
-              priorities={samplePriorities}
-              isDarkMode={isDarkMode}
-              onManagePress={() => console.log('Manage priorities')}
-            />
+            {/* Goals Section */}
+            {shouldShowGoals && (
+              <HomeSection 
+                title="Goals" 
+                onSeeAllPress={() => console.log('See all goals')}
+              >
+                {hasGoals ? (
+                  <View>
+                    {sampleGoals.map(goal => (
+                      <GoalItem key={goal.id} goal={goal} />
+                    ))}
+                  </View>
+                ) : (
+                  <EmptyGoals />
+                )}
+              </HomeSection>
+            )}
+            
+            {/* Memories Section */}
+            {shouldShowMemories && (
+              <HomeSection 
+                title="Memories" 
+                onSeeAllPress={() => console.log('See all memories')}
+              >
+                {hasMemories ? (
+                  <View>
+                    {sampleMemories.map(memory => (
+                      <MemoryItem key={memory.id} memory={memory} />
+                    ))}
+                  </View>
+                ) : (
+                  <EmptyMemories />
+                )}
+              </HomeSection>
+            )}
+            
+            {/* Lessons Section */}
+            {shouldShowLessons && (
+              <HomeSection 
+                title="Lessons & Insights" 
+                onSeeAllPress={() => console.log('See all lessons')}
+              >
+                {hasLessons ? (
+                  <View>
+                    {sampleLessons.map(lesson => (
+                      <LessonItem key={lesson.id} lesson={lesson} />
+                    ))}
+                  </View>
+                ) : (
+                  <EmptyLessons />
+                )}
+              </HomeSection>
+            )}
+            
+            {/* Today's Reflection in Lessons view */}
+            {selectedFilter === 'lessons' && (
+              <HomeSection 
+                title="Today's Reflection" 
+                showSeeAll={false}
+              >
+                <View style={styles.reflectionCard}>
+                  <Text style={styles.reflectionPrompt}>
+                    How are you feeling today? Take a moment to reflect and record your thoughts.
+                  </Text>
+                  <TouchableOpacity style={styles.reflectionButton}>
+                    <Text style={styles.reflectionButtonText}>Start Reflection</Text>
+                  </TouchableOpacity>
+                </View>
+              </HomeSection>
+            )}
           </>
-        )}
-
-        {/* Goals Section */}
-        {shouldShowGoals && (
-          <HomeSection 
-            title="Goals" 
-            isDarkMode={isDarkMode}
-            onSeeAllPress={() => console.log('See all goals')}
-          >
-            {hasGoals ? (
-              <View>
-                {sampleGoals.map(goal => (
-                  <GoalItem key={goal.id} goal={goal} isDarkMode={isDarkMode} />
-                ))}
-              </View>
-            ) : (
-              <EmptyGoals isDarkMode={isDarkMode} />
-            )}
-          </HomeSection>
-        )}
-        
-        {/* Memories Section */}
-        {shouldShowMemories && (
-          <HomeSection 
-            title="Memories" 
-            isDarkMode={isDarkMode}
-            onSeeAllPress={() => console.log('See all memories')}
-          >
-            {hasMemories ? (
-              <View>
-                {sampleMemories.map(memory => (
-                  <MemoryItem key={memory.id} memory={memory} isDarkMode={isDarkMode} />
-                ))}
-              </View>
-            ) : (
-              <EmptyMemories isDarkMode={isDarkMode} />
-            )}
-          </HomeSection>
-        )}
-        
-        {/* Lessons Section */}
-        {shouldShowLessons && (
-          <HomeSection 
-            title="Lessons & Insights" 
-            isDarkMode={isDarkMode}
-            onSeeAllPress={() => console.log('See all lessons')}
-          >
-            {hasLessons ? (
-              <View>
-                {sampleLessons.map(lesson => (
-                  <LessonItem key={lesson.id} lesson={lesson} isDarkMode={isDarkMode} />
-                ))}
-              </View>
-            ) : (
-              <EmptyLessons isDarkMode={isDarkMode} />
-            )}
-          </HomeSection>
-        )}
-        
-        {/* Only show Today's Reflection in All view or Lessons view */}
-        {(showAllContent || selectedFilter === 'lessons') && (
-          <HomeSection 
-            title="Today's Reflection" 
-            isDarkMode={isDarkMode}
-            showSeeAll={false}
-          >
-            <View style={[styles.reflectionCard, isDarkMode && styles.darkCard]}>
-              <Text style={[styles.reflectionPrompt, isDarkMode && styles.darkSecondaryText]}>
-                How are you feeling today? Take a moment to reflect and record your thoughts.
-              </Text>
-              <View style={styles.reflectionButton}>
-                <Text style={styles.reflectionButtonText}>Start Reflection</Text>
-              </View>
-            </View>
-          </HomeSection>
         )}
       </ScrollView>
 
@@ -356,113 +426,20 @@ export default function HomeScreen() {
       <TouchableOpacity 
         style={[
           styles.fab, 
-          isDarkMode && styles.fabDark,
           { bottom: insets.bottom + 16 }
         ]} 
         onPress={openContentForm}
         activeOpacity={0.8}
       >
-        <Ionicons name="add" size={24} color="#FFFFFF" />
+        <Ionicons name="add" size={24} color={theme.colors.text.inverse} />
       </TouchableOpacity>
 
       {/* Content Form Modal */}
       <ContentForm 
         visible={isContentFormVisible}
         onClose={closeContentForm}
-        isDarkMode={isDarkMode}
         onSave={handleSaveContent}
       />
     </SafeAreaView>
   );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F2F2F7', // iOS light background
-  },
-  darkContainer: {
-    backgroundColor: '#121212', // Dark background
-  },
-  darkCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: 40,
-  },
-  // Greeting styles
-  greetingContainer: {
-    paddingHorizontal: 20,
-    paddingTop: 24,
-    paddingBottom: 12,
-  },
-  greeting: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#000',
-    marginBottom: 6,
-  },
-  greetingSubtext: {
-    fontSize: 17,
-    color: '#8E8E93',
-  },
-  darkText: {
-    color: '#FFFFFF',
-  },
-  darkSecondaryText: {
-    color: '#EBEBF5',
-  },
-  // Reflection card styles  
-  reflectionCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 1,
-  },
-  reflectionPrompt: {
-    fontSize: 15,
-    color: '#3C3C43',
-    lineHeight: 20,
-    marginBottom: 16,
-  },
-  reflectionButton: {
-    backgroundColor: '#007AFF',
-    borderRadius: 8,
-    paddingVertical: 10,
-    alignItems: 'center',
-  },
-  reflectionButtonText: {
-    color: '#FFFFFF',
-    fontWeight: '600',
-    fontSize: 15,
-  },
-  // FAB Styles
-  fab: {
-    position: 'absolute',
-    right: 16,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#007AFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 5,
-    zIndex: 1000,
-  },
-  fabDark: {
-    backgroundColor: '#0A84FF',
-  },
-}); 
+} 

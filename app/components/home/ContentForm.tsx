@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from '../../theme';
 
 export type ContentType = 'goal' | 'memory' | 'lesson' | 'reflection' | 'planning' | 'season' | null;
 
@@ -46,14 +47,12 @@ export interface FormData {
 interface ContentFormProps {
   visible: boolean;
   onClose: () => void;
-  isDarkMode: boolean;
   onSave?: (data: FormData, type: ContentType) => void;
 }
 
 export const ContentForm: React.FC<ContentFormProps> = ({
   visible,
   onClose,
-  isDarkMode,
   onSave,
 }) => {
   const insets = useSafeAreaInsets();
@@ -68,6 +67,8 @@ export const ContentForm: React.FC<ContentFormProps> = ({
   // State for priority level and tracking method selection
   const [priorityLevel, setPriorityLevel] = useState<number>(1); // Default to medium (index 1)
   const [trackingMethod, setTrackingMethod] = useState<number>(0); // Default to percentage (index 0)
+  const theme = useTheme();
+  const isDark = theme.isDark;
 
   // Reset form when modal opens/closes
   React.useEffect(() => {
@@ -213,20 +214,18 @@ export const ContentForm: React.FC<ContentFormProps> = ({
       >
         <View style={[
           styles.modalContainer, 
-          isDarkMode && styles.modalContainerDark,
           { paddingBottom: insets.bottom + 20 }
         ]}>
           <View style={styles.modalHandle} />
           
           <View style={styles.modalHeader}>
-            <Text style={[styles.modalTitle, isDarkMode && styles.darkText]}>
+            <Text style={styles.modalTitle}>
               {selectedContentType ? `New ${selectedContentType.charAt(0).toUpperCase() + selectedContentType.slice(1)}` : 'Create New Content'}
             </Text>
             <TouchableOpacity onPress={onClose} hitSlop={{top: 10, right: 10, bottom: 10, left: 10}}>
               <Ionicons 
                 name="close" 
                 size={24} 
-                color={isDarkMode ? '#FFFFFF' : '#000000'} 
               />
             </TouchableOpacity>
           </View>
@@ -234,7 +233,7 @@ export const ContentForm: React.FC<ContentFormProps> = ({
           {!selectedContentType ? (
             // Step 1: Content Type Selection
             <View style={styles.contentTypeSelector}>
-              <Text style={[styles.formLabel, isDarkMode && styles.darkText]}>
+              <Text style={styles.formLabel}>
                 What would you like to create?
               </Text>
               <ScrollView showsVerticalScrollIndicator={false}>
@@ -244,13 +243,12 @@ export const ContentForm: React.FC<ContentFormProps> = ({
                       key={type}
                       style={[
                         styles.contentTypeButton,
-                        isDarkMode && styles.contentTypeButtonDark,
                       ]}
                       onPress={() => selectContentType(type as ContentType)}
                     >
                       <View style={[
                         styles.contentTypeIcon, 
-                        { backgroundColor: isDarkMode ? config.darkColor : config.color }
+                        { backgroundColor: config.color }
                       ]}>
                         <Ionicons 
                           name={config.icon} 
@@ -258,7 +256,7 @@ export const ContentForm: React.FC<ContentFormProps> = ({
                           color="#FFFFFF" 
                         />
                       </View>
-                      <Text style={[styles.contentTypeText, isDarkMode && styles.darkText]}>
+                      <Text style={styles.contentTypeText}>
                         {type.charAt(0).toUpperCase() + type.slice(1)}
                       </Text>
                     </TouchableOpacity>
@@ -287,20 +285,19 @@ export const ContentForm: React.FC<ContentFormProps> = ({
                           <Text style={styles.stepNumberText}>2</Text>
                         </View>
                       </View>
-                      <Text style={[styles.stepTitle, isDarkMode && styles.darkText]}>Essential Information</Text>
+                      <Text style={styles.stepTitle}>Essential Information</Text>
                       
                       <View style={styles.formField}>
-                        <Text style={[styles.formLabel, isDarkMode && styles.darkText]}>
-                          Title <Text style={styles.requiredStar}>*</Text>
+                        <Text style={styles.formLabel}>
+                          Title *
                         </Text>
                         <TextInput
                           style={[
                             styles.textInput, 
-                            isDarkMode && styles.textInputDark,
                             touchedFields.title && !formData.title && styles.inputError,
                           ]}
                           placeholder="What do you want to achieve?"
-                          placeholderTextColor={isDarkMode ? '#8E8E93' : '#C7C7CC'}
+                          placeholderTextColor="#C7C7CC"
                           value={formData.title}
                           onChangeText={(text) => updateField('title', text)}
                         />
@@ -310,22 +307,22 @@ export const ContentForm: React.FC<ContentFormProps> = ({
                       </View>
                       
                       <View style={styles.formField}>
-                        <Text style={[styles.formLabel, isDarkMode && styles.darkText]}>Category</Text>
+                        <Text style={styles.formLabel}>Category</Text>
                         <TextInput
-                          style={[styles.textInput, isDarkMode && styles.textInputDark]}
+                          style={[styles.textInput]}
                           placeholder="e.g., Career, Health, Personal Growth"
-                          placeholderTextColor={isDarkMode ? '#8E8E93' : '#C7C7CC'}
+                          placeholderTextColor="#C7C7CC"
                           value={formData.category}
                           onChangeText={(text) => updateField('category', text)}
                         />
                       </View>
                       
                       <View style={styles.formField}>
-                        <Text style={[styles.formLabel, isDarkMode && styles.darkText]}>Intent</Text>
+                        <Text style={styles.formLabel}>Intent</Text>
                         <TextInput
-                          style={[styles.textArea, isDarkMode && styles.textInputDark]}
+                          style={[styles.textArea]}
                           placeholder="Why is this important to you?"
-                          placeholderTextColor={isDarkMode ? '#8E8E93' : '#C7C7CC'}
+                          placeholderTextColor="#C7C7CC"
                           multiline
                           value={formData.intent}
                           onChangeText={(text) => updateField('intent', text)}
@@ -336,9 +333,7 @@ export const ContentForm: React.FC<ContentFormProps> = ({
                         style={[
                           styles.navigationButton, 
                           { 
-                            backgroundColor: isDarkMode 
-                              ? contentTypeConfig.goal.darkColor 
-                              : contentTypeConfig.goal.color 
+                            backgroundColor: contentTypeConfig.goal.color 
                           }
                         ]}
                         onPress={goToNextStep}
@@ -360,21 +355,21 @@ export const ContentForm: React.FC<ContentFormProps> = ({
                           <Text style={styles.stepNumberText}>2</Text>
                         </View>
                       </View>
-                      <Text style={[styles.stepTitle, isDarkMode && styles.darkText]}>Details & Tracking</Text>
+                      <Text style={styles.stepTitle}>Details & Tracking</Text>
                    
                      <View style={styles.formField}>
-                       <Text style={[styles.formLabel, isDarkMode && styles.darkText]}>Deadline</Text>
+                       <Text style={styles.formLabel}>Deadline</Text>
                        <TextInput
-                         style={[styles.textInput, isDarkMode && styles.textInputDark]}
+                         style={[styles.textInput]}
                          placeholder="When do you want to achieve this?"
-                         placeholderTextColor={isDarkMode ? '#8E8E93' : '#C7C7CC'}
+                         placeholderTextColor="#C7C7CC"
                          value={formData.deadline}
                          onChangeText={(text) => updateField('deadline', text)}
                        />
                      </View>
                    
                      <View style={styles.formField}>
-                       <Text style={[styles.formLabel, isDarkMode && styles.darkText]}>Priority Level</Text>
+                       <Text style={styles.formLabel}>Priority Level</Text>
                        <View style={styles.prioritySelector}>
                          {['Low', 'Medium', 'High'].map((level, index) => (
                            <TouchableOpacity 
@@ -382,35 +377,31 @@ export const ContentForm: React.FC<ContentFormProps> = ({
                              style={[
                                styles.priorityOption,
                                priorityLevel === index ? styles.selectedPriorityOption : null,
-                               isDarkMode && styles.priorityOptionDark
                              ]}
                              onPress={() => {
                                setPriorityLevel(index);
                                updateField('priorityLevel', level.toLowerCase());
                              }}
                            >
-                             <Text style={[
-                               styles.priorityText,
-                               isDarkMode && styles.darkText
-                             ]}>{level}</Text>
+                             <Text style={styles.priorityText}>{level}</Text>
                            </TouchableOpacity>
                          ))}
                        </View>
                      </View>
                      
                      <View style={styles.formField}>
-                       <Text style={[styles.formLabel, isDarkMode && styles.darkText]}>Focus Area</Text>
+                       <Text style={styles.formLabel}>Focus Area</Text>
                        <TextInput
-                         style={[styles.textInput, isDarkMode && styles.textInputDark]}
+                         style={[styles.textInput]}
                          placeholder="e.g., Career, Health, Personal Growth"
-                         placeholderTextColor={isDarkMode ? '#8E8E93' : '#C7C7CC'}
+                         placeholderTextColor="#C7C7CC"
                          value={formData.focusArea}
                          onChangeText={(text) => updateField('focusArea', text)}
                        />
                      </View>
                      
                      <View style={styles.formField}>
-                       <Text style={[styles.formLabel, isDarkMode && styles.darkText]}>Tracking Method</Text>
+                       <Text style={styles.formLabel}>Tracking Method</Text>
                        <View style={styles.trackingSelector}>
                          {['Percentage', 'Binary', 'Milestone'].map((method, index) => (
                            <TouchableOpacity 
@@ -418,28 +409,24 @@ export const ContentForm: React.FC<ContentFormProps> = ({
                              style={[
                                styles.trackingOption,
                                trackingMethod === index ? styles.selectedTrackingOption : null,
-                               isDarkMode && styles.trackingOptionDark
                              ]}
                              onPress={() => {
                                setTrackingMethod(index);
                                updateField('trackingMethod', method.toLowerCase());
                              }}
                            >
-                             <Text style={[
-                               styles.trackingText,
-                               isDarkMode && styles.darkText
-                             ]}>{method}</Text>
+                             <Text style={styles.trackingText}>{method}</Text>
                            </TouchableOpacity>
                          ))}
                        </View>
                      </View>
                      
                      <View style={styles.formField}>
-                       <Text style={[styles.formLabel, isDarkMode && styles.darkText]}>Initial Progress</Text>
+                       <Text style={styles.formLabel}>Initial Progress</Text>
                        <TextInput
-                         style={[styles.textInput, isDarkMode && styles.textInputDark]}
+                         style={[styles.textInput]}
                          placeholder="Initial progress (e.g., 0%, 10%)"
-                         placeholderTextColor={isDarkMode ? '#8E8E93' : '#C7C7CC'}
+                         placeholderTextColor="#C7C7CC"
                          value={formData.progress?.toString() || '0'}
                          onChangeText={(text) => {
                            const progress = parseInt(text, 10);
@@ -457,17 +444,15 @@ export const ContentForm: React.FC<ContentFormProps> = ({
                          style={styles.backButton}
                          onPress={goToPreviousStep}
                        >
-                         <Ionicons name="arrow-back" size={20} color={isDarkMode ? "#FFFFFF" : "#000000"} />
-                         <Text style={[styles.backButtonText, isDarkMode && styles.darkText]}>Back</Text>
+                         <Ionicons name="arrow-back" size={20} color="#000000" />
+                         <Text style={styles.backButtonText}>Back</Text>
                        </TouchableOpacity>
                        
                        <TouchableOpacity 
                          style={[
                            styles.saveButton, 
                            { 
-                             backgroundColor: isDarkMode 
-                               ? contentTypeConfig.goal.darkColor 
-                               : contentTypeConfig.goal.color 
+                             backgroundColor: contentTypeConfig.goal.color 
                            }
                          ]}
                          onPress={handleSave}
@@ -484,22 +469,22 @@ export const ContentForm: React.FC<ContentFormProps> = ({
               {selectedContentType === 'memory' && (
                 <View style={styles.formFields}>
                   <View style={styles.formField}>
-                    <Text style={[styles.formLabel, isDarkMode && styles.darkText]}>Title *</Text>
+                    <Text style={styles.formLabel}>Title *</Text>
                     <TextInput
-                      style={[styles.textInput, isDarkMode && styles.textInputDark]}
+                      style={[styles.textInput]}
                       placeholder="Name this memory"
-                      placeholderTextColor={isDarkMode ? '#8E8E93' : '#C7C7CC'}
+                      placeholderTextColor="#C7C7CC"
                       value={formData.title}
                       onChangeText={(text) => updateField('title', text)}
                     />
                   </View>
                   
                   <View style={styles.formField}>
-                    <Text style={[styles.formLabel, isDarkMode && styles.darkText]}>Description</Text>
+                    <Text style={styles.formLabel}>Description</Text>
                     <TextInput
-                      style={[styles.textArea, isDarkMode && styles.textInputDark]}
+                      style={[styles.textArea]}
                       placeholder="Describe what happened..."
-                      placeholderTextColor={isDarkMode ? '#8E8E93' : '#C7C7CC'}
+                      placeholderTextColor="#C7C7CC"
                       multiline
                       value={formData.description}
                       onChangeText={(text) => updateField('description', text)}
@@ -507,11 +492,11 @@ export const ContentForm: React.FC<ContentFormProps> = ({
                   </View>
                   
                   <View style={styles.formField}>
-                    <Text style={[styles.formLabel, isDarkMode && styles.darkText]}>Tags</Text>
+                    <Text style={styles.formLabel}>Tags</Text>
                     <TextInput
-                      style={[styles.textInput, isDarkMode && styles.textInputDark]}
+                      style={[styles.textInput]}
                       placeholder="Add comma-separated tags"
-                      placeholderTextColor={isDarkMode ? '#8E8E93' : '#C7C7CC'}
+                      placeholderTextColor="#C7C7CC"
                       value={formData.tags as string}
                       onChangeText={(text) => updateField('tags', text)}
                     />
@@ -523,29 +508,29 @@ export const ContentForm: React.FC<ContentFormProps> = ({
               {selectedContentType === 'lesson' && (
                 <View style={styles.formFields}>
                   <View style={styles.formField}>
-                    <Text style={[styles.formLabel, isDarkMode && styles.darkText]}>Lesson Title *</Text>
+                    <Text style={styles.formLabel}>Lesson Title *</Text>
                     <TextInput
-                      style={[styles.textInput, isDarkMode && styles.textInputDark]}
+                      style={[styles.textInput]}
                       placeholder="What did you learn?"
-                      placeholderTextColor={isDarkMode ? '#8E8E93' : '#C7C7CC'}
+                      placeholderTextColor="#C7C7CC"
                       value={formData.title}
                       onChangeText={(text) => updateField('title', text)}
                     />
                   </View>
                   
                   <View style={styles.formField}>
-                    <Text style={[styles.formLabel, isDarkMode && styles.darkText]}>Source</Text>
+                    <Text style={styles.formLabel}>Source</Text>
                     <TextInput
-                      style={[styles.textInput, isDarkMode && styles.textInputDark]}
+                      style={[styles.textInput]}
                       placeholder="Where/how did you learn this?"
-                      placeholderTextColor={isDarkMode ? '#8E8E93' : '#C7C7CC'}
+                      placeholderTextColor="#C7C7CC"
                       value={formData.source}
                       onChangeText={(text) => updateField('source', text)}
                     />
                   </View>
                   
                   <View style={styles.formField}>
-                    <Text style={[styles.formLabel, isDarkMode && styles.darkText]}>Importance</Text>
+                    <Text style={styles.formLabel}>Importance</Text>
                     <View style={styles.importanceSelector}>
                       {[1, 2, 3, 4, 5].map(value => (
                         <TouchableOpacity 
@@ -553,7 +538,7 @@ export const ContentForm: React.FC<ContentFormProps> = ({
                           style={[
                             styles.importanceDot, 
                             { 
-                              backgroundColor: isDarkMode ? '#BF5AF2' : '#AF52DE', 
+                              backgroundColor: value <= importanceRating ? '#AF52DE' : '#F2F2F7', 
                               opacity: value <= importanceRating ? 1 : 0.3 
                             }
                           ]}
@@ -564,11 +549,11 @@ export const ContentForm: React.FC<ContentFormProps> = ({
                   </View>
                   
                   <View style={styles.formField}>
-                    <Text style={[styles.formLabel, isDarkMode && styles.darkText]}>Description</Text>
+                    <Text style={styles.formLabel}>Description</Text>
                     <TextInput
-                      style={[styles.textArea, isDarkMode && styles.textInputDark]}
+                      style={[styles.textArea]}
                       placeholder="Describe this lesson in more detail..."
-                      placeholderTextColor={isDarkMode ? '#8E8E93' : '#C7C7CC'}
+                      placeholderTextColor="#C7C7CC"
                       multiline
                       value={formData.description}
                       onChangeText={(text) => updateField('description', text)}
@@ -581,7 +566,7 @@ export const ContentForm: React.FC<ContentFormProps> = ({
               {selectedContentType === 'reflection' && (
                 <View style={styles.formFields}>
                   <View style={styles.formField}>
-                    <Text style={[styles.formLabel, isDarkMode && styles.darkText]}>How are you feeling?</Text>
+                    <Text style={styles.formLabel}>How are you feeling?</Text>
                     <View style={styles.moodSelector}>
                       {['😔', '😐', '🙂', '😊', '😄'].map((emoji, index) => (
                         <TouchableOpacity 
@@ -589,8 +574,7 @@ export const ContentForm: React.FC<ContentFormProps> = ({
                           style={[
                             styles.moodOption,
                             index === moodSelection && styles.selectedMoodOption,
-                            isDarkMode && styles.moodOptionDark,
-                            index === moodSelection && isDarkMode && { borderColor: '#0A84FF' }
+                            index === moodSelection && { borderColor: '#007AFF' }
                           ]}
                           onPress={() => setMoodSelection(index)}
                         >
@@ -601,11 +585,11 @@ export const ContentForm: React.FC<ContentFormProps> = ({
                   </View>
                   
                   <View style={styles.formField}>
-                    <Text style={[styles.formLabel, isDarkMode && styles.darkText]}>Today's Highlights</Text>
+                    <Text style={styles.formLabel}>Today's Highlights</Text>
                     <TextInput
-                      style={[styles.textArea, isDarkMode && styles.textInputDark]}
+                      style={[styles.textArea]}
                       placeholder="What went well today?"
-                      placeholderTextColor={isDarkMode ? '#8E8E93' : '#C7C7CC'}
+                      placeholderTextColor="#C7C7CC"
                       multiline
                       value={formData.highlights}
                       onChangeText={(text) => updateField('highlights', text)}
@@ -613,11 +597,11 @@ export const ContentForm: React.FC<ContentFormProps> = ({
                   </View>
                   
                   <View style={styles.formField}>
-                    <Text style={[styles.formLabel, isDarkMode && styles.darkText]}>Challenges</Text>
+                    <Text style={styles.formLabel}>Challenges</Text>
                     <TextInput
-                      style={[styles.textArea, isDarkMode && styles.textInputDark]}
+                      style={[styles.textArea]}
                       placeholder="What could have gone better?"
-                      placeholderTextColor={isDarkMode ? '#8E8E93' : '#C7C7CC'}
+                      placeholderTextColor="#C7C7CC"
                       multiline
                       value={formData.challenges}
                       onChangeText={(text) => updateField('challenges', text)}
@@ -625,11 +609,11 @@ export const ContentForm: React.FC<ContentFormProps> = ({
                   </View>
                   
                   <View style={styles.formField}>
-                    <Text style={[styles.formLabel, isDarkMode && styles.darkText]}>Gratitude</Text>
+                    <Text style={styles.formLabel}>Gratitude</Text>
                     <TextInput
-                      style={[styles.textInput, isDarkMode && styles.textInputDark]}
+                      style={[styles.textInput]}
                       placeholder="What are you grateful for today?"
-                      placeholderTextColor={isDarkMode ? '#8E8E93' : '#C7C7CC'}
+                      placeholderTextColor="#C7C7CC"
                       value={formData.gratitude}
                       onChangeText={(text) => updateField('gratitude', text)}
                     />
@@ -641,22 +625,22 @@ export const ContentForm: React.FC<ContentFormProps> = ({
               {selectedContentType === 'planning' && (
                 <View style={styles.formFields}>
                   <View style={styles.formField}>
-                    <Text style={[styles.formLabel, isDarkMode && styles.darkText]}>Date</Text>
+                    <Text style={styles.formLabel}>Date</Text>
                     <TextInput
-                      style={[styles.textInput, isDarkMode && styles.textInputDark]}
+                      style={[styles.textInput]}
                       placeholder="MM/DD/YYYY"
-                      placeholderTextColor={isDarkMode ? '#8E8E93' : '#C7C7CC'}
+                      placeholderTextColor="#C7C7CC"
                       value={formData.deadline}
                       onChangeText={(text) => updateField('deadline', text)}
                     />
                   </View>
                   
                   <View style={styles.formField}>
-                    <Text style={[styles.formLabel, isDarkMode && styles.darkText]}>Top 3 Priorities *</Text>
+                    <Text style={styles.formLabel}>Top 3 Priorities *</Text>
                     <TextInput
-                      style={[styles.textInput, isDarkMode && styles.textInputDark]}
+                      style={[styles.textInput]}
                       placeholder="Priority #1"
-                      placeholderTextColor={isDarkMode ? '#8E8E93' : '#C7C7CC'}
+                      placeholderTextColor="#C7C7CC"
                       value={formData.priorities?.[0]}
                       onChangeText={(text) => {
                         const priorities = [...(formData.priorities || [])];
@@ -666,9 +650,9 @@ export const ContentForm: React.FC<ContentFormProps> = ({
                     />
                     <View style={{ height: 8 }} />
                     <TextInput
-                      style={[styles.textInput, isDarkMode && styles.textInputDark]}
+                      style={[styles.textInput]}
                       placeholder="Priority #2"
-                      placeholderTextColor={isDarkMode ? '#8E8E93' : '#C7C7CC'}
+                      placeholderTextColor="#C7C7CC"
                       value={formData.priorities?.[1]}
                       onChangeText={(text) => {
                         const priorities = [...(formData.priorities || [])];
@@ -678,9 +662,9 @@ export const ContentForm: React.FC<ContentFormProps> = ({
                     />
                     <View style={{ height: 8 }} />
                     <TextInput
-                      style={[styles.textInput, isDarkMode && styles.textInputDark]}
+                      style={[styles.textInput]}
                       placeholder="Priority #3"
-                      placeholderTextColor={isDarkMode ? '#8E8E93' : '#C7C7CC'}
+                      placeholderTextColor="#C7C7CC"
                       value={formData.priorities?.[2]}
                       onChangeText={(text) => {
                         const priorities = [...(formData.priorities || [])];
@@ -691,11 +675,11 @@ export const ContentForm: React.FC<ContentFormProps> = ({
                   </View>
                   
                   <View style={styles.formField}>
-                    <Text style={[styles.formLabel, isDarkMode && styles.darkText]}>Potential Challenges</Text>
+                    <Text style={styles.formLabel}>Potential Challenges</Text>
                     <TextInput
-                      style={[styles.textArea, isDarkMode && styles.textInputDark]}
+                      style={[styles.textArea]}
                       placeholder="What challenges might you face?"
-                      placeholderTextColor={isDarkMode ? '#8E8E93' : '#C7C7CC'}
+                      placeholderTextColor="#C7C7CC"
                       multiline
                       value={formData.potentialChallenges}
                       onChangeText={(text) => updateField('potentialChallenges', text)}
@@ -708,31 +692,31 @@ export const ContentForm: React.FC<ContentFormProps> = ({
               {selectedContentType === 'season' && (
                 <View style={styles.formFields}>
                   <View style={styles.formField}>
-                    <Text style={[styles.formLabel, isDarkMode && styles.darkText]}>Season Name *</Text>
+                    <Text style={styles.formLabel}>Season Name *</Text>
                     <TextInput
-                      style={[styles.textInput, isDarkMode && styles.textInputDark]}
+                      style={[styles.textInput]}
                       placeholder="Give this season of life a name"
-                      placeholderTextColor={isDarkMode ? '#8E8E93' : '#C7C7CC'}
+                      placeholderTextColor="#C7C7CC"
                       value={formData.title}
                       onChangeText={(text) => updateField('title', text)}
                     />
                   </View>
                   
                   <View style={styles.formField}>
-                    <Text style={[styles.formLabel, isDarkMode && styles.darkText]}>Timeframe</Text>
+                    <Text style={styles.formLabel}>Timeframe</Text>
                     <View style={styles.dateRangeContainer}>
                       <TextInput
-                        style={[styles.dateInput, isDarkMode && styles.textInputDark]}
+                        style={[styles.dateInput]}
                         placeholder="Start date"
-                        placeholderTextColor={isDarkMode ? '#8E8E93' : '#C7C7CC'}
+                        placeholderTextColor="#C7C7CC"
                         value={formData.startDate}
                         onChangeText={(text) => updateField('startDate', text)}
                       />
-                      <Text style={[styles.dateRangeSeparator, isDarkMode && styles.darkText]}>to</Text>
+                      <Text style={styles.dateRangeSeparator}>to</Text>
                       <TextInput
-                        style={[styles.dateInput, isDarkMode && styles.textInputDark]}
+                        style={[styles.dateInput]}
                         placeholder="End date"
-                        placeholderTextColor={isDarkMode ? '#8E8E93' : '#C7C7CC'}
+                        placeholderTextColor="#C7C7CC"
                         value={formData.endDate}
                         onChangeText={(text) => updateField('endDate', text)}
                       />
@@ -740,22 +724,22 @@ export const ContentForm: React.FC<ContentFormProps> = ({
                   </View>
                   
                   <View style={styles.formField}>
-                    <Text style={[styles.formLabel, isDarkMode && styles.darkText]}>Season Theme *</Text>
+                    <Text style={styles.formLabel}>Season Theme *</Text>
                     <TextInput
-                      style={[styles.textInput, isDarkMode && styles.textInputDark]}
+                      style={[styles.textInput]}
                       placeholder="What defines this season? (e.g., Growth)"
-                      placeholderTextColor={isDarkMode ? '#8E8E93' : '#C7C7CC'}
+                      placeholderTextColor="#C7C7CC"
                       value={formData.seasonTheme}
                       onChangeText={(text) => updateField('seasonTheme', text)}
                     />
                   </View>
                   
                   <View style={styles.formField}>
-                    <Text style={[styles.formLabel, isDarkMode && styles.darkText]}>Description</Text>
+                    <Text style={styles.formLabel}>Description</Text>
                     <TextInput
-                      style={[styles.textArea, isDarkMode && styles.textInputDark]}
+                      style={[styles.textArea]}
                       placeholder="Describe this season of life..."
-                      placeholderTextColor={isDarkMode ? '#8E8E93' : '#C7C7CC'}
+                      placeholderTextColor="#C7C7CC"
                       multiline
                       value={formData.description}
                       onChangeText={(text) => updateField('description', text)}
@@ -774,9 +758,7 @@ export const ContentForm: React.FC<ContentFormProps> = ({
                   style={[
                     styles.saveButton, 
                     { 
-                      backgroundColor: isDarkMode 
-                        ? contentTypeConfig[selectedContentType].darkColor 
-                        : contentTypeConfig[selectedContentType].color 
+                      backgroundColor: contentTypeConfig[selectedContentType].color 
                     }
                   ]}
                   onPress={handleSave}
@@ -819,9 +801,6 @@ const styles = StyleSheet.create({
     elevation: 20,
     maxHeight: '100%',
   },
-  modalContainerDark: {
-    backgroundColor: '#1C1C1E',
-  },
   modalHandle: {
     alignSelf: 'center',
     width: 36,
@@ -841,9 +820,6 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '600',
     color: '#000',
-  },
-  darkText: {
-    color: '#FFFFFF',
   },
   
   // Step indicator styles
@@ -970,9 +946,6 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     alignItems: 'center',
   },
-  contentTypeButtonDark: {
-    backgroundColor: '#2C2C2E',
-  },
   contentTypeIcon: {
     width: 50,
     height: 50,
@@ -1015,10 +988,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#000',
   },
-  textInputDark: {
-    backgroundColor: '#2C2C2E',
-    color: '#FFFFFF',
-  },
   textArea: {
     backgroundColor: '#F2F2F7',
     borderRadius: 10,
@@ -1059,9 +1028,6 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
     marginHorizontal: 4,
   },
-  priorityOptionDark: {
-    backgroundColor: '#2C2C2E',
-  },
   selectedPriorityOption: {
     borderColor: '#007AFF',
   },
@@ -1088,9 +1054,6 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
     marginHorizontal: 4,
   },
-  trackingOptionDark: {
-    backgroundColor: '#2C2C2E',
-  },
   selectedTrackingOption: {
     borderColor: '#007AFF',
   },
@@ -1116,9 +1079,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 2,
     borderColor: 'transparent',
-  },
-  moodOptionDark: {
-    backgroundColor: '#2C2C2E',
   },
   selectedMoodOption: {
     borderColor: '#007AFF',

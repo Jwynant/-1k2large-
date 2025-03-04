@@ -1,5 +1,7 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text } from 'react-native';
+import { useStyles } from '../../../hooks';
+import { useTheme } from '../../../theme';
 
 // Define a type for the goal object
 export interface Goal {
@@ -19,117 +21,104 @@ export interface Goal {
 
 interface GoalItemProps {
   goal: Goal;
-  isDarkMode: boolean;
 }
 
-export const GoalItem: React.FC<GoalItemProps> = ({ goal, isDarkMode }) => (
-  <View style={[styles.contentCard, isDarkMode && styles.darkCard]}>
-    <View style={styles.goalHeader}>
-      <View style={[styles.goalPriorityIndicator, { backgroundColor: goal.priorityColor }]} />
-      <Text style={[styles.goalTitle, isDarkMode && styles.darkText]}>{goal.title}</Text>
-    </View>
-    <Text style={[styles.goalDescription, isDarkMode && styles.darkSecondaryText]}>
-      {goal.description}
-    </Text>
-    <View style={styles.goalFooter}>
-      <View style={styles.goalMetrics}>
-        <View style={styles.goalProgressContainer}>
-          <View style={styles.goalProgressBar}>
-            <View style={[styles.goalProgress, { width: `${goal.progress}%`, backgroundColor: goal.priorityColor }]} />
-          </View>
-          <Text style={[styles.goalProgressText, isDarkMode && styles.darkTertiaryText]}>{goal.progress}%</Text>
-        </View>
-      </View>
-      <Text style={[styles.goalDeadline, isDarkMode && styles.darkTertiaryText]}>
-        {goal.deadline ? `Due: ${goal.deadline}` : 'No deadline'}
-      </Text>
-    </View>
-  </View>
-);
+export const GoalItem: React.FC<GoalItemProps> = ({ goal }) => {
+  const theme = useTheme();
+  const styles = useStyles(theme => ({
+    contentCard: {
+      backgroundColor: theme.colors.background.secondary,
+      borderRadius: theme.borders.radius.lg,
+      padding: theme.spacing.md,
+      marginBottom: theme.spacing.md,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.08,
+      shadowRadius: 2,
+      elevation: 1,
+      borderWidth: theme.isDark ? 1 : 0,
+      borderColor: theme.colors.border.light,
+    },
+    goalHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: theme.spacing.sm,
+    },
+    goalPriorityIndicator: {
+      width: 12,
+      height: 12,
+      borderRadius: 6,
+      marginRight: theme.spacing.sm,
+    },
+    goalTitle: {
+      fontSize: theme.typography.sizes.md,
+      fontWeight: theme.typography.weights.semibold,
+      color: theme.colors.text.primary,
+      flex: 1,
+    },
+    goalDescription: {
+      fontSize: theme.typography.sizes.sm,
+      color: theme.colors.text.secondary,
+      marginBottom: theme.spacing.md,
+    },
+    goalFooter: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    goalMetrics: {
+      flex: 1,
+    },
+    goalProgressContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    goalProgressBar: {
+      flex: 1,
+      height: 6,
+      backgroundColor: theme.colors.background.tertiary,
+      borderRadius: 3,
+      marginRight: theme.spacing.sm,
+    },
+    goalProgress: {
+      height: '100%',
+      borderRadius: 3,
+    },
+    goalProgressText: {
+      fontSize: theme.typography.sizes.xs,
+      color: theme.colors.text.tertiary,
+      width: 35,
+    },
+    goalDeadline: {
+      fontSize: theme.typography.sizes.xs,
+      color: theme.colors.text.tertiary,
+    },
+  }));
 
-const styles = StyleSheet.create({
-  contentCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 1,
-  },
-  darkCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  goalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  goalPriorityIndicator: {
-    width: 4,
-    height: 16,
-    borderRadius: 2,
-    marginRight: 12,
-  },
-  goalTitle: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: '#000',
-    flex: 1,
-  },
-  goalDescription: {
-    fontSize: 15,
-    color: '#3C3C43',
-    marginBottom: 16,
-    lineHeight: 20,
-  },
-  goalFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  goalMetrics: {
-    flex: 1,
-  },
-  goalProgressContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  goalProgressBar: {
-    flex: 1,
-    height: 6,
-    backgroundColor: '#E5E5EA',
-    borderRadius: 3,
-    overflow: 'hidden',
-  },
-  goalProgress: {
-    height: '100%',
-    borderRadius: 3,
-  },
-  goalProgressText: {
-    fontSize: 12,
-    color: '#8E8E93',
-    marginLeft: 8,
-    width: 35,
-  },
-  goalDeadline: {
-    fontSize: 13,
-    color: '#8E8E93',
-    marginLeft: 10,
-  },
-  darkText: {
-    color: '#FFFFFF',
-  },
-  darkSecondaryText: {
-    color: '#EBEBF5',
-  },
-  darkTertiaryText: {
-    color: '#8E8E93',
-  },
-});
+  return (
+    <View style={styles.contentCard}>
+      <View style={styles.goalHeader}>
+        <View style={[styles.goalPriorityIndicator, { backgroundColor: goal.priorityColor }]} />
+        <Text style={styles.goalTitle}>{goal.title}</Text>
+      </View>
+      <Text style={styles.goalDescription}>
+        {goal.description}
+      </Text>
+      <View style={styles.goalFooter}>
+        <View style={styles.goalMetrics}>
+          <View style={styles.goalProgressContainer}>
+            <View style={styles.goalProgressBar}>
+              <View style={[styles.goalProgress, { width: `${goal.progress}%`, backgroundColor: goal.priorityColor }]} />
+            </View>
+            <Text style={styles.goalProgressText}>{goal.progress}%</Text>
+          </View>
+        </View>
+        <Text style={styles.goalDeadline}>
+          {goal.deadline ? `Due: ${goal.deadline}` : 'No deadline'}
+        </Text>
+      </View>
+    </View>
+  );
+};
 
 export default GoalItem; 

@@ -94,4 +94,13 @@ export type AppAction =
   | { type: 'UPDATE_SEASON'; payload: Season }
   | { type: 'DELETE_SEASON'; payload: string }
   | { type: 'SET_THEME'; payload: 'dark' | 'light' | 'system' }
-  | { type: 'LOAD_DATA'; payload: { contentItems: ContentItem[]; seasons: Season[] } }; 
+  | { type: 'LOAD_DATA'; payload: { contentItems: ContentItem[]; seasons: Season[] } };
+
+// Default export for Expo Router
+import React from 'react';
+
+export default function AppTypes() {
+  // This is a dummy component that satisfies Expo Router's requirement
+  // for having a React component as the default export
+  return null;
+} 

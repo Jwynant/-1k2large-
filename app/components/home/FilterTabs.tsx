@@ -1,19 +1,45 @@
 import React from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
+import { useStyles } from '../../hooks';
+import { useTheme } from '../../theme';
 
 export type FilterOption = 'all' | 'goals' | 'memories' | 'lessons';
 
 interface FilterTabsProps {
   selectedFilter: FilterOption;
   onSelectFilter: (filter: FilterOption) => void;
-  isDarkMode: boolean;
 }
 
 export const FilterTabs: React.FC<FilterTabsProps> = ({ 
   selectedFilter, 
   onSelectFilter,
-  isDarkMode 
 }) => {
+  const theme = useTheme();
+  const styles = useStyles(theme => ({
+    filterContainer: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginTop: theme.spacing.xs,
+    },
+    filterTab: {
+      paddingVertical: theme.spacing.sm,
+      paddingHorizontal: theme.spacing.md,
+      borderRadius: theme.borders.radius.lg,
+      backgroundColor: 'transparent',
+    },
+    selectedFilterTab: {
+      backgroundColor: theme.colors.accent,
+    },
+    filterTabText: {
+      fontSize: theme.typography.sizes.sm,
+      fontWeight: theme.typography.weights.semibold,
+      color: theme.colors.text.tertiary,
+    },
+    selectedFilterTabText: {
+      color: theme.colors.text.inverse,
+    },
+  }));
+
   const filterOptions: { id: FilterOption; label: string }[] = [
     { id: 'all', label: 'All' },
     { id: 'goals', label: 'Goals' },
@@ -29,7 +55,6 @@ export const FilterTabs: React.FC<FilterTabsProps> = ({
           style={[
             styles.filterTab,
             selectedFilter === option.id && styles.selectedFilterTab,
-            isDarkMode && selectedFilter === option.id && styles.darkSelectedFilterTab
           ]}
           onPress={() => onSelectFilter(option.id)}
         >
@@ -37,8 +62,6 @@ export const FilterTabs: React.FC<FilterTabsProps> = ({
             style={[
               styles.filterTabText,
               selectedFilter === option.id && styles.selectedFilterTabText,
-              isDarkMode && styles.darkFilterTabText,
-              isDarkMode && selectedFilter === option.id && styles.darkSelectedFilterTabText
             ]}
           >
             {option.label}
@@ -48,39 +71,5 @@ export const FilterTabs: React.FC<FilterTabsProps> = ({
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  filterContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 4,
-  },
-  filterTab: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 16,
-    backgroundColor: 'transparent',
-  },
-  selectedFilterTab: {
-    backgroundColor: '#007AFF',
-  },
-  darkSelectedFilterTab: {
-    backgroundColor: '#0A84FF',
-  },
-  filterTabText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#8E8E93',
-  },
-  selectedFilterTabText: {
-    color: '#FFFFFF',
-  },
-  darkFilterTabText: {
-    color: '#8E8E93',
-  },
-  darkSelectedFilterTabText: {
-    color: '#FFFFFF',
-  },
-});
 
 export default FilterTabs; 

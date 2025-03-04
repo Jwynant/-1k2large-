@@ -55,4 +55,7 @@ export class StorageService {
       console.error('Error clearing all data:', error);
     }
   }
-} 
+}
+
+// Default export for Expo Router
+export default StorageService; 

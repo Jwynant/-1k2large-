@@ -1,73 +1,60 @@
 import React from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useStyles } from '../../../hooks';
+import { useTheme } from '../../../theme';
+import { Button } from '../../ui/Button';
 
-interface EmptyPrioritiesProps {
-  isDarkMode: boolean;
-}
+export const EmptyPriorities: React.FC = () => {
+  const theme = useTheme();
+  const styles = useStyles(theme => ({
+    emptyPrioritiesContainer: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: theme.spacing.lg,
+      backgroundColor: 'transparent',
+    },
+    emptyStateIconContainer: {
+      width: 80,
+      height: 80,
+      borderRadius: 40,
+      backgroundColor: theme.colors.background.secondary,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: theme.spacing.md,
+    },
+    emptyPrioritiesTitle: {
+      fontSize: theme.typography.sizes.lg,
+      fontWeight: theme.typography.weights.semibold,
+      color: theme.colors.text.primary,
+      marginBottom: theme.spacing.sm,
+      textAlign: 'center',
+    },
+    emptyPrioritiesDescription: {
+      fontSize: theme.typography.sizes.md,
+      color: theme.colors.text.secondary,
+      textAlign: 'center',
+      marginBottom: theme.spacing.lg,
+      paddingHorizontal: theme.spacing.md,
+    },
+  }));
 
-export const EmptyPriorities: React.FC<EmptyPrioritiesProps> = ({ isDarkMode }) => (
-  <View style={styles.emptyPrioritiesContainer}>
-    <View style={[styles.emptyStateIconContainer, isDarkMode && { backgroundColor: '#2C2C2E' }]}>
-      <Ionicons name="compass" size={36} color={isDarkMode ? '#FF9F0A' : '#FF9500'} />
+  return (
+    <View style={styles.emptyPrioritiesContainer}>
+      <View style={styles.emptyStateIconContainer}>
+        <Ionicons name="compass" size={36} color={theme.colors.warning} />
+      </View>
+      <Text style={styles.emptyPrioritiesTitle}>Define Your Focus Areas</Text>
+      <Text style={styles.emptyPrioritiesDescription}>
+        What life domains need your attention right now? Set high-level focus areas to guide your daily decisions.
+      </Text>
+      <Button 
+        label="Set Focus Areas"
+        onPress={() => {}}
+        variant="primary"
+      />
     </View>
-    <Text style={[styles.emptyPrioritiesTitle, isDarkMode && styles.darkText]}>Define Your Focus Areas</Text>
-    <Text style={[styles.emptyPrioritiesDescription, isDarkMode && styles.darkSecondaryText]}>
-      What life domains need your attention right now? Set high-level focus areas to guide your daily decisions.
-    </Text>
-    <Pressable style={styles.emptyStateButton}>
-      <Text style={styles.emptyStateButtonText}>Set Focus Areas</Text>
-    </Pressable>
-  </View>
-);
-
-const styles = StyleSheet.create({
-  emptyPrioritiesContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
-    backgroundColor: 'transparent',
-  },
-  emptyStateIconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#F2F2F7',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-  },
-  emptyPrioritiesTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#000',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  emptyPrioritiesDescription: {
-    fontSize: 15,
-    color: '#8E8E93',
-    textAlign: 'center',
-    marginBottom: 20,
-    paddingHorizontal: 16,
-  },
-  emptyStateButton: {
-    backgroundColor: '#007AFF',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-  },
-  emptyStateButtonText: {
-    color: '#FFFFFF',
-    fontWeight: '600',
-    fontSize: 16,
-  },
-  darkText: {
-    color: '#FFFFFF',
-  },
-  darkSecondaryText: {
-    color: '#EBEBF5',
-  },
-});
+  );
+};
 
 export default EmptyPriorities; 
