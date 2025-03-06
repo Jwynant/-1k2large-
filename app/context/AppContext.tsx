@@ -7,7 +7,9 @@ import {
   Season, 
   ViewMode, 
   ViewState, 
-  SelectedCell 
+  SelectedCell,
+  FocusArea,
+  UserSettings
 } from '../types';
 
 // Create the context
@@ -27,6 +29,19 @@ const AppContext = createContext<{
     selectedCell: null,
     contentItems: [],
     seasons: [],
+    focusAreas: [],
+    userSettings: {
+      lifeExpectancy: 83, // Default 83 years (approximately 1000 months)
+      notifications: {
+        goalDeadlines: true,
+        priorityReminders: true,
+        reflectionPrompts: true,
+        memoryCapture: true
+      },
+      notificationsEnabled: true,
+      showCompletedGoals: true,
+      weekStartsOnMonday: false
+    },
     theme: 'dark',
   },
   dispatch: () => null,
@@ -45,6 +60,19 @@ const initialState: AppState = {
   selectedCell: null,
   contentItems: [],
   seasons: [],
+  focusAreas: [],
+  userSettings: {
+    lifeExpectancy: 83, // Default 83 years (approximately 1000 months)
+    notifications: {
+      goalDeadlines: true,
+      priorityReminders: true,
+      reflectionPrompts: true,
+      memoryCapture: true
+    },
+    notificationsEnabled: true,
+    showCompletedGoals: true,
+    weekStartsOnMonday: false
+  },
   theme: 'dark',
 };
 
@@ -105,11 +133,47 @@ function appReducer(state: AppState, action: AppAction): AppState {
         ...state, 
         seasons: state.seasons.filter(season => season.id !== action.payload) 
       };
+    case 'ADD_FOCUS_AREA':
+      return {
+        ...state,
+        focusAreas: [...state.focusAreas, action.payload]
+      };
+    case 'UPDATE_FOCUS_AREA':
+      return {
+        ...state,
+        focusAreas: state.focusAreas.map(area =>
+          area.id === action.payload.id ? action.payload : area
+        )
+      };
+    case 'DELETE_FOCUS_AREA':
+      return {
+        ...state,
+        focusAreas: state.focusAreas.filter(area => area.id !== action.payload)
+      };
+    case 'REORDER_FOCUS_AREAS':
+      // Reorder based on the array of IDs representing the new order
+      return {
+        ...state,
+        focusAreas: action.payload.map(id => 
+          // Find the focus area with matching ID
+          state.focusAreas.find(area => area.id === id)!
+        ).filter(Boolean) // Filter out any undefined values
+      };
+    case 'UPDATE_USER_SETTINGS':
+      return {
+        ...state,
+        userSettings: {
+          ...state.userSettings,
+          ...action.payload
+        }
+      };
     case 'LOAD_DATA':
       return { 
         ...state, 
-        contentItems: action.payload.contentItems,
-        seasons: action.payload.seasons,
+        contentItems: action.payload.contentItems || [],
+        seasons: action.payload.seasons || [],
+        focusAreas: action.payload.focusAreas || [],
+        userSettings: action.payload.userSettings || initialState.userSettings,
         isLoading: false
       };
     default:
@@ -131,7 +195,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
             type: 'LOAD_DATA', 
             payload: { 
               contentItems: userData.contentItems || [], 
-              seasons: userData.seasons || [] 
+              seasons: userData.seasons || [],
+              focusAreas: userData.focusAreas || [],
+              userSettings: userData.userSettings || initialState.userSettings
             } 
           });
           
@@ -166,10 +232,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
         accentColor: state.accentColor,
         contentItems: state.contentItems,
         seasons: state.seasons,
+        focusAreas: state.focusAreas,
+        userSettings: state.userSettings,
         theme: state.theme,
       });
     }
-  }, [state.userBirthDate, state.accentColor, state.contentItems, state.seasons, state.theme, state.isLoading]);
+  }, [
+    state.userBirthDate, 
+    state.accentColor, 
+    state.contentItems, 
+    state.seasons, 
+    state.focusAreas, 
+    state.userSettings, 
+    state.theme, 
+    state.isLoading
+  ]);
   
   return (
     <AppContext.Provider value={{ state, dispatch }}>
@@ -185,4 +262,7 @@ export function useAppContext() {
     throw new Error('useAppContext must be used within an AppProvider');
   }
   return context;
-} 
+}
+
+// Export the provider as default to satisfy Expo Router
+export default AppProvider; 

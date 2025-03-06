@@ -76,19 +76,14 @@ export function useContentManagement() {
     return getContentByType('memory');
   }, [getContentByType]);
   
-  // Get all lessons
-  const getLessons = useCallback(() => {
-    return getContentByType('lesson');
-  }, [getContentByType]);
-  
   // Get all goals
   const getGoals = useCallback(() => {
     return getContentByType('goal');
   }, [getContentByType]);
   
-  // Get all reflections
-  const getReflections = useCallback(() => {
-    return getContentByType('reflection');
+  // Get all insights
+  const getInsights = useCallback(() => {
+    return getContentByType('insight');
   }, [getContentByType]);
   
   // Check if a cell has any content
@@ -104,9 +99,11 @@ export function useContentManagement() {
     deleteContentItem,
     getContentByType,
     getMemories,
-    getLessons,
     getGoals,
-    getReflections,
+    getInsights,
     hasContent,
   };
-} 
+}
+
+// Default export for Expo Router compatibility
+export default useContentManagement; 

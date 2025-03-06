@@ -254,4 +254,7 @@ export function useDateCalculations() {
     // Legacy method for backward compatibility
     userAge: getAgeForYear,
   };
-} 
+}
+
+// Default export for Expo Router compatibility
+export default useDateCalculations; 

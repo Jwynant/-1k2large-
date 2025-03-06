@@ -2,6 +2,14 @@ import { View, Text, StyleSheet, Pressable, Dimensions, Alert, Modal, TouchableW
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { MotiView } from 'moti';
 import { Animated, ScrollView } from 'react-native';
+import Reanimated, { 
+  useSharedValue, 
+  useAnimatedStyle, 
+  withTiming, 
+  withSpring,
+  Easing,
+  runOnJS
+} from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { format } from 'date-fns';
 import YearGridView from './years/YearGridView';
@@ -51,6 +59,8 @@ export default function GridContainer() {
   const [quickAddPosition, setQuickAddPosition] = useState<Position>({ x: 0, y: 0 });
   const [monthViewVisible, setMonthViewVisible] = useState(false);
   const [selectedYearForMonthView, setSelectedYearForMonthView] = useState<number | null>(null);
+  const [selectedClusterPosition, setSelectedClusterPosition] = useState({ x: 0, y: 0 });
+  const [fromMonthView, setFromMonthView] = useState(false);
   
   // Refs
   const scrollViewRef = useRef<ScrollView>(null);
@@ -59,12 +69,53 @@ export default function GridContainer() {
   // Window dimensions
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   
+  // Animation values for transitions
+  const expandedViewOpacity = useSharedValue(0);
+  const expandedViewScale = useSharedValue(0.95);
+  const expandedViewTranslateY = useSharedValue(100);
+  
+  // Animation values for cell detail view
+  const detailViewOpacity = useSharedValue(0);
+  const detailViewScale = useSharedValue(0.95);
+  
+  // Animated styles - define these at the component level, not inside render functions
+  const expandedViewAnimatedStyles = useAnimatedStyle(() => {
+    return {
+      opacity: expandedViewOpacity.value,
+      transform: [
+        { scale: expandedViewScale.value },
+        { translateY: expandedViewTranslateY.value }
+      ],
+    };
+  });
+  
+  const expandedViewOverlayAnimatedStyles = useAnimatedStyle(() => {
+    return {
+      opacity: expandedViewOpacity.value * 0.7, // Dim the background slightly less than full opacity
+    };
+  });
+  
+  const detailViewAnimatedStyles = useAnimatedStyle(() => {
+    return {
+      opacity: detailViewOpacity.value,
+      transform: [
+        { scale: detailViewScale.value }
+      ],
+    };
+  });
+  
+  const detailViewOverlayAnimatedStyles = useAnimatedStyle(() => {
+    return {
+      opacity: detailViewOpacity.value * 0.7, // Dim the background
+    };
+  });
+  
+  // Get app context for user data
+  const { state } = useAppContext();
+  
   // Calculate grid dimensions
   const gridWidth = windowWidth;
   const gridHeight = windowHeight - 100; // Further reduced to give more space to the grid
-  
-  // Calculate current age with precision
-  const { state } = useAppContext();
   
   // Generate clusters based on current year and user lifespan
   const clusters = useMemo(() => {
@@ -88,6 +139,21 @@ export default function GridContainer() {
     }
     return clusterArray;
   }, [state.userBirthDate]);
+  
+  // Use the centralized age calculation
+  const preciseAge = useMemo(() => {
+    return getPreciseAge();
+  }, [getPreciseAge]);
+  
+  // Format current date
+  const formattedDate = useMemo(() => {
+    return format(new Date(), 'MMMM d, yyyy');
+  }, []);
+  
+  // Calculate life progress percentage using centralized method
+  const lifeProgressPercentage = useMemo(() => {
+    return getLifeProgress(80); // 80 years as default life expectancy
+  }, [getLifeProgress]);
   
   // Handle view mode toggle
   const toggleViewMode = useCallback(() => {
@@ -121,37 +187,82 @@ export default function GridContainer() {
     setDetailSheetVisible(true);
   }, []);
   
-  // Handle cell detail view close
-  const handleCellDetailClose = useCallback(() => {
-    setDetailSheetVisible(false);
-  }, []);
-
-  // Open month expanded view
-  const openMonthExpandedView = useCallback((year: number) => {
+  // Open month expanded view with animation
+  const openMonthExpandedView = useCallback((year: number, position?: Position) => {
+    // Store the position of the cluster that was clicked for origin-based animation
+    if (position) {
+      setSelectedClusterPosition(position);
+    }
+    
     setSelectedYearForMonthView(year);
+    
+    // Start animations
+    expandedViewOpacity.value = 0;
+    expandedViewScale.value = 0.95;
+    expandedViewTranslateY.value = 50;
+    
+    // Animate in the expanded view
+    expandedViewOpacity.value = withTiming(1, { duration: 300, easing: Easing.out(Easing.ease) });
+    expandedViewScale.value = withSpring(1, { damping: 15, stiffness: 100 });
+    expandedViewTranslateY.value = withTiming(0, { duration: 300, easing: Easing.out(Easing.ease) });
+    
     setMonthViewVisible(true);
   }, []);
 
-  // Close month expanded view
+  // Close month expanded view with animation
   const closeMonthExpandedView = useCallback(() => {
-    setMonthViewVisible(false);
-    setSelectedYearForMonthView(null);
+    // Animate out
+    expandedViewOpacity.value = withTiming(0, { duration: 250, easing: Easing.in(Easing.ease) }, () => {
+      // When animation is complete, hide the view
+      runOnJS(setMonthViewVisible)(false);
+      runOnJS(setSelectedYearForMonthView)(null);
+    });
+    expandedViewScale.value = withTiming(0.95, { duration: 250 });
+    expandedViewTranslateY.value = withTiming(50, { duration: 250 });
   }, []);
 
   // Handle month press in the expanded view
   const handleMonthPress = useCallback((month: number) => {
     if (selectedYearForMonthView !== null) {
+      setFromMonthView(true);
       handleCellPress(selectedYearForMonthView, month);
       closeMonthExpandedView();
     }
   }, [selectedYearForMonthView, handleCellPress, closeMonthExpandedView]);
   
-  // Effect to open detail sheet when a cell is selected
+  // Effect to handle cell detail view animations
   useEffect(() => {
     if (selectedCell) {
+      // Animate in the detail view
+      detailViewOpacity.value = withTiming(1, { duration: 300 });
+      detailViewScale.value = withSpring(1, { damping: 15, stiffness: 100 });
       setDetailSheetVisible(true);
     }
   }, [selectedCell]);
+  
+  // Handle cell detail view close with animation
+  const handleCellDetailClose = useCallback(() => {
+    // Animate out
+    detailViewOpacity.value = withTiming(0, { duration: 250 }, () => {
+      // When animation is complete, hide the view
+      runOnJS(setDetailSheetVisible)(false);
+      runOnJS(setFromMonthView)(false);
+    });
+    detailViewScale.value = withTiming(0.95, { duration: 250 });
+  }, []);
+  
+  // Handle back to month view
+  const handleBackToMonthView = useCallback(() => {
+    // Close the cell detail view
+    handleCellDetailClose();
+    
+    // Reopen the month expanded view
+    if (selectedCell?.year) {
+      setTimeout(() => {
+        openMonthExpandedView(selectedCell.year);
+      }, 300); // Delay slightly to allow detail view to close
+    }
+  }, [handleCellDetailClose, selectedCell, openMonthExpandedView]);
   
   // Render the appropriate grid view based on view mode
   const renderGridView = useCallback(() => {
@@ -199,54 +310,56 @@ export default function GridContainer() {
     }
   }, [viewMode, handleYearSelect, handleCellLongPress, handleCellPress, clusters, hasContent, openMonthExpandedView]);
 
-  // Render month expanded view
+  // Render month expanded view with enhanced animation
   const renderMonthExpandedView = useCallback(() => {
-    if (monthViewVisible && selectedYearForMonthView !== null) {
-      return (
-        <Modal
-          animationType="slide"
-          transparent={false}
-          visible={monthViewVisible}
-          onRequestClose={closeMonthExpandedView}
+    if (!monthViewVisible) return null;
+    
+    return (
+      <View style={styles.animatedModalContainer}>
+        <Reanimated.View 
+          style={[styles.modalOverlay, expandedViewOverlayAnimatedStyles]} 
+          pointerEvents="auto"
         >
-          <MonthExpandedView
-            year={selectedYearForMonthView}
-            onClose={closeMonthExpandedView}
-            onMonthPress={handleMonthPress}
+          <Pressable 
+            style={{ flex: 1 }} 
+            onPress={closeMonthExpandedView}
           />
-        </Modal>
-      );
-    }
-    return null;
-  }, [monthViewVisible, selectedYearForMonthView, closeMonthExpandedView, handleMonthPress]);
+        </Reanimated.View>
+        
+        <Reanimated.View style={[styles.expandedViewContainer, expandedViewAnimatedStyles]}>
+          {selectedYearForMonthView !== null && (
+            <MonthExpandedView
+              year={selectedYearForMonthView}
+              onClose={closeMonthExpandedView}
+              onMonthPress={handleMonthPress}
+            />
+          )}
+        </Reanimated.View>
+      </View>
+    );
+  }, [monthViewVisible, selectedYearForMonthView, closeMonthExpandedView, handleMonthPress, expandedViewAnimatedStyles, expandedViewOverlayAnimatedStyles]);
   
-  // Render the cell detail view if a cell is selected
+  // Render the cell detail view if a cell is selected with enhanced animation
   const renderCellDetailView = useCallback(() => {
-    if (detailSheetVisible && selectedCell) {
-      return (
-        <CellDetailView 
-          selectedCell={selectedCell} 
-          onClose={handleCellDetailClose} 
+    if (!detailSheetVisible || !selectedCell) return null;
+    
+    return (
+      <Reanimated.View
+        style={[
+          StyleSheet.absoluteFill,
+          styles.detailViewOverlay,
+          detailViewOverlayAnimatedStyles
+        ]}
+      >
+        <CellDetailView
+          selectedCell={selectedCell}
+          onClose={handleCellDetailClose}
+          onBack={handleBackToMonthView}
+          showBackButton={fromMonthView}
         />
-      );
-    }
-    return null;
-  }, [detailSheetVisible, selectedCell, handleCellDetailClose]);
-  
-  // Use the centralized age calculation
-  const preciseAge = useMemo(() => {
-    return getPreciseAge();
-  }, [getPreciseAge]);
-  
-  // Format current date
-  const formattedDate = useMemo(() => {
-    return format(new Date(), 'MMMM d, yyyy');
-  }, []);
-  
-  // Calculate life progress percentage using centralized method
-  const lifeProgressPercentage = useMemo(() => {
-    return getLifeProgress(80); // 80 years as default life expectancy
-  }, [getLifeProgress]);
+      </Reanimated.View>
+    );
+  }, [detailSheetVisible, selectedCell, handleCellDetailClose, detailViewOverlayAnimatedStyles, fromMonthView, handleBackToMonthView]);
   
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
@@ -377,5 +490,34 @@ const styles = StyleSheet.create({
   gridContainer: {
     flex: 1,
     padding: 4, // Reduced padding
+  },
+  // New styles for animated modals
+  animatedModalContainer: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  modalOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#000',
+  },
+  expandedViewContainer: {
+    width: '90%',
+    height: '85%',
+    backgroundColor: '#121212',
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  detailViewContainer: {
+    width: '85%',
+    maxHeight: '80%',
+    borderRadius: 16,
+  },
+  detailViewOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#000',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

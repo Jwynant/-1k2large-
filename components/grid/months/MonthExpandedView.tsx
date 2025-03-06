@@ -1,6 +1,16 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import Animated, { 
+  useSharedValue, 
+  useAnimatedStyle, 
+  withTiming, 
+  withSpring,
+  Easing, 
+  FadeIn,
+  FadeOut
+} from 'react-native-reanimated';
+import * as Haptics from 'expo-haptics';
 import { useContentManagement } from '../../../app/hooks/useContentManagement';
 import { useDateCalculations } from '../../../app/hooks/useDateCalculations';
 import CellContentIndicator from '../CellContentIndicator';
@@ -13,13 +23,13 @@ interface MonthExpandedViewProps {
 
 export default function MonthExpandedView({ year, onClose, onMonthPress }: MonthExpandedViewProps) {
   const { hasContent, getCellContent } = useContentManagement();
-  const { isCurrentMonth, isMonthInPast, isInCurrentYear } = useDateCalculations();
+  const { isCurrentMonth, isMonthInPast, isCurrentYear } = useDateCalculations();
   const { width } = useWindowDimensions();
   
   // Calculate age from the year
   const currentYear = new Date().getFullYear();
   const age = currentYear - year;
-  const isCurrentYearSelected = year === currentYear;
+  const isCurrentYearSelected = isCurrentYear(year);
   const isPastYear = year < currentYear;
   const isFutureYear = year > currentYear;
   
@@ -52,86 +62,106 @@ export default function MonthExpandedView({ year, onClose, onMonthPress }: Month
     return monthsData;
   }, [year, isCurrentMonth, isMonthInPast, hasContent, getCellContent]);
 
-  // Calculate cell size - changed to 3 per row for 50% bigger cells
-  const cellsPerRow = 3;
-  const cellMargin = 10;
-  const horizontalPadding = 20 * 2;
-  const availableWidth = width - horizontalPadding;
-  const cellSize = (availableWidth - (cellMargin * 2 * (cellsPerRow - 1))) / cellsPerRow;
+  // Handle month press with animation
+  const handleMonthPress = (month: number) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onMonthPress(month);
+  };
+
+  // Handle back button press
+  const handleBackPress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onClose();
+  };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onClose} style={styles.backButton}>
-          <Ionicons name="chevron-back" size={28} color="#FFFFFF" />
-        </TouchableOpacity>
-        <View style={styles.titleContainer}>
-          <Text style={styles.yearTitle}>{year}</Text>
-          <Text style={styles.ageTitle}>Age {age}</Text>
+    <Animated.View 
+      style={styles.container}
+      entering={FadeIn.duration(300).springify()}
+      exiting={FadeOut.duration(200)}
+    >
+      <SafeAreaView style={{ flex: 1 }}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={handleBackPress} style={styles.backButton}>
+            <Ionicons name="chevron-back" size={28} color="#FFFFFF" />
+          </TouchableOpacity>
+          <Animated.View 
+            style={styles.titleContainer}
+            entering={FadeIn.delay(100).duration(300)}
+          >
+            <Text style={styles.yearTitle}>{year}</Text>
+            <Text style={styles.ageTitle}>Age {age}</Text>
+          </Animated.View>
+          <View style={styles.placeholder} />
         </View>
-        <View style={styles.placeholder} />
-      </View>
-      
-      <View style={styles.monthsGridContainer}>
-        <View style={styles.monthsGrid}>
-          {months.map((month) => {
-            // Determine cell style based on year and month
-            let cellStyle;
-            let textStyle;
-            
-            if (isPastYear) {
-              // Past year - all cells have white fill with dark text
-              cellStyle = styles.pastCell;
-              textStyle = styles.pastCellText;
-            } else if (isFutureYear) {
-              // Future year - all cells are transparent with white border and white text
-              cellStyle = styles.futureCell;
-              textStyle = styles.futureCellText;
-            } else {
-              // Current year - mixed styles based on month
-              if (month.isPast) {
-                // Past months - white fill with dark text
+        
+        <View style={styles.monthsGridContainer}>
+          <View style={styles.monthsGrid}>
+            {months.map((month, index) => {
+              // Determine cell style based on year and month
+              let cellStyle;
+              let textStyle;
+              
+              if (isPastYear) {
+                // Past year - all cells have white fill with dark text
                 cellStyle = styles.pastCell;
                 textStyle = styles.pastCellText;
-              } else if (month.isCurrent) {
-                // Current month - transparent with blue border and white text
-                cellStyle = styles.currentCell;
-                textStyle = styles.currentCellText;
-              } else {
-                // Future months - transparent with white border and white text
+              } else if (isFutureYear) {
+                // Future year - all cells are transparent with white border and white text
                 cellStyle = styles.futureCell;
                 textStyle = styles.futureCellText;
+              } else {
+                // Current year - mixed styles based on month
+                if (month.isPast) {
+                  // Past months - white fill with dark text
+                  cellStyle = styles.pastCell;
+                  textStyle = styles.pastCellText;
+                } else if (month.isCurrent) {
+                  // Current month - transparent with blue border and white text
+                  cellStyle = styles.currentCell;
+                  textStyle = styles.currentCellText;
+                } else {
+                  // Future months - transparent with white border and white text
+                  cellStyle = styles.futureCell;
+                  textStyle = styles.futureCellText;
+                }
               }
-            }
-            
-            return (
-              <TouchableOpacity
-                key={month.index}
-                style={[
-                  styles.monthCell,
-                  { width: cellSize, height: cellSize, margin: cellMargin },
-                  cellStyle
-                ]}
-                onPress={() => onMonthPress(month.index)}
-              >
-                <Text style={textStyle}>
-                  {month.name}
-                </Text>
-                
-                {month.hasContent && (
-                  <View style={styles.contentIndicatorContainer}>
-                    <CellContentIndicator 
-                      content={month.content} 
-                      size="medium" // Increased from small to medium for larger cells
-                    />
-                  </View>
-                )}
-              </TouchableOpacity>
-            );
-          })}
+              
+              return (
+                <View key={month.index} style={styles.cellWrapper}>
+                  <Animated.View
+                    entering={FadeIn.delay(100 + index * 30).duration(300)}
+                    style={styles.animatedCell}
+                  >
+                    <TouchableOpacity
+                      style={[styles.monthCell, cellStyle]}
+                      onPress={() => handleMonthPress(month.index)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={[textStyle, styles.monthText]}>
+                        {month.name}
+                      </Text>
+                      
+                      {month.hasContent && (
+                        <Animated.View 
+                          entering={FadeIn.delay(300 + index * 20).duration(300)}
+                          style={styles.contentIndicatorContainer}
+                        >
+                          <CellContentIndicator 
+                            content={month.content} 
+                            size="medium"
+                          />
+                        </Animated.View>
+                      )}
+                    </TouchableOpacity>
+                  </Animated.View>
+                </View>
+              );
+            })}
+          </View>
         </View>
-      </View>
-    </SafeAreaView>
+      </SafeAreaView>
+    </Animated.View>
   );
 }
 
@@ -172,19 +202,25 @@ const styles = StyleSheet.create({
   },
   monthsGridContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 20,
+    paddingVertical: 16,
+    paddingHorizontal: 12,
   },
   monthsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'center',
-    width: '95%',
-    maxWidth: 450,
+    marginTop: 8,
+  },
+  cellWrapper: {
+    width: '33.33%', // Exactly 3 columns
+    aspectRatio: 1,
+    padding: 6,
+  },
+  animatedCell: {
+    flex: 1,
   },
   monthCell: {
-    borderRadius: 12, // Slightly larger border radius for bigger cells
+    flex: 1,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
@@ -195,7 +231,7 @@ const styles = StyleSheet.create({
   },
   pastCellText: {
     color: '#000000', // Dark text
-    fontSize: 20, // Larger font for bigger cells
+    fontSize: 20,
     fontWeight: '600',
   },
   // 2. Present cells: no fill with blue border and white text
@@ -206,24 +242,28 @@ const styles = StyleSheet.create({
   },
   currentCellText: {
     color: '#FFFFFF', // White text
-    fontSize: 20, // Larger font for bigger cells
+    fontSize: 20,
     fontWeight: '600',
   },
   // 3. Future cells: no fill with white border and white text
   futureCell: {
     backgroundColor: 'transparent', // No fill
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: '#FFFFFF', // White border
   },
   futureCellText: {
     color: '#FFFFFF', // White text
-    fontSize: 20, // Larger font for bigger cells
+    fontSize: 20,
     fontWeight: '600',
   },
   contentIndicatorContainer: {
     position: 'absolute',
-    bottom: 10, // More bottom padding for larger cells
+    bottom: 8,
     alignItems: 'center',
     justifyContent: 'center',
-  }
+  },
+  monthText: {
+    fontSize: 18,
+    fontWeight: '600',
+  },
 }); 

@@ -67,21 +67,18 @@ export function useContentForm({
     return Object.keys(newErrors).length === 0;
   }, [formState]);
   
-  // Handle form submission
-  const handleSubmit = useCallback(() => {
-    if (!validateForm()) {
-      return null;
-    }
+  // Finalize the new content item and add it to the state
+  const submitForm = useCallback(async (): Promise<string | null> => {
+    if (!validateForm()) return null;
     
-    // Create content item
-    const newItem = {
-      id: nanoid(),
+    // Create a new content item
+    const newItem: Omit<ContentItem, 'id'> = {
       title: formState.title,
       date: formState.date.toISOString(),
       type,
       notes: formState.notes || undefined,
       emoji: formState.emoji || undefined,
-      importance: type === 'lesson' ? formState.importance : undefined,
+      importance: type === 'insight' ? formState.importance : undefined,
       media: formState.media.length > 0 ? formState.media : undefined,
     };
     
@@ -122,10 +119,13 @@ export function useContentForm({
     formState,
     errors,
     handleChange,
-    handleSubmit,
+    handleSubmit: submitForm,
     resetForm,
     addMedia,
     removeMedia,
     isValid: validateForm,
   };
-} 
+}
+
+// Default export for Expo Router compatibility
+export default useContentForm; 

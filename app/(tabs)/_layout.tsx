@@ -42,36 +42,46 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Life Grid',
-          tabBarIcon: ({ color }) => <Ionicons name="grid" size={24} color={color} />,
+          title: 'Grid',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? "grid" : "grid-outline"} size={24} color={color} />
+          ),
         }}
       />
       <Tabs.Screen
-        name="intentions"
+        name="focus"
         options={{
-          title: 'Intentions',
-          tabBarIcon: ({ color }) => <Ionicons name="flag" size={24} color={color} />,
+          title: 'Focus',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? "compass" : "compass-outline"} size={24} color={color} />
+          ),
         }}
       />
       <Tabs.Screen
-        name="insights"
+        name="today"
         options={{
-          title: 'Insights',
-          tabBarIcon: ({ color }) => <Ionicons name="sparkles" size={24} color={color} />,
+          title: 'Today',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? "today" : "today-outline"} size={24} color={color} />
+          ),
         }}
       />
       <Tabs.Screen
-        name="timeline"
+        name="content"
         options={{
-          title: 'Timeline',
-          tabBarIcon: ({ color }) => <Ionicons name="time" size={24} color={color} />,
+          title: 'Content',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? "library" : "library-outline"} size={24} color={color} />
+          ),
         }}
       />
       <Tabs.Screen
-        name="more"
+        name="profile"
         options={{
-          title: 'More',
-          tabBarIcon: ({ color }) => <Ionicons name="ellipsis-horizontal" size={24} color={color} />,
+          title: 'Profile',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? "person" : "person-outline"} size={24} color={color} />
+          ),
         }}
       />
     </Tabs>

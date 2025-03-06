@@ -54,4 +54,9 @@ export type GoalStats = {
   mediumPriorityGoals: number;
   lowPriorityGoals: number;
   highImpactGoals: number;
-}; 
+};
+
+// Dummy component for Expo Router compatibility
+export default function IntentionTypes() {
+  return null;
+} 

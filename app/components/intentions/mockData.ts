@@ -187,4 +187,13 @@ export const goals: Goal[] = [
     createdAt: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString(),
     updatedAt: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString(),
   },
-]; 
+];
+
+// Mock data collection with all exported data
+const mockData = {
+  priorities,
+  goals
+};
+
+// Default export for Expo Router compatibility
+export default mockData; 

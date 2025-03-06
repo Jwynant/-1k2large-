@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { ContentItem, Season } from '../types';
+import { ContentItem, Season, FocusArea, UserSettings } from '../types';
 
 // Storage keys
 const STORAGE_KEYS = {
@@ -12,6 +12,8 @@ interface UserData {
   accentColor?: string;
   contentItems?: ContentItem[];
   seasons?: Season[];
+  focusAreas?: FocusArea[];
+  userSettings?: UserSettings;
   theme?: 'dark' | 'light' | 'system';
 }
 
@@ -55,4 +57,7 @@ export class StorageService {
       console.error('Error clearing all data:', error);
     }
   }
-} 
+}
+
+// Default export for Expo Router compatibility
+export default StorageService; 
