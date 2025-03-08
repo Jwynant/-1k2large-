@@ -19,12 +19,14 @@ import MonthExpandedView from './months/MonthExpandedView';
 import BottomSheet from '../ui/BottomSheet';
 import CellDetailView from './CellDetailView';
 import ViewModeToggle from '../ui/ViewModeToggle';
+import DisplayModeToggle from '../ui/DisplayModeToggle';
+import TimelineView from '../timeline/TimelineView';
 import { useGridNavigation } from '../../app/hooks/useGridNavigation';
 import { useContentManagement } from '../../app/hooks/useContentManagement';
 import { useDateCalculations } from '../../app/hooks/useDateCalculations';
 import { useAppContext } from '../../app/context/AppContext';
 import QuickAddMenu from '../ui/QuickAddMenu';
-import { ViewMode, ViewState, ClusterPosition, SelectedCell, Cluster } from '../../app/types';
+import { ViewMode, ViewState, ClusterPosition, SelectedCell, Cluster, DisplayMode } from '../../app/types';
 
 type Position = {
   x: number;
@@ -110,8 +112,9 @@ export default function GridContainer() {
     };
   });
   
-  // Get app context for user data
-  const { state } = useAppContext();
+  // Get app context for user data and display mode
+  const { state, dispatch } = useAppContext();
+  const displayMode = state.displayMode || 'grid'; // Default to grid if not set
   
   // Calculate grid dimensions
   const gridWidth = windowWidth;
@@ -361,12 +364,25 @@ export default function GridContainer() {
     );
   }, [detailSheetVisible, selectedCell, handleCellDetailClose, detailViewOverlayAnimatedStyles, fromMonthView, handleBackToMonthView]);
   
+  // Handle display mode toggle
+  const handleDisplayModeChange = useCallback((mode: DisplayMode) => {
+    dispatch({ type: 'SET_DISPLAY_MODE', payload: mode });
+  }, [dispatch]);
+  
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerTopRow}>
           <Text style={styles.dateText}>{formattedDate}</Text>
+          
+          {/* Display mode toggle (grid/timeline) */}
+          <View style={styles.displayModeToggleContainer}>
+            <DisplayModeToggle 
+              currentMode={displayMode}
+              onModeChange={handleDisplayModeChange}
+            />
+          </View>
         </View>
         
         {/* Age text */}
@@ -381,22 +397,28 @@ export default function GridContainer() {
           </View>
         </View>
         
-        {/* View mode toggle */}
-        <View style={styles.toggleContainer}>
-          <ViewModeToggle 
-            currentMode={viewMode}
-            onModeChange={setViewMode}
-          />
-        </View>
+        {/* View mode toggle - only show in grid mode */}
+        {displayMode === 'grid' && (
+          <View style={styles.toggleContainer}>
+            <ViewModeToggle 
+              currentMode={viewMode}
+              onModeChange={setViewMode}
+            />
+          </View>
+        )}
       </View>
       
-      {/* Main grid view */}
+      {/* Main content area */}
       <View style={styles.gridContainer}>
-        {renderGridView()}
+        {displayMode === 'grid' ? (
+          renderGridView()
+        ) : (
+          <TimelineView />
+        )}
       </View>
       
-      {/* Month expanded view */}
-      {renderMonthExpandedView()}
+      {/* Month expanded view - only in grid mode */}
+      {displayMode === 'grid' && renderMonthExpandedView()}
       
       {/* Cell detail view */}
       {renderCellDetailView()}
@@ -435,6 +457,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    width: '100%',
+    paddingHorizontal: 16,
   },
   dateText: {
     fontSize: 14, 
@@ -519,5 +543,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#000',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  displayModeToggleContainer: {
+    position: 'absolute',
+    right: 16,
+    top: 0,
+    zIndex: 10,
   },
 });

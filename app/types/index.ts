@@ -1,6 +1,7 @@
 // View and Navigation Types
 export type ViewMode = 'weeks' | 'months' | 'years';
 export type ViewState = 'grid' | 'cluster';
+export type DisplayMode = 'grid' | 'timeline';
 
 // Grid Types
 export interface ClusterPosition {
@@ -22,13 +23,28 @@ export interface Cluster {
 }
 
 // Focus Area Types
+export type PriorityLevel = 'essential' | 'important' | 'supplemental';
+
+// Category type for the global category system
+export interface Category {
+  id: string;
+  name: string;
+  color: string;
+  icon?: string;
+  description?: string;
+  parentId?: string; // For hierarchical categories (optional)
+}
+
 export interface FocusArea {
   id: string;
   name: string;
   color: string; // From predefined palette
-  allocation: number; // Percentage of focus
-  rank: number; // Order of importance (1 = primary, 2 = secondary, etc.)
-  description?: string;
+  rank: number; // Order of importance within priority level
+  priorityLevel: PriorityLevel; // Explicit priority level
+  categoryIds?: string[]; // IDs of associated categories
+  description?: string; // Keep description for notes
+  status?: 'active' | 'dormant'; // Track whether focus area has active goals
+  lastUpdated?: string; // Track when the focus area was last updated
 }
 
 // Content Types
@@ -61,6 +77,7 @@ export interface ContentItem {
   focusAreaId?: string;
   milestones?: SubGoal[];
   isCompleted?: boolean;
+  categoryIds?: string[]; // NEW: IDs of associated categories
   
   // For memories:
   media?: string[];
@@ -106,6 +123,7 @@ export interface ContentFormState {
   emoji: string;
   importance: number;
   media: string[];
+  categoryIds: string[]; // Add category support
   
   // Goal-specific fields
   deadline?: Date;
@@ -139,6 +157,7 @@ export interface AppState {
   accentColor: string;
   viewMode: ViewMode;
   viewState: ViewState;
+  displayMode: DisplayMode;
   selectedYear: number | null;
   selectedMonth: number | null;
   selectedWeek: number | null;
@@ -146,8 +165,10 @@ export interface AppState {
   contentItems: ContentItem[];
   seasons: Season[];
   focusAreas: FocusArea[];
+  categories: Category[]; // NEW: Global categories list
   userSettings: UserSettings;
   theme: 'dark' | 'light' | 'system';
+  timelineColumns: TimelineColumn[];
 }
 
 export type AppAction = 
@@ -156,6 +177,7 @@ export type AppAction =
   | { type: 'SET_ACCENT_COLOR'; payload: string }
   | { type: 'SET_VIEW_MODE'; payload: ViewMode }
   | { type: 'SET_VIEW_STATE'; payload: ViewState }
+  | { type: 'SET_DISPLAY_MODE'; payload: DisplayMode }
   | { type: 'SELECT_YEAR'; payload: number | null }
   | { type: 'SELECT_MONTH'; payload: number | null }
   | { type: 'SELECT_WEEK'; payload: number | null }
@@ -166,13 +188,38 @@ export type AppAction =
   | { type: 'ADD_SEASON'; payload: Season }
   | { type: 'UPDATE_SEASON'; payload: Season }
   | { type: 'DELETE_SEASON'; payload: string }
+  | { type: 'ADD_TIMELINE_COLUMN'; payload: TimelineColumn }
+  | { type: 'UPDATE_TIMELINE_COLUMN'; payload: TimelineColumn }
+  | { type: 'DELETE_TIMELINE_COLUMN'; payload: string }
   | { type: 'ADD_FOCUS_AREA'; payload: FocusArea }
   | { type: 'UPDATE_FOCUS_AREA'; payload: FocusArea }
   | { type: 'DELETE_FOCUS_AREA'; payload: string }
-  | { type: 'REORDER_FOCUS_AREAS'; payload: string[] } // IDs in new order
+  | { type: 'REORDER_FOCUS_AREAS'; payload: string[] }
+  | { type: 'ADD_CATEGORY'; payload: Category }
+  | { type: 'UPDATE_CATEGORY'; payload: Category }
+  | { type: 'DELETE_CATEGORY'; payload: string }
+  | { type: 'LOAD_CATEGORIES'; payload: Category[] }
   | { type: 'UPDATE_USER_SETTINGS'; payload: Partial<UserSettings> }
   | { type: 'SET_THEME'; payload: 'dark' | 'light' | 'system' }
-  | { type: 'LOAD_DATA'; payload: { contentItems: ContentItem[]; seasons: Season[]; focusAreas: FocusArea[]; userSettings: UserSettings } };
+  | { type: 'LOAD_DATA'; payload: { contentItems: ContentItem[]; seasons: Season[]; focusAreas: FocusArea[]; userSettings: UserSettings; categories?: Category[] } };
+
+// Timeline Types
+export interface TimelineColumn {
+  id: string;
+  title: string;
+  color: string;
+  icon?: string;
+  order: number;
+  visible: boolean;
+}
+
+export interface TimelineEvent {
+  id: string;
+  contentItemId: string;
+  columnId: string;
+  date: string;
+  type: ContentType;
+}
 
 // Provide a default export for the types file
 // This is a dummy component to satisfy Expo Router's requirements

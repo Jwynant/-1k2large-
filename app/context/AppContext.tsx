@@ -6,11 +6,15 @@ import {
   ContentItem, 
   Season, 
   ViewMode, 
-  ViewState, 
+  ViewState,
+  DisplayMode,
   SelectedCell,
   FocusArea,
-  UserSettings
+  UserSettings,
+  TimelineColumn
 } from '../types';
+import { migrateFocusAreas, needsFocusAreaMigration } from '../utils/migrations';
+import { DEFAULT_CATEGORIES } from '../hooks/useCategories';
 
 // Create the context
 const AppContext = createContext<{
@@ -23,6 +27,7 @@ const AppContext = createContext<{
     accentColor: '#007AFF',
     viewMode: 'months',
     viewState: 'grid',
+    displayMode: 'grid', // Default to grid view
     selectedYear: null,
     selectedMonth: null,
     selectedWeek: null,
@@ -30,6 +35,8 @@ const AppContext = createContext<{
     contentItems: [],
     seasons: [],
     focusAreas: [],
+    categories: [],
+    timelineColumns: [], // Initialize empty timeline columns
     userSettings: {
       lifeExpectancy: 83, // Default 83 years (approximately 1000 months)
       notifications: {
@@ -54,6 +61,7 @@ const initialState: AppState = {
   accentColor: '#007AFF',
   viewMode: 'months',
   viewState: 'grid',
+  displayMode: 'grid', // Default to grid view
   selectedYear: null,
   selectedMonth: null,
   selectedWeek: null,
@@ -61,6 +69,8 @@ const initialState: AppState = {
   contentItems: [],
   seasons: [],
   focusAreas: [],
+  categories: [],
+  timelineColumns: [], // Initialize empty timeline columns
   userSettings: {
     lifeExpectancy: 83, // Default 83 years (approximately 1000 months)
     notifications: {
@@ -86,9 +96,20 @@ function appReducer(state: AppState, action: AppAction): AppState {
     case 'SET_ACCENT_COLOR':
       return { ...state, accentColor: action.payload };
     case 'SET_VIEW_MODE':
-      return { ...state, viewMode: action.payload };
+      return {
+        ...state,
+        viewMode: action.payload
+      };
     case 'SET_VIEW_STATE':
-      return { ...state, viewState: action.payload };
+      return {
+        ...state,
+        viewState: action.payload
+      };
+    case 'SET_DISPLAY_MODE':
+      return {
+        ...state,
+        displayMode: action.payload
+      };
     case 'SELECT_YEAR':
       return { ...state, selectedYear: action.payload };
     case 'SELECT_MONTH':
@@ -167,14 +188,63 @@ function appReducer(state: AppState, action: AppAction): AppState {
           ...action.payload
         }
       };
+    case 'ADD_CATEGORY':
+      return {
+        ...state,
+        categories: [...state.categories, action.payload]
+      };
+    case 'UPDATE_CATEGORY':
+      return {
+        ...state,
+        categories: state.categories.map(category => 
+          category.id === action.payload.id ? action.payload : category
+        )
+      };
+    case 'DELETE_CATEGORY':
+      // Remove the category and also remove references to it from content
+      return {
+        ...state,
+        categories: state.categories.filter(category => category.id !== action.payload),
+        focusAreas: state.focusAreas.map(area => ({
+          ...area,
+          categoryIds: area.categoryIds?.filter(id => id !== action.payload) || []
+        })),
+        contentItems: state.contentItems.map(item => ({
+          ...item,
+          categoryIds: item.categoryIds?.filter(id => id !== action.payload) || []
+        }))
+      };
+    case 'LOAD_CATEGORIES':
+      return {
+        ...state,
+        categories: action.payload
+      };
     case 'LOAD_DATA':
       return { 
         ...state, 
         contentItems: action.payload.contentItems || [],
         seasons: action.payload.seasons || [],
         focusAreas: action.payload.focusAreas || [],
+        categories: action.payload.categories || [],
         userSettings: action.payload.userSettings || initialState.userSettings,
         isLoading: false
+      };
+    case 'ADD_TIMELINE_COLUMN':
+      return {
+        ...state,
+        timelineColumns: [...state.timelineColumns, action.payload]
+      };
+    case 'UPDATE_TIMELINE_COLUMN':
+      return {
+        ...state,
+        timelineColumns: state.timelineColumns.map(column => 
+          column.id === action.payload.id ? action.payload : column
+        )
+      };
+    case 'DELETE_TIMELINE_COLUMN':
+      return {
+        ...state,
+        timelineColumns: state.timelineColumns.filter(column => column.id !== action.payload)
       };
     default:
       return state;
@@ -185,22 +255,49 @@ function appReducer(state: AppState, action: AppAction): AppState {
 export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(appReducer, initialState);
   
-  // Load data from storage on initial render
+  // Load data when the component mounts
   useEffect(() => {
     async function loadData() {
       try {
+        // Set loading state
+        dispatch({ type: 'SET_LOADING', payload: true });
+        
+        // Load user data from storage
         const userData = await StorageService.getUserData();
+        
         if (userData) {
-          dispatch({ 
-            type: 'LOAD_DATA', 
-            payload: { 
-              contentItems: userData.contentItems || [], 
+          // Apply migrations if needed
+          const needsMigration = userData.focusAreas && needsFocusAreaMigration(userData.focusAreas);
+          let focusAreas = userData.focusAreas || [];
+          
+          if (needsMigration) {
+            console.log('Migrating focus areas to include priorityLevel');
+            focusAreas = migrateFocusAreas(focusAreas);
+          }
+          
+          // Initialize categories if they don't exist
+          let categories = userData.categories || [];
+          if (categories.length === 0) {
+            console.log('Initializing default categories');
+            categories = DEFAULT_CATEGORIES.map(cat => ({
+              ...cat,
+              id: Date.now().toString(36) + Math.random().toString(36).substring(2)
+            }));
+          }
+          
+          // Load all data into state
+          dispatch({
+            type: 'LOAD_DATA',
+            payload: {
+              contentItems: userData.contentItems || [],
               seasons: userData.seasons || [],
-              focusAreas: userData.focusAreas || [],
+              focusAreas: focusAreas,
+              categories: categories,
               userSettings: userData.userSettings || initialState.userSettings
-            } 
+            }
           });
           
+          // Set other state values
           if (userData.userBirthDate) {
             dispatch({ type: 'SET_USER_BIRTH_DATE', payload: userData.userBirthDate });
           }
@@ -212,15 +309,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
           if (userData.theme) {
             dispatch({ type: 'SET_THEME', payload: userData.theme });
           }
+        } else {
+          dispatch({ type: 'SET_LOADING', payload: false });
         }
-        
-        dispatch({ type: 'SET_LOADING', payload: false });
       } catch (error) {
         console.error('Error loading data:', error);
         dispatch({ type: 'SET_LOADING', payload: false });
       }
     }
-    
+
     loadData();
   }, []);
   
@@ -233,6 +330,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         contentItems: state.contentItems,
         seasons: state.seasons,
         focusAreas: state.focusAreas,
+        categories: state.categories,
         userSettings: state.userSettings,
         theme: state.theme,
       });
@@ -243,6 +341,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     state.contentItems, 
     state.seasons, 
     state.focusAreas, 
+    state.categories, 
     state.userSettings, 
     state.theme, 
     state.isLoading

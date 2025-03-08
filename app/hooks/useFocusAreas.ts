@@ -1,37 +1,122 @@
 import { useCallback, useMemo } from 'react';
-import { nanoid } from 'nanoid';
+// Remove nanoid import
+// import { nanoid } from 'nanoid';
 import { useAppContext } from '../context/AppContext';
-import { FocusArea } from '../types';
+import { FocusArea, PriorityLevel } from '../types';
+import { useContentManagement } from './useContentManagement';
+
+/**
+ * Generate a unique ID for new focus areas
+ */
+function generateUniqueId(): string {
+  return 'id_' + 
+    Math.random().toString(36).substring(2, 15) + 
+    Math.random().toString(36).substring(2, 15) + 
+    '_' + Date.now().toString(36);
+}
 
 /**
  * Custom hook for managing focus areas
  */
 export function useFocusAreas() {
   const { state, dispatch } = useAppContext();
+  const { getGoals } = useContentManagement();
   
   // Get all focus areas
   const focusAreas = state.focusAreas;
   
-  // Get focus areas ordered by rank
+  // Get focus areas ordered by priority level and then by rank within each level
   const orderedFocusAreas = useMemo(() => {
-    return [...focusAreas].sort((a, b) => a.rank - b.rank);
-  }, [focusAreas]);
-
-  // Add a new focus area
-  const addFocusArea = useCallback((area: Omit<FocusArea, 'id'>) => {
-    const newFocusArea: FocusArea = {
-      id: nanoid(),
-      ...area,
+    // First, group by priority level
+    const grouped = {
+      essential: focusAreas.filter(area => area.priorityLevel === 'essential'),
+      important: focusAreas.filter(area => area.priorityLevel === 'important'),
+      supplemental: focusAreas.filter(area => area.priorityLevel === 'supplemental')
     };
     
+    // Then sort each group by rank
+    const sortedEssential = [...grouped.essential].sort((a, b) => a.rank - b.rank);
+    const sortedImportant = [...grouped.important].sort((a, b) => a.rank - b.rank);
+    const sortedSupplemental = [...grouped.supplemental].sort((a, b) => a.rank - b.rank);
+    
+    // Return all sorted focus areas in order of priority
+    return [...sortedEssential, ...sortedImportant, ...sortedSupplemental];
+  }, [focusAreas]);
+  
+  // Group focus areas by priority level
+  const focusByLevel = useMemo(() => {
+    return {
+      essential: focusAreas.filter(area => area.priorityLevel === 'essential')
+        .sort((a, b) => a.rank - b.rank),
+      important: focusAreas.filter(area => area.priorityLevel === 'important')
+        .sort((a, b) => a.rank - b.rank),
+      supplemental: focusAreas.filter(area => area.priorityLevel === 'supplemental')
+        .sort((a, b) => a.rank - b.rank)
+    };
+  }, [focusAreas]);
+  
+  // Update focus area status based on goals
+  const updateFocusAreaStatus = useCallback(() => {
+    const goals = getGoals();
+    const updatedFocusAreas = focusAreas.map(area => {
+      const areaGoals = goals.filter(goal => goal.focusAreaId === area.id);
+      const activeGoals = areaGoals.filter(goal => !goal.isCompleted);
+      const status = activeGoals.length > 0 ? 'active' as const : 'dormant' as const;
+      
+      if (area.status !== status) {
+        return { ...area, status };
+      }
+      return area;
+    });
+    
+    // Only dispatch if there are changes
+    if (JSON.stringify(updatedFocusAreas) !== JSON.stringify(focusAreas)) {
+      dispatch({ 
+        type: 'LOAD_DATA', 
+        payload: { 
+          contentItems: state.contentItems,
+          seasons: state.seasons,
+          focusAreas: updatedFocusAreas,
+          userSettings: state.userSettings,
+          categories: state.categories
+        } 
+      });
+    }
+  }, [focusAreas, getGoals, dispatch, state]);
+  
+  // Add a new focus area
+  const addFocusArea = useCallback((focusArea: Omit<FocusArea, 'id'>) => {
+    // Generate a unique ID
+    const id = generateUniqueId();
+    
+    // Set default rank if not provided
+    const rank = focusArea.rank || getNextRank(focusArea.priorityLevel);
+    
+    // Create the new focus area
+    const newFocusArea: FocusArea = {
+      ...focusArea,
+      id,
+      rank,
+      status: 'dormant',
+      lastUpdated: new Date().toISOString()
+    };
+    
+    // Add to state
     dispatch({ type: 'ADD_FOCUS_AREA', payload: newFocusArea });
     
     return newFocusArea;
   }, [dispatch]);
   
   // Update an existing focus area
-  const updateFocusArea = useCallback((area: FocusArea) => {
-    dispatch({ type: 'UPDATE_FOCUS_AREA', payload: area });
+  const updateFocusArea = useCallback((focusArea: FocusArea) => {
+    // Update the last updated timestamp
+    const updatedFocusArea = {
+      ...focusArea,
+      lastUpdated: new Date().toISOString()
+    };
+    
+    dispatch({ type: 'UPDATE_FOCUS_AREA', payload: updatedFocusArea });
+    return updatedFocusArea;
   }, [dispatch]);
   
   // Delete a focus area
@@ -39,108 +124,91 @@ export function useFocusAreas() {
     dispatch({ type: 'DELETE_FOCUS_AREA', payload: id });
   }, [dispatch]);
   
-  // Get a focus area by ID
-  const getFocusAreaById = useCallback((id: string) => {
-    return focusAreas.find(area => area.id === id) || null;
+  // Change the priority level of a focus area
+  const changePriorityLevel = useCallback((id: string, newLevel: PriorityLevel) => {
+    const focusArea = focusAreas.find(area => area.id === id);
+    if (!focusArea) return;
+    
+    // Get the next rank in the new priority level
+    const newRank = getNextRank(newLevel);
+    
+    // Update the focus area
+    const updatedFocusArea = {
+      ...focusArea,
+      priorityLevel: newLevel,
+      rank: newRank,
+      lastUpdated: new Date().toISOString()
+    };
+    
+    dispatch({ type: 'UPDATE_FOCUS_AREA', payload: updatedFocusArea });
+    return updatedFocusArea;
+  }, [focusAreas, dispatch]);
+  
+  // Get the next available rank for a priority level
+  const getNextRank = useCallback((priorityLevel: PriorityLevel) => {
+    const areasInLevel = focusAreas.filter(area => area.priorityLevel === priorityLevel);
+    if (areasInLevel.length === 0) return 1;
+    
+    const maxRank = Math.max(...areasInLevel.map(area => area.rank));
+    return maxRank + 1;
   }, [focusAreas]);
   
-  // Reorder focus areas by priority
-  const reorderFocusAreas = useCallback((orderedIds: string[]) => {
-    // Create a new array of focus areas with updated ranks
-    const updatedFocusAreas = orderedIds.map((id, index) => {
-      const area = getFocusAreaById(id);
-      if (area) {
-        return {
-          ...area,
-          rank: index + 1, // Rank starts at 1
-        };
-      }
-      return null;
-    }).filter(Boolean) as FocusArea[];
+  // Check if a priority level has reached its maximum allowed items
+  const isPriorityLevelFull = useCallback((priorityLevel: PriorityLevel) => {
+    const areasInLevel = focusAreas.filter(area => area.priorityLevel === priorityLevel);
     
-    // Update all focus areas with their new ranks
-    updatedFocusAreas.forEach(area => {
-      updateFocusArea(area);
-    });
-    
-    // Also dispatch the reorder action to update the state order
-    dispatch({ type: 'REORDER_FOCUS_AREAS', payload: orderedIds });
-  }, [dispatch, getFocusAreaById, updateFocusArea]);
-  
-  // Calculate total allocation percentage
-  const totalAllocation = useMemo(() => {
-    return focusAreas.reduce((total, area) => total + area.allocation, 0);
+    // Set limits for each priority level
+    switch (priorityLevel) {
+      case 'essential':
+        return areasInLevel.length >= 3; // Max 3 essential focus areas
+      case 'important':
+        return areasInLevel.length >= 5; // Max 5 important focus areas
+      case 'supplemental':
+        return areasInLevel.length >= 7; // Max 7 supplemental focus areas
+      default:
+        return false;
+    }
   }, [focusAreas]);
   
-  // Check if allocations are valid (sum to 100%)
-  const isAllocationValid = useMemo(() => {
-    return Math.abs(totalAllocation - 100) < 0.01; // Allow for floating point errors
-  }, [totalAllocation]);
-  
-  // Normalize allocations to sum to 100%
-  const normalizeAllocations = useCallback(() => {
-    if (focusAreas.length === 0) return;
-    
-    // If there's only one focus area, set it to 100%
-    if (focusAreas.length === 1) {
-      const area = focusAreas[0];
-      updateFocusArea({
-        ...area,
-        allocation: 100
-      });
-      return;
-    }
-    
-    // Otherwise, distribute proportionally
-    const normalizedAreas = focusAreas.map(area => {
-      return {
-        ...area,
-        allocation: Math.round((area.allocation / totalAllocation) * 100)
-      };
-    });
-    
-    // Ensure the total is exactly 100% by adjusting the first area if needed
-    const adjustedTotal = normalizedAreas.reduce((total, area) => total + area.allocation, 0);
-    if (adjustedTotal !== 100 && normalizedAreas.length > 0) {
-      const diff = 100 - adjustedTotal;
-      normalizedAreas[0].allocation += diff;
-    }
-    
-    // Update each area with the normalized allocation
-    normalizedAreas.forEach(area => {
-      updateFocusArea(area);
-    });
-  }, [focusAreas, totalAllocation, updateFocusArea]);
-  
-  // Get a preset color based on index
-  const getPresetColor = useCallback((index: number) => {
-    const colors = [
-      '#4CAF50', // Green
-      '#2196F3', // Blue
-      '#E91E63', // Pink
-      '#FF9800', // Orange
-      '#9C27B0', // Purple
-      '#00BCD4', // Cyan
-      '#FFEB3B', // Yellow
-      '#795548', // Brown
-      '#607D8B', // Blue Grey
+  // Get a preset color for a new focus area
+  const getPresetColor = useCallback(() => {
+    const presetColors = [
+      '#FF3B30', // Red
+      '#FF9500', // Orange
+      '#FFCC00', // Yellow
+      '#34C759', // Green
+      '#5AC8FA', // Light Blue
+      '#007AFF', // Blue
+      '#5856D6', // Purple
+      '#AF52DE', // Magenta
+      '#FF2D55', // Pink
+      '#A2845E', // Brown
     ];
     
-    return colors[index % colors.length];
-  }, []);
+    // Try to find a color that's not already in use
+    const usedColors = focusAreas.map(area => area.color);
+    const availableColors = presetColors.filter(color => !usedColors.includes(color));
+    
+    // If there are available colors, return a random one
+    if (availableColors.length > 0) {
+      return availableColors[Math.floor(Math.random() * availableColors.length)];
+    }
+    
+    // Otherwise, return a random color from the preset list
+    return presetColors[Math.floor(Math.random() * presetColors.length)];
+  }, [focusAreas]);
   
   return {
     focusAreas,
     orderedFocusAreas,
+    focusByLevel,
     addFocusArea,
     updateFocusArea,
     deleteFocusArea,
-    getFocusAreaById,
-    reorderFocusAreas,
-    totalAllocation,
-    isAllocationValid,
-    normalizeAllocations,
+    changePriorityLevel,
     getPresetColor,
+    updateFocusAreaStatus,
+    isPriorityLevelFull
   };
 }
 

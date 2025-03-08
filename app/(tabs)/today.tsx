@@ -1,16 +1,186 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useDateCalculations } from '../hooks/useDateCalculations';
 import { useAppContext } from '../context/AppContext';
+import { useDateCalculations } from '../hooks/useDateCalculations';
 import { useFocusAreas } from '../hooks/useFocusAreas';
+import { useContentManagement } from '../hooks/useContentManagement';
 import { format } from 'date-fns';
+import { ContentItem, FocusArea } from '../types';
+import { useRouter } from 'expo-router';
+import AddGoalButton from '../components/goals/AddGoalButton';
+
+// Simple Goals Dashboard Component
+function GoalsDashboard({ activeGoals, focusAreas }: { activeGoals: ContentItem[], focusAreas: FocusArea[] }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const router = useRouter();
+  
+  // Calculate completion percentage
+  const completedGoals = activeGoals.filter(goal => goal.isCompleted).length;
+  const completionPercentage = activeGoals.length > 0 
+    ? Math.round((completedGoals / activeGoals.length) * 100) 
+    : 0;
+    
+  // Get focus area with most goals
+  const focusAreaWithMostGoals = React.useMemo(() => {
+    if (activeGoals.length === 0 || focusAreas.length === 0) return null;
+    
+    const goalsByFocusArea = focusAreas.map(area => {
+      const goals = activeGoals.filter(goal => goal.focusAreaId === area.id);
+      return { area, count: goals.length };
+    });
+    
+    return goalsByFocusArea.sort((a, b) => b.count - a.count)[0];
+  }, [activeGoals, focusAreas]);
+  
+  const handleAddGoal = () => {
+    // Navigate to the goal creation form
+    router.push("/(tabs)/content/new" as any);
+  };
+  
+  return (
+    <View style={styles.section}>
+      <TouchableOpacity 
+        style={styles.goalsDashboardContainer}
+        onPress={() => setIsExpanded(!isExpanded)}
+        activeOpacity={0.7}
+      >
+        <View style={styles.goalsDashboardHeader}>
+          <Text style={styles.sectionTitle}>Goals at a Glance</Text>
+          <Ionicons 
+            name={isExpanded ? "chevron-up" : "chevron-down"} 
+            size={16} 
+            color="#AEAEB2" 
+          />
+        </View>
+
+        {!isExpanded ? (
+          // Compact View
+          <View style={styles.goalsDashboardContent}>
+            {activeGoals.length > 0 ? (
+              <>
+                <View style={styles.metricsRow}>
+                  <View style={styles.metric}>
+                    <Text style={styles.metricValue}>{activeGoals.length}</Text>
+                    <Text style={styles.metricLabel}>Active</Text>
+                  </View>
+                  <View style={styles.metric}>
+                    <Text style={styles.metricValue}>{completionPercentage}%</Text>
+                    <Text style={styles.metricLabel}>Complete</Text>
+                  </View>
+                </View>
+
+                <View style={styles.progressSection}>
+                  <View style={styles.progressBar}>
+                    <View 
+                      style={[
+                        styles.progressFill, 
+                        { width: `${completionPercentage}%` }
+                      ]} 
+                    />
+                  </View>
+                </View>
+
+                {focusAreaWithMostGoals && (
+                  <View style={styles.focusAreaSection}>
+                    <Text style={styles.focusAreaLabel}>Most goals in:</Text>
+                    <Text 
+                      style={[
+                        styles.focusAreaName, 
+                        { color: focusAreaWithMostGoals.area.color }
+                      ]}
+                    >
+                      {focusAreaWithMostGoals.area.name} ({focusAreaWithMostGoals.count})
+                    </Text>
+                  </View>
+                )}
+              </>
+            ) : (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyStateText}>No active goals</Text>
+                <AddGoalButton />
+              </View>
+            )}
+          </View>
+        ) : (
+          // Expanded View
+          <View style={styles.goalsDashboardExpandedContent}>
+            {activeGoals.length > 0 ? (
+              <>
+                <View style={styles.expandedSection}>
+                  <Text style={styles.expandedSectionTitle}>Overall Progress</Text>
+                  <View style={styles.progressBar}>
+                    <View 
+                      style={[
+                        styles.progressFill, 
+                        { width: `${completionPercentage}%` }
+                      ]} 
+                    />
+                  </View>
+                  <Text style={styles.progressText}>
+                    {completedGoals} of {activeGoals.length} goals completed
+                  </Text>
+                </View>
+                
+                <View style={styles.expandedSection}>
+                  <Text style={styles.expandedSectionTitle}>Goals by Focus Area</Text>
+                  {focusAreas.map(area => {
+                    const areaGoals = activeGoals.filter(goal => goal.focusAreaId === area.id);
+                    if (areaGoals.length === 0) return null;
+                    
+                    const areaCompletedGoals = areaGoals.filter(goal => goal.isCompleted).length;
+                    const areaCompletionPercentage = areaGoals.length > 0 
+                      ? Math.round((areaCompletedGoals / areaGoals.length) * 100) 
+                      : 0;
+                    
+                    return (
+                      <View key={area.id} style={styles.focusAreaGoalCard}>
+                        <View style={styles.focusAreaGoalHeader}>
+                          <Text style={[styles.focusAreaGoalName, { color: area.color }]}>
+                            {area.name}
+                          </Text>
+                          <Text style={styles.focusAreaGoalCount}>
+                            {areaGoals.length} {areaGoals.length === 1 ? 'goal' : 'goals'}
+                          </Text>
+                        </View>
+                        <View style={styles.focusAreaGoalProgress}>
+                          <View style={styles.progressBar}>
+                            <View 
+                              style={[
+                                styles.progressFill, 
+                                { 
+                                  width: `${areaCompletionPercentage}%`,
+                                  backgroundColor: area.color 
+                                }
+                              ]} 
+                            />
+                          </View>
+                          <Text style={styles.progressPercentage}>{areaCompletionPercentage}%</Text>
+                        </View>
+                      </View>
+                    );
+                  })}
+                </View>
+              </>
+            ) : (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyStateText}>No active goals</Text>
+                <AddGoalButton />
+              </View>
+            )}
+          </View>
+        )}
+      </TouchableOpacity>
+    </View>
+  );
+}
 
 export default function TodayScreen() {
   // Get current date info and app state
   const { getPreciseAge, getLifeProgress } = useDateCalculations();
   const { state } = useAppContext();
-  const { orderedFocusAreas } = useFocusAreas();
+  const { orderedFocusAreas, focusAreas } = useFocusAreas();
+  const { getGoals } = useContentManagement();
   
   // Format current date
   const today = new Date();
@@ -20,7 +190,11 @@ export default function TodayScreen() {
   // Calculate life progress
   const lifeProgressPercentage = getLifeProgress(state.userSettings.lifeExpectancy);
   const preciseAge = getPreciseAge();
-  
+
+  // Get goals data
+  const allGoals = getGoals();
+  const activeGoals = allGoals.filter(goal => !goal.isCompleted);
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -43,7 +217,13 @@ export default function TodayScreen() {
             </Text>
           </View>
         </View>
-        
+
+        {/* Goals Dashboard Section */}
+        <GoalsDashboard 
+          activeGoals={activeGoals}
+          focusAreas={focusAreas}
+        />
+         
         {/* Focus Areas Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Today's Focus</Text>
@@ -55,20 +235,23 @@ export default function TodayScreen() {
                   <View style={styles.focusContent}>
                     <Text style={styles.focusName}>{area.name}</Text>
                     <Text style={styles.focusPriority}>
-                      {index === 0 ? 'Primary' : 
-                      index === 1 ? 'Secondary' : 
-                      index === 2 ? 'Tertiary' : `Priority ${index + 1}`}
+                      {area.priorityLevel.charAt(0).toUpperCase() + area.priorityLevel.slice(1)}
                     </Text>
                   </View>
-                  <Text style={styles.focusAllocation}>{area.allocation}%</Text>
+                  <View style={styles.focusGoals}>
+                    <Ionicons name="flag" size={16} color="#AEAEB2" />
+                    <Text style={styles.focusGoalsText}>
+                      {activeGoals.filter(goal => goal.focusAreaId === area.id).length} goals
+                    </Text>
+                  </View>
                 </View>
               ))
             ) : (
               <View style={styles.emptyFocus}>
                 <Text style={styles.emptyText}>No focus areas defined</Text>
-                <Pressable style={styles.emptyButton}>
+                <TouchableOpacity style={styles.emptyButton}>
                   <Text style={styles.emptyButtonText}>Set Focus Areas</Text>
-                </Pressable>
+                </TouchableOpacity>
               </View>
             )}
           </View>
@@ -78,34 +261,21 @@ export default function TodayScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Quick Actions</Text>
           <View style={styles.actionsContainer}>
-            <Pressable style={styles.actionButton}>
-              <Ionicons name="flag-outline" size={24} color="#007AFF" />
-              <Text style={styles.actionText}>Add Goal</Text>
-            </Pressable>
+            <AddGoalButton 
+              label="Add Goal"
+              icon="flag-outline"
+              color="#007AFF"
+            />
             
-            <Pressable style={styles.actionButton}>
+            <TouchableOpacity style={styles.actionButton}>
               <Ionicons name="image-outline" size={24} color="#4CD964" />
               <Text style={styles.actionText}>Add Memory</Text>
-            </Pressable>
+            </TouchableOpacity>
             
-            <Pressable style={styles.actionButton}>
+            <TouchableOpacity style={styles.actionButton}>
               <Ionicons name="bulb-outline" size={24} color="#FF9500" />
               <Text style={styles.actionText}>Add Insight</Text>
-            </Pressable>
-          </View>
-        </View>
-        
-        {/* Upcoming Goals Preview */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Upcoming Goals</Text>
-          <View style={styles.upcomingCard}>
-            {/* This will be populated dynamically */}
-            <View style={styles.emptyUpcoming}>
-              <Text style={styles.emptyText}>No upcoming goals</Text>
-              <Pressable style={styles.emptyButton}>
-                <Text style={styles.emptyButtonText}>Create a Goal</Text>
-              </Pressable>
-            </View>
+            </TouchableOpacity>
           </View>
         </View>
       </ScrollView>
@@ -116,31 +286,33 @@ export default function TodayScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#121212', // Dark mode background
+    backgroundColor: '#1C1C1E',
   },
   header: {
-    padding: 20,
     paddingTop: 60,
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    backgroundColor: '#1C1C1E',
   },
   dayOfWeek: {
-    fontSize: 18,
+    fontSize: 16,
     color: '#AEAEB2',
     marginBottom: 4,
   },
   date: {
-    fontSize: 32,
-    fontWeight: 'bold',
+    fontSize: 24,
+    fontWeight: '600',
     color: '#FFFFFF',
   },
   content: {
     flex: 1,
-    padding: 20,
+    paddingHorizontal: 16,
   },
   section: {
     marginBottom: 24,
   },
   sectionTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '600',
     color: '#FFFFFF',
     marginBottom: 12,
@@ -172,6 +344,135 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#AEAEB2',
   },
+  // Goals Dashboard Styles
+  goalsDashboardContainer: {
+    backgroundColor: '#2C2C2E',
+    borderRadius: 16,
+    padding: 16,
+  },
+  goalsDashboardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  goalsDashboardContent: {
+    gap: 12,
+  },
+  metricsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  metric: {
+    alignItems: 'center',
+  },
+  metricValue: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  metricLabel: {
+    fontSize: 12,
+    color: '#AEAEB2',
+    marginTop: 2,
+  },
+  progressSection: {
+    marginTop: 4,
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#0A84FF',
+    borderRadius: 2,
+  },
+  focusAreaSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  focusAreaLabel: {
+    fontSize: 12,
+    color: '#AEAEB2',
+    marginRight: 4,
+  },
+  focusAreaName: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 16,
+  },
+  emptyStateText: {
+    fontSize: 14,
+    color: '#FFFFFF',
+    fontWeight: '500',
+    marginBottom: 12,
+  },
+  emptyStateSubtext: {
+    fontSize: 12,
+    color: '#AEAEB2',
+    marginTop: 4,
+  },
+  addGoalButton: {
+    backgroundColor: '#0A84FF',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 16,
+    marginTop: 8,
+  },
+  addGoalIcon: {
+    marginRight: 6,
+  },
+  addGoalButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '500',
+    fontSize: 14,
+  },
+  // Expanded Goals Dashboard Styles
+  goalsDashboardExpandedContent: {
+    gap: 16,
+  },
+  expandedSection: {
+    marginTop: 8,
+  },
+  expandedSectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginBottom: 8,
+  },
+  focusAreaGoalCard: {
+    backgroundColor: '#3A3A3C',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 8,
+  },
+  focusAreaGoalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  focusAreaGoalName: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  focusAreaGoalCount: {
+    fontSize: 12,
+    color: '#AEAEB2',
+  },
+  focusAreaGoalProgress: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  progressPercentage: {
+    fontSize: 12,
+    color: '#AEAEB2',
+    marginLeft: 8,
+  },
+  // Focus Card Styles
   focusCard: {
     backgroundColor: '#2C2C2E',
     borderRadius: 16,
@@ -180,14 +481,12 @@ const styles = StyleSheet.create({
   focusItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#3A3A3C',
+    marginBottom: 12,
   },
   focusColor: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
     marginRight: 12,
   },
   focusContent: {
@@ -199,17 +498,22 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   focusPriority: {
-    fontSize: 12,
+    fontSize: 14,
     color: '#AEAEB2',
   },
-  focusAllocation: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#FFFFFF',
+  focusGoals: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  focusGoalsText: {
+    fontSize: 12,
+    color: '#AEAEB2',
+    marginLeft: 4,
   },
   emptyFocus: {
     alignItems: 'center',
-    padding: 20,
+    justifyContent: 'center',
+    padding: 24,
   },
   emptyText: {
     fontSize: 16,
@@ -218,18 +522,18 @@ const styles = StyleSheet.create({
   },
   emptyButton: {
     backgroundColor: '#0A84FF',
-    paddingVertical: 8,
     paddingHorizontal: 16,
-    borderRadius: 8,
+    paddingVertical: 8,
+    borderRadius: 16,
   },
   emptyButtonText: {
     color: '#FFFFFF',
     fontWeight: '500',
   },
+  // Quick Actions Styles
   actionsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 16,
   },
   actionButton: {
     flex: 1,
@@ -237,21 +541,11 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     alignItems: 'center',
-    justifyContent: 'center',
     marginHorizontal: 4,
   },
   actionText: {
     fontSize: 14,
     color: '#FFFFFF',
     marginTop: 8,
-  },
-  upcomingCard: {
-    backgroundColor: '#2C2C2E',
-    borderRadius: 16,
-    padding: 16,
-  },
-  emptyUpcoming: {
-    alignItems: 'center',
-    padding: 20,
   },
 }); 

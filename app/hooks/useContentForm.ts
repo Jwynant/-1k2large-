@@ -28,6 +28,7 @@ export function useContentForm({
     emoji: initialData.emoji || '',
     importance: initialData.importance || 3,
     media: initialData.media || [],
+    categoryIds: initialData.categoryIds || [],
   });
   
   // Form errors state
@@ -63,28 +64,74 @@ export function useContentForm({
       newErrors.date = 'Date is required';
     }
     
+    if (type === 'goal' && !formState.focusAreaId) {
+      newErrors.focusAreaId = 'Please select a focus area';
+    }
+    
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  }, [formState]);
+  }, [formState, type]);
   
-  // Finalize the new content item and add it to the state
-  const submitForm = useCallback(async (): Promise<string | null> => {
-    if (!validateForm()) return null;
+  // Submit the form
+  const handleSubmit = useCallback(() => {
+    // Validate form fields
+    const newErrors: ContentFormErrors = {};
     
-    // Create a new content item
-    const newItem: Omit<ContentItem, 'id'> = {
-      title: formState.title,
-      date: formState.date.toISOString(),
+    if (!formState.title.trim()) {
+      newErrors.title = 'Title is required';
+    }
+    
+    if (type === 'goal' && !formState.focusAreaId) {
+      newErrors.focusAreaId = 'Please select a focus area';
+    }
+    
+    // If there are validation errors, set them and return
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return null;
+    }
+    
+    // Clear errors
+    setErrors({});
+    
+    // Prepare the common content item data
+    const contentData: ContentItem = {
+      id: nanoid(),
       type,
-      notes: formState.notes || undefined,
-      emoji: formState.emoji || undefined,
-      importance: type === 'insight' ? formState.importance : undefined,
-      media: formState.media.length > 0 ? formState.media : undefined,
+      title: formState.title.trim(),
+      date: formState.date.toISOString().split('T')[0],
+      notes: formState.notes,
+      emoji: formState.emoji,
+      categoryIds: formState.categoryIds,
     };
     
-    // Add the item
-    return addContentItem(newItem);
-  }, [formState, type, validateForm, addContentItem]);
+    // Add type-specific data
+    if (type === 'goal') {
+      contentData.focusAreaId = formState.focusAreaId;
+      contentData.progress = 0;
+      contentData.isCompleted = false;
+      
+      if (formState.deadline) {
+        contentData.deadline = formState.deadline.toISOString().split('T')[0];
+      }
+      
+      if (formState.milestones && formState.milestones.length > 0) {
+        contentData.milestones = formState.milestones;
+      }
+    } else if (type === 'memory') {
+      contentData.media = formState.media;
+      contentData.mediaType = formState.mediaType;
+      contentData.emotion = formState.emotion;
+      contentData.isSpecialEvent = formState.isSpecialEvent;
+    } else if (type === 'insight') {
+      contentData.importance = formState.importance;
+      contentData.relatedGoalIds = formState.relatedGoalIds;
+      contentData.relatedMemoryIds = formState.relatedMemoryIds;
+    }
+    
+    // Add content item and return it
+    return addContentItem(contentData);
+  }, [formState, type, addContentItem]);
   
   // Reset the form
   const resetForm = useCallback(() => {
@@ -95,6 +142,7 @@ export function useContentForm({
       emoji: '',
       importance: 3,
       media: [],
+      categoryIds: [],
     });
     setErrors({});
   }, []);
@@ -119,7 +167,7 @@ export function useContentForm({
     formState,
     errors,
     handleChange,
-    handleSubmit: submitForm,
+    handleSubmit,
     resetForm,
     addMedia,
     removeMedia,

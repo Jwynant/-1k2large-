@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { ContentItem, Season, FocusArea, UserSettings } from '../types';
+import { ContentItem, Season, FocusArea, UserSettings, Category } from '../types';
 
 // Storage keys
 const STORAGE_KEYS = {
@@ -13,6 +13,7 @@ interface UserData {
   contentItems?: ContentItem[];
   seasons?: Season[];
   focusAreas?: FocusArea[];
+  categories?: Category[];
   userSettings?: UserSettings;
   theme?: 'dark' | 'light' | 'system';
 }
