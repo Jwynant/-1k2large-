@@ -138,62 +138,42 @@ export function useDateCalculations() {
     return weekNum;
   }, []);
   
-  // Get the start month based on alignment preference
+  // Get the start month based on birth date
   const getStartMonth = useCallback((): number => {
-    const alignment = state.userSettings?.gridAlignment || 'birth';
-    
-    if (alignment === 'calendar') {
-      // Calendar alignment always starts with January (0)
-      return 0;
-    } else {
-      // Birth alignment starts with birth month
-      const birthDate = getBirthDate();
-      return birthDate ? birthDate.getMonth() : 0;
-    }
-  }, [getBirthDate, state.userSettings?.gridAlignment]);
+    // Always use birth date alignment
+    const birthDate = getBirthDate();
+    return birthDate ? birthDate.getMonth() : 0;
+  }, [getBirthDate]);
   
-  // Get the year offset based on alignment preference
+  // Get the year offset based on birth date alignment
   const getYearOffset = useCallback((month: number): number => {
-    const alignment = state.userSettings?.gridAlignment || 'birth';
     const startMonth = getStartMonth();
     
-    if (alignment === 'calendar') {
-      // No offset for calendar alignment
-      return 0;
-    } else {
-      // For birth alignment, if the month is before the start month, it belongs to the previous year
-      return month < startMonth ? -1 : 0;
-    }
-  }, [getStartMonth, state.userSettings?.gridAlignment]);
+    // For birth alignment, if the month is before the start month, it belongs to the previous year
+    return month < startMonth ? -1 : 0;
+  }, [getStartMonth]);
   
-  // Convert a calendar month/year to an aligned month/year
+  // Convert a calendar month/year to an aligned month/year based on birth date
   const getAlignedDate = useCallback((year: number, month: number): { year: number, month: number } => {
-    const alignment = state.userSettings?.gridAlignment || 'birth';
+    const startMonth = getStartMonth();
     
-    if (alignment === 'calendar') {
-      // No conversion needed for calendar alignment
-      return { year, month };
+    // Calculate the offset from the start month
+    const monthOffset = month - startMonth;
+    
+    if (monthOffset >= 0) {
+      // Month is in the same aligned year
+      return { 
+        year: year, 
+        month: monthOffset 
+      };
     } else {
-      const startMonth = getStartMonth();
-      
-      // Calculate the offset from the start month
-      const monthOffset = month - startMonth;
-      
-      if (monthOffset >= 0) {
-        // Month is in the same aligned year
-        return { 
-          year: year, 
-          month: monthOffset 
-        };
-      } else {
-        // Month is in the previous aligned year
-        return { 
-          year: year - 1, 
-          month: monthOffset + 12 
-        };
-      }
+      // Month is in the previous aligned year
+      return { 
+        year: year - 1, 
+        month: monthOffset + 12 
+      };
     }
-  }, [getStartMonth, state.userSettings?.gridAlignment]);
+  }, [getStartMonth]);
   
   // Calculate if a month is in the past (i.e., between birth date and current date)
   const isMonthInPast = useCallback((year: number, month: number) => {

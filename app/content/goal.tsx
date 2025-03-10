@@ -1,109 +1,180 @@
-import React from 'react';
-import { Alert, View, StyleSheet, Switch, Text } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import * as Haptics from 'expo-haptics';
-
-import ContentFormLayout from '../../components/content/ContentFormLayout';
+import React, { useRef } from 'react';
 import { 
-  TextInputField, 
-  DatePickerField, 
-  EmojiPickerField,
-  ImportanceRatingField
-} from '../../components/content/FormComponents';
+  View, 
+  StyleSheet, 
+  Text, 
+  TouchableOpacity, 
+  useColorScheme, 
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+  Alert
+} from 'react-native';
+import { useRouter, Stack } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useContentForm } from '../hooks/useContentForm';
+import TextInputField from '../components/form/TextInputField';
+import DatePickerField from '../components/form/DatePickerField';
+import EmojiPickerField from '../components/form/EmojiPickerField';
+import FocusAreaPickerField from '../components/form/FocusAreaPickerField';
 
 export default function GoalScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ year?: string; month?: string; week?: string }>();
+  const colorScheme = useColorScheme();
+  const isDarkMode = colorScheme === 'dark';
+  const initialized = useRef(false);
   
-  // Parse URL parameters
-  const year = params.year ? parseInt(params.year, 10) : undefined;
-  const month = params.month ? parseInt(params.month, 10) : undefined;
-  const week = params.week ? parseInt(params.week, 10) : undefined;
-  
-  // Initialize form with the useContentForm hook
+  // Initialize content form with a fixed type to prevent re-renders
   const {
     formState,
     errors,
     handleChange,
-    handleSubmit: submitForm,
-    isValid
+    handleSubmit,
+    validateForm
   } = useContentForm({
     type: 'goal',
-    initialYear: year,
-    initialMonth: month,
-    initialWeek: week
+    initialData: {}
   });
   
   // Handle form submission
-  const handleSubmit = async () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+  const onSubmit = () => {
+    if (!validateForm()) {
+      Alert.alert('Please fill in all required fields');
+      return;
+    }
     
-    const result = submitForm();
+    const result = handleSubmit();
     if (result) {
-      // Navigate back to the previous screen
       router.back();
-    } else {
-      // Show error message
-      Alert.alert('Error', 'Failed to save goal. Please try again.');
     }
   };
   
-  // Calculate the default target date (30 days from now)
-  const defaultTargetDate = new Date();
-  defaultTargetDate.setDate(defaultTargetDate.getDate() + 30);
+  // Check if form is valid - simplified to prevent potential infinite loops
+  const isValid = () => {
+    return formState.title && formState.date && formState.focusAreaId;
+  };
   
   return (
-    <ContentFormLayout
-      title="New Goal"
-      onSubmit={handleSubmit}
-      isSubmitting={false}
-      isValid={isValid()}
-      submitLabel="Save Goal"
+    <KeyboardAvoidingView 
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <TextInputField
-        label="Goal Title"
-        value={formState.title}
-        onChangeText={(text) => handleChange('title', text)}
-        placeholder="What do you want to achieve?"
-        required
-        error={errors.title}
-      />
-      
-      <DatePickerField
-        label="Target Date"
-        value={formState.date}
-        onChange={(date) => handleChange('date', date)}
-        minimumDate={new Date()} // Can't set a goal in the past
-      />
-      
-      <TextInputField
-        label="Description"
-        value={formState.notes}
-        onChangeText={(text) => handleChange('notes', text)}
-        placeholder="Describe your goal and why it's important to you..."
-        multiline
-        numberOfLines={4}
-      />
-      
-      <EmojiPickerField
-        label="Emoji"
-        value={formState.emoji}
-        onSelect={(emoji) => handleChange('emoji', emoji)}
-      />
-      
-      <ImportanceRatingField
-        label="Priority"
-        value={formState.importance}
-        onChange={(rating) => handleChange('importance', rating)}
-      />
-    </ContentFormLayout>
+      <View style={[
+        styles.container,
+        isDarkMode ? styles.darkContainer : styles.lightContainer
+      ]}>
+        <Stack.Screen 
+          options={{
+            title: 'New Goal',
+            headerShown: true,
+            headerBackTitle: 'Cancel',
+            headerRight: () => (
+              <TouchableOpacity 
+                onPress={onSubmit}
+                disabled={!isValid()}
+                style={[
+                  styles.saveButton,
+                  !isValid() && styles.saveButtonDisabled
+                ]}
+              >
+                <Text style={[
+                  styles.saveButtonText,
+                  !isValid() && styles.saveButtonTextDisabled
+                ]}>
+                  Save
+                </Text>
+              </TouchableOpacity>
+            )
+          }} 
+        />
+        
+        <ScrollView 
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollViewContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.formContainer}>
+            <TextInputField
+              label="Title"
+              value={formState.title}
+              onChangeText={(text) => handleChange('title', text)}
+              placeholder="What do you want to achieve?"
+              required
+              error={errors.title}
+            />
+            
+            <DatePickerField
+              label="Target Date"
+              value={formState.date}
+              onChange={(date) => handleChange('date', date)}
+              minimumDate={new Date()}
+              required
+              error={errors.date}
+            />
+            
+            <FocusAreaPickerField
+              label="Focus Area"
+              value={formState.focusAreaId}
+              onChange={(focusAreaId) => handleChange('focusAreaId', focusAreaId)}
+              error={errors.focusAreaId}
+              required
+            />
+            
+            <TextInputField
+              label="Notes"
+              value={formState.notes}
+              onChangeText={(text) => handleChange('notes', text)}
+              placeholder="Describe your goal and why it's important to you..."
+              multiline
+              numberOfLines={4}
+            />
+            
+            <EmojiPickerField
+              label="Emoji"
+              value={formState.emoji}
+              onSelect={(emoji) => handleChange('emoji', emoji)}
+            />
+          </View>
+        </ScrollView>
+      </View>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f8f8',
+  },
+  darkContainer: {
+    backgroundColor: '#121212',
+  },
+  lightContainer: {
+    backgroundColor: '#F2F2F7',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollViewContent: {
+    padding: 16,
+    paddingBottom: 40,
+  },
+  formContainer: {
+    flex: 1,
+  },
+  saveButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: '#0A84FF',
+  },
+  saveButtonDisabled: {
+    backgroundColor: '#0A84FF50',
+  },
+  saveButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  saveButtonTextDisabled: {
+    color: '#FFFFFF80',
   },
 }); 

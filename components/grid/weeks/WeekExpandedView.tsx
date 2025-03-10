@@ -13,7 +13,7 @@ interface WeekExpandedViewProps {
 
 export default function WeekExpandedView({ year, onClose, onWeekPress }: WeekExpandedViewProps) {
   const { hasContent, getCellContent } = useContentManagement();
-  const { isCurrentWeek, isWeekInPast, isCurrentYear } = useDateCalculations();
+  const { isCurrentWeek, isWeekInPast, getBirthDate, getWeekNumber } = useDateCalculations();
   const { width, height } = useWindowDimensions();
   
   // Determine year state
@@ -24,25 +24,75 @@ export default function WeekExpandedView({ year, onClose, onWeekPress }: WeekExp
   // Generate week data with proper indicators
   const weeks = useMemo(() => {
     const weeksData = [];
+    const birthDate = getBirthDate();
     
-    for (let i = 0; i < 52; i++) {
-      const isCurrent = isCurrentWeek(year, i);
-      const isPast = isWeekInPast(year, i);
-      const hasContentForWeek = hasContent(year, undefined, i);
-      const content = hasContentForWeek ? getCellContent(year, undefined, i) : [];
+    if (!birthDate) {
+      // Fallback if no birth date is set
+      for (let i = 0; i < 52; i++) {
+        const isCurrent = isCurrentWeek(year, i);
+        const isPast = isWeekInPast(year, i);
+        const hasContentForWeek = hasContent(year, undefined, i);
+        const content = hasContentForWeek ? getCellContent(year, undefined, i) : [];
+        
+        weeksData.push({
+          index: i,
+          weekNumber: i + 1,
+          isCurrent,
+          isPast,
+          hasContent: hasContentForWeek,
+          content
+        });
+      }
+    } else {
+      // Use birth date alignment
+      const birthWeek = getWeekNumber(birthDate);
+      const birthYear = birthDate.getFullYear();
       
-      weeksData.push({
-        index: i,
-        weekNumber: i + 1,
-        isCurrent,
-        isPast,
-        hasContent: hasContentForWeek,
-        content
-      });
+      // Current date for comparison
+      const today = new Date();
+      const currentYear = today.getFullYear();
+      const currentWeek = getWeekNumber(today);
+      
+      // Calculate total weeks lived
+      const totalWeeksLived = (currentYear - birthYear) * 52 + (currentWeek - birthWeek + 1);
+      
+      // Calculate weeks from birth to the start of this cluster
+      const weeksFromBirthToClusterStart = (year - birthYear) * 52;
+      
+      for (let i = 0; i < 52; i++) {
+        // Calculate how many weeks from birth this cell represents
+        const weeksFromBirth = weeksFromBirthToClusterStart + i;
+        
+        // A week is in the past if the user has lived it
+        const isPast = weeksFromBirth >= 0 && weeksFromBirth < totalWeeksLived;
+        
+        // This is the current week if it's the last filled week
+        const isCurrent = weeksFromBirth === totalWeeksLived - 1;
+        
+        // Calculate the actual week number for content lookup
+        const actualWeek = (birthWeek + i) % 52;
+        const yearOffset = Math.floor((birthWeek + i) / 52);
+        const actualYear = year + yearOffset;
+        
+        // Check if this week has content
+        const hasContentForWeek = hasContent(actualYear, undefined, actualWeek);
+        const content = hasContentForWeek ? getCellContent(actualYear, undefined, actualWeek) : [];
+        
+        weeksData.push({
+          index: i,
+          weekNumber: i + 1,
+          isCurrent,
+          isPast,
+          hasContent: hasContentForWeek,
+          content,
+          actualYear, // Store the actual year for reference
+          actualWeek // Store the actual week for reference
+        });
+      }
     }
     
     return weeksData;
-  }, [year, isCurrentWeek, isWeekInPast, hasContent, getCellContent]);
+  }, [year, isCurrentWeek, isWeekInPast, hasContent, getCellContent, getBirthDate, getWeekNumber]);
 
   // Calculate optimal cell size to fit all cells in the container
   // Use 13 rows and 4 columns format (52 weeks)

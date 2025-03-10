@@ -60,6 +60,9 @@ function MonthCluster({
     const rows = [];
     const birthDate = getBirthDate();
     
+    // Track if this cluster contains the current month
+    let clusterContainsCurrentMonth = false;
+    
     if (!birthDate) {
       // Fallback rendering if no birth date
       for (let rowIndex = 0; rowIndex < 4; rowIndex++) {
@@ -105,6 +108,11 @@ function MonthCluster({
           // This is the current month if it's the last filled month
           const isCurrent = monthsFromBirth === totalMonthsLived - 1;
           
+          // Track if this cluster contains the current month
+          if (isCurrent) {
+            clusterContainsCurrentMonth = true;
+          }
+          
           // Check if this month has content
           const actualMonth = (birthMonth + positionInCluster) % 12;
           const actualYear = year + Math.floor((birthMonth + positionInCluster) / 12);
@@ -130,6 +138,10 @@ function MonthCluster({
       }
     }
     
+    // Store whether this cluster contains the current month
+    // We'll use this to determine if we should show the blue border
+    (MonthCluster as any).clusterContainsCurrentMonth = clusterContainsCurrentMonth;
+    
     return (
       <View style={styles.simplifiedGrid}>
         <View style={styles.monthGrid}>
@@ -150,7 +162,9 @@ function MonthCluster({
         ref={clusterRef}
         style={[
           styles.cluster,
-          isCurrent && styles.currentCluster
+          // Show the blue border if this cluster contains the current month
+          // This ensures the blue border is around the actual present cluster
+          (MonthCluster as any).clusterContainsCurrentMonth && styles.currentCluster
         ]}
         animate={{
           scale: 1,

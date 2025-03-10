@@ -28,6 +28,11 @@ export function useContentForm({
     emoji: initialData.emoji || '',
     media: initialData.media || [],
     categoryIds: initialData.categoryIds || [],
+    
+    // Memory-specific fields
+    mood: initialData.mood || '',
+    location: initialData.location || '',
+    people: initialData.people || [],
   });
   
   // Form errors state
@@ -63,6 +68,7 @@ export function useContentForm({
       newErrors.date = 'Date is required';
     }
     
+    // Type-specific validation
     if (type === 'goal' && !formState.focusAreaId) {
       newErrors.focusAreaId = 'Please select a focus area';
     }
@@ -74,19 +80,7 @@ export function useContentForm({
   // Submit the form
   const handleSubmit = useCallback(() => {
     // Validate form fields
-    const newErrors: ContentFormErrors = {};
-    
-    if (!formState.title.trim()) {
-      newErrors.title = 'Title is required';
-    }
-    
-    if (type === 'goal' && !formState.focusAreaId) {
-      newErrors.focusAreaId = 'Please select a focus area';
-    }
-    
-    // If there are validation errors, set them and return
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
+    if (!validateForm()) {
       return null;
     }
     
@@ -119,11 +113,24 @@ export function useContentForm({
       }
     } else if (type === 'memory') {
       contentData.media = formState.media;
+      
+      // Add new memory-specific fields
+      if (formState.mood) {
+        contentData.mood = formState.mood;
+      }
+      
+      if (formState.location) {
+        contentData.location = formState.location;
+      }
+      
+      if (formState.people && formState.people.length > 0) {
+        contentData.people = formState.people;
+      }
     }
     
     // Add content item and return it
     return addContentItem(contentData);
-  }, [formState, type, addContentItem]);
+  }, [formState, type, addContentItem, validateForm]);
   
   // Reset the form
   const resetForm = useCallback(() => {
@@ -134,6 +141,11 @@ export function useContentForm({
       emoji: '',
       media: [],
       categoryIds: [],
+      
+      // Reset memory-specific fields
+      mood: '',
+      location: '',
+      people: [],
     });
     setErrors({});
   }, []);
@@ -162,6 +174,7 @@ export function useContentForm({
     resetForm,
     addMedia,
     removeMedia,
+    validateForm,
     isValid: validateForm,
   };
 }

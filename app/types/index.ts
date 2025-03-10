@@ -81,6 +81,9 @@ export interface ContentItem {
   
   // For memories:
   media?: string[];
+  mood?: string;
+  location?: string;
+  people?: string[];
   
   // For insights:
   relatedGoalIds?: string[]; // Multiple connections possible
@@ -109,7 +112,6 @@ export interface UserSettings {
   notificationsEnabled: boolean;
   showCompletedGoals: boolean;
   weekStartsOnMonday: boolean;
-  gridAlignment: 'birth' | 'calendar'; // 'birth' for birth date alignment, 'calendar' for calendar year alignment
 }
 
 // Form Types
@@ -128,7 +130,9 @@ export interface ContentFormState {
   milestones?: SubGoal[];
   
   // Memory-specific fields
-  // Removing mediaType, emotion, isSpecialEvent
+  mood?: string;
+  location?: string;
+  people?: string[];
   
   // Insight-specific fields
   relatedGoalIds?: string[];

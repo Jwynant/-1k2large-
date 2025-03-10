@@ -7,6 +7,7 @@ import { useColorScheme } from 'react-native';
 import { useRouter } from 'expo-router';
 import { BirthDateModal, LifeExpectancyModal, ThemeModal } from '../components/profile';
 import * as Haptics from 'expo-haptics';
+import { MaterialIcons } from '@expo/vector-icons';
 
 export default function ProfileScreen() {
   const { state, dispatch } = useAppContext();
@@ -253,26 +254,6 @@ export default function ProfileScreen() {
               thumbColor="#FFFFFF"
             />
           </View>
-          
-          <View style={styles.settingItem}>
-            <Ionicons name="grid" size={24} color="#4CD964" style={styles.settingIcon} />
-            <View style={styles.settingContent}>
-              <Text style={styles.settingLabel}>Calendar Year Alignment</Text>
-              <Text style={styles.settingDescription}>Align grid with calendar years instead of birth date</Text>
-            </View>
-            <Switch
-              value={userSettings?.gridAlignment === 'calendar'}
-              onValueChange={(value) => {
-                dispatch({
-                  type: 'UPDATE_USER_SETTINGS',
-                  payload: { ...userSettings, gridAlignment: value ? 'calendar' : 'birth' }
-                });
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              }}
-              trackColor={{ false: '#3A3A3C', true: '#4CD964' }}
-              thumbColor="#FFFFFF"
-            />
-          </View>
         </View>
         
         <View style={styles.section}>
@@ -453,11 +434,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   settingValue: {
-    fontSize: 14,
-    color: '#8E8E93',
-    marginTop: 2,
-  },
-  settingDescription: {
     fontSize: 14,
     color: '#8E8E93',
     marginTop: 2,

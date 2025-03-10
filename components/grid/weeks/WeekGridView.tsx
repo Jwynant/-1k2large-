@@ -24,7 +24,7 @@ function WeekGridView({
   onClusterPress,
   hasContent
 }: WeekGridViewProps) {
-  const { getAgeForYear } = useDateCalculations();
+  const { getAgeForYear, getBirthDate } = useDateCalculations();
   const { state } = useAppContext();
   const [expandedCluster, setExpandedCluster] = useState<number | null>(null);
   
@@ -157,6 +157,7 @@ function WeekGridView({
                         onLongPress(cluster.year, undefined, week, position)
                       }
                       hasContent={hasContent}
+                      getBirthDate={getBirthDate}
                     />
                   );
                 })}

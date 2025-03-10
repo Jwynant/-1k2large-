@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusAreas } from '../../hooks/useFocusAreas';
 import { FocusArea, PriorityLevel } from '../../types';
 import * as Haptics from 'expo-haptics';
+import { useRouter } from 'expo-router';
 
 // Priority level colors
 const PRIORITY_COLORS = {
@@ -36,6 +37,13 @@ const PRIORITY_LIMITS = {
   supplemental: 7
 };
 
+// Priority level labels
+const PRIORITY_LABELS = {
+  essential: 'Essential',
+  important: 'Important',
+  supplemental: 'Supplemental'
+};
+
 export default function SimplifiedFocusAreas() {
   const { 
     orderedFocusAreas, 
@@ -46,6 +54,8 @@ export default function SimplifiedFocusAreas() {
     getPresetColor,
     isPriorityLevelFull
   } = useFocusAreas();
+  
+  const router = useRouter();
   
   // Get color scheme
   const colorScheme = useColorScheme();
@@ -111,171 +121,90 @@ export default function SimplifiedFocusAreas() {
     );
   };
 
+  // Navigate to focus areas page
+  const navigateToFocusAreas = () => {
+    // This would navigate to a dedicated focus areas page
+    // router.push('/focus');
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
+
   // Render focus areas grouped by priority
   const renderFocusAreasByPriority = () => {
-    return Object.entries(focusByLevel).map(([priority, areas]) => (
-      <View key={priority} style={styles.prioritySection}>
-        <View style={styles.prioritySectionHeader}>
-          <View style={[
-            styles.priorityBadge, 
-            { backgroundColor: PRIORITY_COLORS[priority as PriorityLevel] + '40' }
-          ]}>
-            <Text style={[
-              styles.priorityBadgeText, 
-              { color: PRIORITY_COLORS[priority as PriorityLevel] }
+    return Object.entries(focusByLevel).map(([priority, areas]) => {
+      if (areas.length === 0) return null;
+      
+      return (
+        <View key={priority} style={styles.prioritySection}>
+          <View style={styles.priorityHeader}>
+            <View style={[
+              styles.priorityBadge, 
+              { backgroundColor: PRIORITY_COLORS[priority as PriorityLevel] + '30' }
             ]}>
-              {priority.toUpperCase()}
-            </Text>
+              <Text style={[
+                styles.priorityBadgeText, 
+                { color: PRIORITY_COLORS[priority as PriorityLevel] }
+              ]}>
+                {PRIORITY_LABELS[priority as PriorityLevel]}
+              </Text>
+            </View>
+            <Text style={styles.areaCount}>{areas.length} areas</Text>
           </View>
           
-          {areas.length >= PRIORITY_LIMITS[priority as PriorityLevel] && (
-            <Text style={styles.limitText}>
-              Limit: {areas.length}/{PRIORITY_LIMITS[priority as PriorityLevel]}
-            </Text>
-          )}
-        </View>
-        
-        <Text style={styles.priorityDescription}>
-          {PRIORITY_DESCRIPTIONS[priority as PriorityLevel]}
-        </Text>
-        
-        {areas.map((area) => (
-          <View key={area.id} style={[
-            styles.focusItem,
-            isDarkMode ? styles.darkFocusItem : styles.lightFocusItem,
-            { borderColor: area.color }
-          ]}>
-            <View style={styles.focusItemHeader}>
-              <View style={[styles.focusColor, { backgroundColor: area.color }]} />
-              <Text style={[
-                styles.focusName,
-                isDarkMode ? styles.lightText : styles.darkText
-              ]}>
-                {area.name}
-              </Text>
-              <TouchableOpacity
-                onPress={() => handleDeleteFocus(area)}
-                style={styles.deleteButton}
-              >
-                <Ionicons 
-                  name="trash-outline" 
-                  size={20} 
-                  color={isDarkMode ? "#FF453A" : "#FF3B30"} 
-                />
-              </TouchableOpacity>
-            </View>
-          </View>
-        ))}
-        
-        {/* Add button for this priority level */}
-        {areas.length < PRIORITY_LIMITS[priority as PriorityLevel] && (
-          <TouchableOpacity 
-            style={[
-              styles.addPriorityButton, 
-              { borderColor: PRIORITY_COLORS[priority as PriorityLevel] }
-            ]}
-            onPress={() => {
-              setNewFocusPriority(priority as PriorityLevel);
-              setIsAddingFocus(true);
-            }}
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.areasScrollContent}
           >
-            <Ionicons 
-              name="add-circle-outline" 
-              size={20} 
-              color={PRIORITY_COLORS[priority as PriorityLevel]} 
-            />
-            <Text style={[
-              styles.addPriorityButtonText, 
-              { color: PRIORITY_COLORS[priority as PriorityLevel] }
-            ]}>
-              Add {priority.charAt(0).toUpperCase() + priority.slice(1)} Focus Area
-            </Text>
-          </TouchableOpacity>
-        )}
-      </View>
-    ));
+            {areas.map((area) => (
+              <TouchableOpacity 
+                key={area.id} 
+                style={[
+                  styles.focusAreaCard,
+                  { borderColor: area.color }
+                ]}
+                onPress={navigateToFocusAreas}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.focusColorBar, { backgroundColor: area.color }]} />
+                <Text style={styles.focusName}>
+                  {area.name}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      );
+    }).filter(Boolean); // Filter out null values
   };
 
   return (
-    <View style={[
-      styles.container,
-      isDarkMode ? styles.darkContainer : styles.lightContainer
-    ]}>
-      <ScrollView 
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollViewContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {renderFocusAreasByPriority()}
-      </ScrollView>
-      
-      {/* Add Focus Area Modal */}
-      {isAddingFocus && (
-        <View style={styles.modalOverlay}>
-          <View style={[
-            styles.modalContent,
-            isDarkMode ? styles.darkModalContent : styles.lightModalContent
-          ]}>
-            <Text style={[
-              styles.modalTitle,
-              isDarkMode ? styles.lightText : styles.darkText
-            ]}>
-              New Focus Area
-            </Text>
-            
-            <TextInput
-              style={[
-                styles.input,
-                isDarkMode ? styles.darkInput : styles.lightInput
-              ]}
-              placeholder="Focus Area Name"
-              placeholderTextColor={isDarkMode ? "#8E8E93" : "#8E8E93"}
-              value={newFocusTitle}
-              onChangeText={setNewFocusTitle}
-            />
-            
-            <View style={styles.priorityButtons}>
-              {Object.keys(PRIORITY_COLORS).map((priority) => (
-                <TouchableOpacity
-                  key={priority}
-                  style={[
-                    styles.priorityButton,
-                    newFocusPriority === priority && styles.priorityButtonActive,
-                    { borderColor: PRIORITY_COLORS[priority as PriorityLevel] }
-                  ]}
-                  onPress={() => setNewFocusPriority(priority as PriorityLevel)}
-                >
-                  <Text style={[
-                    styles.priorityButtonText,
-                    newFocusPriority === priority && styles.priorityButtonTextActive,
-                    newFocusPriority === priority && { color: PRIORITY_COLORS[priority as PriorityLevel] }
-                  ]}>
-                    {priority.charAt(0).toUpperCase() + priority.slice(1)}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-            
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.cancelButton]}
-                onPress={() => {
-                  setIsAddingFocus(false);
-                  setNewFocusTitle('');
-                  setNewFocusPriority('important');
-                }}
-              >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={[styles.modalButton, styles.addButton]}
-                onPress={handleAddFocus}
-              >
-                <Text style={styles.addButtonText}>Add</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+    <View style={styles.container}>
+      {orderedFocusAreas.length > 0 ? (
+        <>
+          {renderFocusAreasByPriority()}
+          
+          <TouchableOpacity 
+            style={styles.viewAllButton}
+            onPress={navigateToFocusAreas}
+          >
+            <Text style={styles.viewAllText}>View All Focus Areas</Text>
+            <Ionicons name="chevron-forward" size={16} color="#0A84FF" />
+          </TouchableOpacity>
+        </>
+      ) : (
+        <View style={styles.emptyState}>
+          <Ionicons name="compass-outline" size={48} color="#8E8E93" style={styles.emptyIcon} />
+          <Text style={styles.emptyTitle}>No Focus Areas</Text>
+          <Text style={styles.emptyDescription}>
+            Define what matters most to you by adding focus areas
+          </Text>
+          <TouchableOpacity 
+            style={styles.addButton}
+            onPress={navigateToFocusAreas}
+          >
+            <Ionicons name="add" size={20} color="#FFFFFF" />
+            <Text style={styles.addButtonText}>Add Focus Area</Text>
+          </TouchableOpacity>
         </View>
       )}
     </View>
@@ -284,198 +213,107 @@ export default function SimplifiedFocusAreas() {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    borderRadius: 16,
-    overflow: 'hidden',
-  },
-  darkContainer: {
-    backgroundColor: '#121212',
-  },
-  lightContainer: {
-    backgroundColor: '#F2F2F7',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollViewContent: {
-    paddingVertical: 16,
-    paddingHorizontal: 8,
+    width: '100%',
   },
   prioritySection: {
-    marginBottom: 24,
+    marginBottom: 16,
   },
-  prioritySectionHeader: {
+  priorityHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 8,
   },
   priorityBadge: {
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
-    alignSelf: 'flex-start',
   },
   priorityBadgeText: {
     fontSize: 12,
-    fontWeight: 'bold',
+    fontWeight: '600',
   },
-  limitText: {
+  areaCount: {
     fontSize: 12,
-    color: '#FF453A',
-    fontWeight: '500',
+    color: '#8E8E93',
   },
-  priorityTitle: {
+  areasScrollContent: {
+    paddingRight: 16,
+  },
+  focusAreaCard: {
+    backgroundColor: '#3A3A3C',
+    borderRadius: 12,
+    padding: 12,
+    marginRight: 12,
+    width: 120,
+    height: 80,
+    justifyContent: 'space-between',
+    borderLeftWidth: 0,
+    borderTopWidth: 0,
+    borderRightWidth: 0,
+    borderBottomWidth: 3,
+  },
+  focusColorBar: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 4,
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
+  },
+  focusName: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  viewAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    backgroundColor: 'rgba(10, 132, 255, 0.1)',
+    borderRadius: 12,
+    marginTop: 8,
+  },
+  viewAllText: {
+    color: '#0A84FF',
+    fontWeight: '600',
+    fontSize: 14,
+    marginRight: 4,
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  emptyIcon: {
+    marginBottom: 16,
+  },
+  emptyTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: '600',
     color: '#FFFFFF',
     marginBottom: 8,
   },
-  priorityDescription: {
+  emptyDescription: {
     fontSize: 14,
     color: '#8E8E93',
+    textAlign: 'center',
     marginBottom: 16,
-    paddingHorizontal: 4,
-  },
-  focusItem: {
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    borderLeftWidth: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  darkFocusItem: {
-    backgroundColor: '#2C2C2E',
-  },
-  lightFocusItem: {
-    backgroundColor: '#FFFFFF',
-  },
-  focusItemHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  focusColor: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    marginRight: 12,
-  },
-  focusContent: {
-    flex: 1,
-  },
-  focusName: {
-    fontSize: 16,
-    fontWeight: '500',
-    flex: 1,
-  },
-  lightText: {
-    color: '#FFFFFF',
-  },
-  darkText: {
-    color: '#000000',
-  },
-  deleteButton: {
-    padding: 4,
-  },
-  addPriorityButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderRadius: 12,
-    padding: 12,
-    marginTop: 8,
-  },
-  addPriorityButtonText: {
-    fontSize: 14,
-    fontWeight: '500',
-    marginLeft: 8,
-  },
-  modalOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContent: {
-    borderRadius: 16,
-    padding: 24,
-    width: '90%',
-    maxWidth: 400,
-  },
-  darkModalContent: {
-    backgroundColor: '#2C2C2E',
-  },
-  lightModalContent: {
-    backgroundColor: '#FFFFFF',
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 16,
-  },
-  input: {
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 16,
-  },
-  darkInput: {
-    backgroundColor: '#1C1C1E',
-    color: '#FFFFFF',
-  },
-  lightInput: {
-    backgroundColor: '#F2F2F7',
-    color: '#000000',
-  },
-  priorityButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 24,
-  },
-  priorityButton: {
-    flex: 1,
-    padding: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    marginHorizontal: 4,
-    alignItems: 'center',
-  },
-  priorityButtonActive: {
-    backgroundColor: 'rgba(0, 0, 0, 0.1)',
-  },
-  priorityButtonText: {
-    color: '#8E8E93',
-    fontSize: 14,
-  },
-  priorityButtonTextActive: {
-    fontWeight: '600',
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-  },
-  modalButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    marginLeft: 8,
-  },
-  cancelButton: {
-    backgroundColor: '#3A3A3C',
-  },
-  cancelButtonText: {
-    color: '#FFFFFF',
   },
   addButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#0A84FF',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
   },
   addButtonText: {
     color: '#FFFFFF',
-    fontWeight: '500',
+    fontWeight: '600',
+    fontSize: 14,
+    marginLeft: 8,
   },
 }); 

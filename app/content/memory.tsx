@@ -1,138 +1,228 @@
-import React, { useState } from 'react';
-import { View, Alert } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import * as ImagePicker from 'expo-image-picker';
-import * as Haptics from 'expo-haptics';
-
-import ContentFormLayout from '../../components/content/ContentFormLayout';
+import React, { useRef } from 'react';
 import { 
-  TextInputField, 
-  DatePickerField, 
-  EmojiPickerField,
-  MediaUploadField,
-  ImportanceRatingField
-} from '../../components/content/FormComponents';
+  View, 
+  StyleSheet, 
+  Text, 
+  TouchableOpacity, 
+  useColorScheme, 
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+  Alert
+} from 'react-native';
+import { useRouter, Stack } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useContentForm } from '../hooks/useContentForm';
+import TextInputField from '../components/form/TextInputField';
+import DatePickerField from '../components/form/DatePickerField';
+import EmojiPickerField from '../components/form/EmojiPickerField';
+import MediaUploadField from '../components/form/MediaUploadField';
+
+// Conditionally import components to avoid errors if they don't exist yet
+let LocationPickerField: React.ComponentType<any> | null = null;
+let PeopleTagField: React.ComponentType<any> | null = null;
+let MoodPickerField: React.ComponentType<any> | null = null;
+
+try {
+  LocationPickerField = require('../components/form/LocationPickerField').default;
+} catch (error) {
+  console.log('LocationPickerField not available');
+}
+
+try {
+  PeopleTagField = require('../components/form/PeopleTagField').default;
+} catch (error) {
+  console.log('PeopleTagField not available');
+}
+
+try {
+  MoodPickerField = require('../components/form/MoodPickerField').default;
+} catch (error) {
+  console.log('MoodPickerField not available');
+}
 
 export default function MemoryScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ year?: string; month?: string; week?: string }>();
+  const colorScheme = useColorScheme();
+  const isDarkMode = colorScheme === 'dark';
+  const initialized = useRef(false);
   
-  // Parse URL parameters
-  const year = params.year ? parseInt(params.year, 10) : undefined;
-  const month = params.month ? parseInt(params.month, 10) : undefined;
-  const week = params.week ? parseInt(params.week, 10) : undefined;
-  
-  // Initialize form with the useContentForm hook
+  // Initialize content form with a fixed type to prevent re-renders
   const {
     formState,
     errors,
     handleChange,
-    handleSubmit: submitForm,
+    handleSubmit,
     addMedia,
     removeMedia,
-    isValid
+    validateForm
   } = useContentForm({
     type: 'memory',
-    initialYear: year,
-    initialMonth: month,
-    initialWeek: week
+    initialData: {}
   });
   
   // Handle form submission
-  const handleSubmit = async () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+  const onSubmit = () => {
+    if (!validateForm()) {
+      Alert.alert('Please fill in all required fields');
+      return;
+    }
     
-    const result = submitForm();
+    const result = handleSubmit();
     if (result) {
-      // Navigate back to the previous screen
       router.back();
-    } else {
-      // Show error message
-      Alert.alert('Error', 'Failed to save memory. Please try again.');
     }
   };
   
-  // Handle media upload
-  const handleAddMedia = async () => {
-    try {
-      // Request permission to access the photo library
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      
-      if (status !== 'granted') {
-        Alert.alert('Permission Required', 'Please allow access to your photo library to add photos.');
-        return;
-      }
-      
-      // Launch the image picker
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [4, 3],
-        quality: 0.8,
-      });
-      
-      if (!result.canceled && result.assets && result.assets.length > 0) {
-        // Add the selected image to the form state
-        addMedia(result.assets[0].uri);
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      }
-    } catch (error) {
-      console.error('Error picking image:', error);
-      Alert.alert('Error', 'Failed to add photo. Please try again.');
-    }
+  // Check if form is valid
+  const isValid = () => {
+    return formState.title && formState.date;
   };
   
   return (
-    <ContentFormLayout
-      title="New Memory"
-      onSubmit={handleSubmit}
-      isSubmitting={false}
-      isValid={isValid()}
-      submitLabel="Save Memory"
+    <KeyboardAvoidingView 
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <TextInputField
-        label="Title"
-        value={formState.title}
-        onChangeText={(text) => handleChange('title', text)}
-        placeholder="What happened?"
-        required
-        error={errors.title}
-      />
-      
-      <DatePickerField
-        label="Date"
-        value={formState.date}
-        onChange={(date) => handleChange('date', date)}
-        maximumDate={new Date()}
-      />
-      
-      <TextInputField
-        label="Notes"
-        value={formState.notes}
-        onChangeText={(text) => handleChange('notes', text)}
-        placeholder="Describe this memory..."
-        multiline
-        numberOfLines={4}
-      />
-      
-      <EmojiPickerField
-        label="Emoji"
-        value={formState.emoji}
-        onSelect={(emoji) => handleChange('emoji', emoji)}
-      />
-      
-      <ImportanceRatingField
-        label="Importance"
-        value={formState.importance}
-        onChange={(rating) => handleChange('importance', rating)}
-      />
-      
-      <MediaUploadField
-        label="Photos"
-        onAddMedia={handleAddMedia}
-        mediaCount={formState.media.length}
-      />
-    </ContentFormLayout>
+      <View style={[
+        styles.container,
+        isDarkMode ? styles.darkContainer : styles.lightContainer
+      ]}>
+        <Stack.Screen 
+          options={{
+            title: 'New Memory',
+            headerShown: true,
+            headerBackTitle: 'Cancel',
+            headerRight: () => (
+              <TouchableOpacity 
+                onPress={onSubmit}
+                disabled={!isValid()}
+                style={[
+                  styles.saveButton,
+                  !isValid() && styles.saveButtonDisabled
+                ]}
+              >
+                <Text style={[
+                  styles.saveButtonText,
+                  !isValid() && styles.saveButtonTextDisabled
+                ]}>
+                  Save
+                </Text>
+              </TouchableOpacity>
+            )
+          }} 
+        />
+        
+        <ScrollView 
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollViewContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.formContainer}>
+            <TextInputField
+              label="Title"
+              value={formState.title}
+              onChangeText={(text) => handleChange('title', text)}
+              placeholder="What's this memory about?"
+              required
+              error={errors.title}
+            />
+            
+            <DatePickerField
+              label="Date"
+              value={formState.date}
+              onChange={(date) => handleChange('date', date)}
+              maximumDate={new Date()}
+              required
+              error={errors.date}
+            />
+            
+            {MoodPickerField && (
+              <MoodPickerField
+                label="How did you feel?"
+                value={formState.mood}
+                onChange={(mood: string) => handleChange('mood', mood)}
+              />
+            )}
+            
+            <MediaUploadField
+              label="Photos"
+              onAddMedia={(uri) => addMedia(uri)}
+              onRemoveMedia={(index: number) => removeMedia(index)}
+              mediaItems={formState.media}
+            />
+            
+            {LocationPickerField && (
+              <LocationPickerField
+                label="Location"
+                value={formState.location}
+                onChange={(location: string) => handleChange('location', location)}
+              />
+            )}
+            
+            {PeopleTagField && (
+              <PeopleTagField
+                label="People"
+                value={formState.people || []}
+                onChange={(people: string[]) => handleChange('people', people)}
+              />
+            )}
+            
+            <TextInputField
+              label="Notes"
+              value={formState.notes}
+              onChangeText={(text) => handleChange('notes', text)}
+              placeholder="Describe this memory in detail..."
+              multiline
+              numberOfLines={6}
+            />
+            
+            <EmojiPickerField
+              label="Emoji"
+              value={formState.emoji}
+              onSelect={(emoji) => handleChange('emoji', emoji)}
+            />
+          </View>
+        </ScrollView>
+      </View>
+    </KeyboardAvoidingView>
   );
-} 
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  darkContainer: {
+    backgroundColor: '#121212',
+  },
+  lightContainer: {
+    backgroundColor: '#F2F2F7',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollViewContent: {
+    padding: 16,
+    paddingBottom: 40,
+  },
+  formContainer: {
+    flex: 1,
+  },
+  saveButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: '#0A84FF',
+  },
+  saveButtonDisabled: {
+    backgroundColor: '#0A84FF50',
+  },
+  saveButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  saveButtonTextDisabled: {
+    color: '#FFFFFF80',
+  },
+}); 

@@ -131,6 +131,7 @@ export default function GridContainer() {
     }
     
     const birthYear = birthDate.getFullYear();
+    const birthMonth = birthDate.getMonth();
     
     // Start from birth year
     let startYear = birthYear;
@@ -141,25 +142,29 @@ export default function GridContainer() {
     const currentYear = today.getFullYear();
     const currentMonth = today.getMonth();
     
+    // Calculate the current age in years
+    const ageInYears = currentYear - birthYear;
+    
+    // Adjust for birth month (if we haven't reached the birth month this year, subtract 1)
+    const adjustedAge = currentMonth >= birthMonth ? ageInYears : ageInYears - 1;
+    
+    // The current year in the life grid is the birth year + adjusted age
+    const currentGridYear = birthYear + adjustedAge;
+    
     for (let year = startYear; year <= endYear; year++) {
-      // Determine if this is the current year
-      const isCurrent = year === currentYear;
+      // Determine if this is the current year in the life grid
+      // This is different from the calendar year - it's based on birth date
+      const isCurrent = year === currentGridYear;
       
       // For the birth year and current year, we need special handling
       // For years in between, all months are in the past
       let isPast = false;
       
-      if (year < currentYear && year > birthYear) {
-        // Years between birth and current are fully in the past
+      if (year < currentGridYear) {
+        // Years before the current grid year are fully in the past
         isPast = true;
-      } else if (year === birthYear && year === currentYear) {
-        // Both birth year and current year - check if any months have passed
-        isPast = birthDate.getMonth() <= currentMonth;
-      } else if (year === birthYear) {
-        // Birth year - some months are in the past
-        isPast = true;
-      } else if (year === currentYear) {
-        // Current year - some months are in the past
+      } else if (year === currentGridYear) {
+        // Current grid year - some months are in the past
         isPast = true;
       }
       
