@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useReducer, ReactNode, useEffect } from 'react';
+import React, { createContext, useContext, useReducer, ReactNode, useEffect, useRef } from 'react';
 import { StorageService } from '../services/StorageService';
 import { 
   AppState, 
@@ -45,7 +45,6 @@ const AppContext = createContext<{
       notificationsEnabled: true,
       showCompletedGoals: true,
       weekStartsOnMonday: false,
-      // Removed gridAlignment option since we're always using birth date alignment
     },
     theme: 'dark',
   },
@@ -78,7 +77,6 @@ const initialState: AppState = {
     notificationsEnabled: true,
     showCompletedGoals: true,
     weekStartsOnMonday: false,
-    // Removed gridAlignment option since we're always using birth date alignment
   },
   theme: 'dark',
 };
@@ -107,10 +105,14 @@ function appReducer(state: AppState, action: AppAction): AppState {
     case 'SELECT_CELL':
       return { ...state, selectedCell: action.payload };
     case 'ADD_CONTENT_ITEM':
-      return { 
+      console.log('AppContext - ADD_CONTENT_ITEM action received:', action.payload.id);
+      console.log('AppContext - Current contentItems count:', state.contentItems.length);
+      const newState = { 
         ...state, 
         contentItems: [...state.contentItems, action.payload] 
       };
+      console.log('AppContext - New contentItems count:', newState.contentItems.length);
+      return newState;
     case 'UPDATE_CONTENT_ITEM':
       return { 
         ...state, 
@@ -211,6 +213,12 @@ function appReducer(state: AppState, action: AppAction): AppState {
         categories: action.payload.categories || state.categories,
         isLoading: false
       };
+    case 'INITIALIZE_APP':
+      return {
+        ...state,
+        ...action.payload,
+        isLoading: false
+      };
     default:
       return state;
   }
@@ -219,55 +227,56 @@ function appReducer(state: AppState, action: AppAction): AppState {
 // Provider component
 export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(appReducer, initialState);
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const prevStateRef = useRef<AppState>(initialState);
   
-  // Load data from storage on initial render
+  // Load data from storage on initial render - optimized to load in parallel
   useEffect(() => {
     async function loadData() {
       try {
-        // Load content items
-        const contentItems = await StorageService.getContentItems();
+        console.log('Loading app data...');
         
-        // Load seasons
-        const seasons = await StorageService.getSeasons();
+        // Load all data in parallel for better performance
+        const [
+          contentItems,
+          seasons,
+          focusAreas,
+          userSettings,
+          categories,
+          userBirthDate,
+          theme
+        ] = await Promise.all([
+          StorageService.getContentItems(),
+          StorageService.getSeasons(),
+          StorageService.getFocusAreas(),
+          StorageService.getUserSettings(),
+          StorageService.getCategories(),
+          StorageService.getUserBirthDate(),
+          StorageService.getTheme()
+        ]);
         
-        // Load focus areas
-        let focusAreas = await StorageService.getFocusAreas();
-        
-        // Check if focus areas need migration
+        // Process focus areas if needed
+        let processedFocusAreas = focusAreas;
         if (needsFocusAreaMigration(focusAreas)) {
-          focusAreas = migrateFocusAreas(focusAreas);
-          await StorageService.saveFocusAreas(focusAreas);
+          processedFocusAreas = migrateFocusAreas(focusAreas);
+          await StorageService.saveFocusAreas(processedFocusAreas);
         }
         
-        // Load user settings
-        const userSettings = await StorageService.getUserSettings();
-        
-        // Load categories
-        const categories = await StorageService.getCategories();
-        
-        // Load user birth date
-        const userBirthDate = await StorageService.getUserBirthDate();
-        if (userBirthDate) {
-          dispatch({ type: 'SET_USER_BIRTH_DATE', payload: userBirthDate });
-        }
-        
-        // Load theme
-        const theme = await StorageService.getTheme();
-        if (theme) {
-          dispatch({ type: 'SET_THEME', payload: theme });
-        }
-        
-        // Dispatch loaded data
+        // Batch all state updates into a single dispatch
         dispatch({ 
-          type: 'LOAD_DATA', 
+          type: 'INITIALIZE_APP', 
           payload: { 
             contentItems: contentItems || [], 
             seasons: seasons || [], 
-            focusAreas: focusAreas || [],
+            focusAreas: processedFocusAreas || [],
             userSettings: userSettings || initialState.userSettings,
-            categories: categories || DEFAULT_CATEGORIES
+            categories: categories || DEFAULT_CATEGORIES,
+            userBirthDate: userBirthDate || null,
+            theme: theme || 'dark'
           } 
         });
+        
+        console.log('App data loaded successfully');
       } catch (error) {
         console.error('Error loading data:', error);
         dispatch({ type: 'SET_LOADING', payload: false });
@@ -277,21 +286,71 @@ export function AppProvider({ children }: { children: ReactNode }) {
     loadData();
   }, []);
   
-  // Save data to storage when state changes
+  // Save data to storage when state changes, with debounce and change detection
   useEffect(() => {
-    if (!state.isLoading) {
-      StorageService.saveContentItems(state.contentItems);
-      StorageService.saveSeasons(state.seasons);
-      StorageService.saveFocusAreas(state.focusAreas);
-      StorageService.saveUserSettings(state.userSettings);
-      StorageService.saveCategories(state.categories);
+    if (state.isLoading) return;
+    
+    // Clear any existing timeout
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+    
+    // Set a new timeout to save data after a delay
+    saveTimeoutRef.current = setTimeout(async () => {
+      const prevState = prevStateRef.current;
+      const savePromises = [];
       
-      if (state.userBirthDate) {
-        StorageService.saveUserBirthDate(state.userBirthDate);
+      // Only save data that has actually changed
+      if (JSON.stringify(prevState.contentItems) !== JSON.stringify(state.contentItems)) {
+        savePromises.push(StorageService.saveContentItems(state.contentItems));
       }
       
-      StorageService.saveTheme(state.theme);
-    }
+      if (JSON.stringify(prevState.seasons) !== JSON.stringify(state.seasons)) {
+        savePromises.push(StorageService.saveSeasons(state.seasons));
+      }
+      
+      if (JSON.stringify(prevState.focusAreas) !== JSON.stringify(state.focusAreas)) {
+        savePromises.push(StorageService.saveFocusAreas(state.focusAreas));
+      }
+      
+      if (JSON.stringify(prevState.userSettings) !== JSON.stringify(state.userSettings)) {
+        savePromises.push(StorageService.saveUserSettings(state.userSettings));
+      }
+      
+      if (JSON.stringify(prevState.categories) !== JSON.stringify(state.categories)) {
+        savePromises.push(StorageService.saveCategories(state.categories));
+      }
+      
+      if (prevState.userBirthDate !== state.userBirthDate && state.userBirthDate) {
+        savePromises.push(StorageService.saveUserBirthDate(state.userBirthDate));
+      }
+      
+      if (prevState.theme !== state.theme) {
+        savePromises.push(StorageService.saveTheme(state.theme));
+      }
+      
+      // Only log and execute if there are changes to save
+      if (savePromises.length > 0) {
+        console.log(`Saving ${savePromises.length} changed data items to storage...`);
+        
+        try {
+          await Promise.all(savePromises);
+          console.log('App state saved successfully');
+        } catch (error) {
+          console.error('Error saving app state:', error);
+        }
+      }
+      
+      // Update the previous state reference
+      prevStateRef.current = { ...state };
+    }, 500); // 500ms debounce
+    
+    // Cleanup function to clear the timeout if the component unmounts
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
   }, [state]);
   
   return (

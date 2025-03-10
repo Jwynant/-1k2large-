@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 // Remove nanoid import
 // import { nanoid } from 'nanoid';
 import { useAppContext } from '../context/AppContext';
@@ -15,6 +15,27 @@ function generateUniqueId(): string {
     '_' + Date.now().toString(36);
 }
 
+// Preset colors for focus areas - moved outside the hook to avoid recreation
+const PRESET_COLORS = [
+  '#FF3B30', // Red
+  '#FF9500', // Orange
+  '#FFCC00', // Yellow
+  '#34C759', // Green
+  '#5AC8FA', // Light Blue
+  '#007AFF', // Blue
+  '#5856D6', // Purple
+  '#AF52DE', // Magenta
+  '#FF2D55', // Pink
+  '#A2845E', // Brown
+];
+
+// Priority level limits - moved outside the hook to avoid recreation
+const PRIORITY_LIMITS = {
+  essential: 3, // Max 3 essential focus areas
+  important: 5, // Max 5 important focus areas
+  supplemental: 7, // Max 7 supplemental focus areas
+};
+
 /**
  * Custom hook for managing focus areas
  */
@@ -27,14 +48,14 @@ export function useFocusAreas() {
   
   // Get focus areas ordered by priority level and then by rank within each level
   const orderedFocusAreas = useMemo(() => {
-    // First, group by priority level
+    // Group by priority level
     const grouped = {
       essential: focusAreas.filter(area => area.priorityLevel === 'essential'),
       important: focusAreas.filter(area => area.priorityLevel === 'important'),
       supplemental: focusAreas.filter(area => area.priorityLevel === 'supplemental')
     };
     
-    // Then sort each group by rank
+    // Sort each group by rank
     const sortedEssential = [...grouped.essential].sort((a, b) => a.rank - b.rank);
     const sortedImportant = [...grouped.important].sort((a, b) => a.rank - b.rank);
     const sortedSupplemental = [...grouped.supplemental].sort((a, b) => a.rank - b.rank);
@@ -55,22 +76,34 @@ export function useFocusAreas() {
     };
   }, [focusAreas]);
   
+  // Get the next available rank for a priority level
+  const getNextRank = useCallback((priorityLevel: PriorityLevel) => {
+    const areasInLevel = focusByLevel[priorityLevel];
+    if (areasInLevel.length === 0) return 1;
+    
+    const maxRank = Math.max(...areasInLevel.map(area => area.rank));
+    return maxRank + 1;
+  }, [focusByLevel]);
+  
   // Update focus area status based on goals
   const updateFocusAreaStatus = useCallback(() => {
     const goals = getGoals();
+    let hasChanges = false;
+    
     const updatedFocusAreas = focusAreas.map(area => {
       const areaGoals = goals.filter(goal => goal.focusAreaId === area.id);
       const activeGoals = areaGoals.filter(goal => !goal.isCompleted);
       const status = activeGoals.length > 0 ? 'active' as const : 'dormant' as const;
       
       if (area.status !== status) {
+        hasChanges = true;
         return { ...area, status };
       }
       return area;
     });
     
     // Only dispatch if there are changes
-    if (JSON.stringify(updatedFocusAreas) !== JSON.stringify(focusAreas)) {
+    if (hasChanges) {
       dispatch({ 
         type: 'LOAD_DATA', 
         payload: { 
@@ -82,7 +115,7 @@ export function useFocusAreas() {
         } 
       });
     }
-  }, [focusAreas, getGoals, dispatch, state]);
+  }, [focusAreas, getGoals, dispatch, state.contentItems, state.seasons, state.userSettings, state.categories]);
   
   // Add a new focus area
   const addFocusArea = useCallback((focusArea: Omit<FocusArea, 'id'>) => {
@@ -105,7 +138,7 @@ export function useFocusAreas() {
     dispatch({ type: 'ADD_FOCUS_AREA', payload: newFocusArea });
     
     return newFocusArea;
-  }, [dispatch]);
+  }, [dispatch, getNextRank]);
   
   // Update an existing focus area
   const updateFocusArea = useCallback((focusArea: FocusArea) => {
@@ -142,52 +175,19 @@ export function useFocusAreas() {
     
     dispatch({ type: 'UPDATE_FOCUS_AREA', payload: updatedFocusArea });
     return updatedFocusArea;
-  }, [focusAreas, dispatch]);
-  
-  // Get the next available rank for a priority level
-  const getNextRank = useCallback((priorityLevel: PriorityLevel) => {
-    const areasInLevel = focusAreas.filter(area => area.priorityLevel === priorityLevel);
-    if (areasInLevel.length === 0) return 1;
-    
-    const maxRank = Math.max(...areasInLevel.map(area => area.rank));
-    return maxRank + 1;
-  }, [focusAreas]);
+  }, [focusAreas, dispatch, getNextRank]);
   
   // Check if a priority level has reached its maximum allowed items
   const isPriorityLevelFull = useCallback((priorityLevel: PriorityLevel) => {
-    const areasInLevel = focusAreas.filter(area => area.priorityLevel === priorityLevel);
-    
-    // Set limits for each priority level
-    switch (priorityLevel) {
-      case 'essential':
-        return areasInLevel.length >= 3; // Max 3 essential focus areas
-      case 'important':
-        return areasInLevel.length >= 5; // Max 5 important focus areas
-      case 'supplemental':
-        return areasInLevel.length >= 7; // Max 7 supplemental focus areas
-      default:
-        return false;
-    }
-  }, [focusAreas]);
+    const areasInLevel = focusByLevel[priorityLevel];
+    return areasInLevel.length >= PRIORITY_LIMITS[priorityLevel];
+  }, [focusByLevel]);
   
   // Get a preset color for a new focus area
   const getPresetColor = useCallback(() => {
-    const presetColors = [
-      '#FF3B30', // Red
-      '#FF9500', // Orange
-      '#FFCC00', // Yellow
-      '#34C759', // Green
-      '#5AC8FA', // Light Blue
-      '#007AFF', // Blue
-      '#5856D6', // Purple
-      '#AF52DE', // Magenta
-      '#FF2D55', // Pink
-      '#A2845E', // Brown
-    ];
-    
     // Try to find a color that's not already in use
     const usedColors = focusAreas.map(area => area.color);
-    const availableColors = presetColors.filter(color => !usedColors.includes(color));
+    const availableColors = PRESET_COLORS.filter(color => !usedColors.includes(color));
     
     // If there are available colors, return a random one
     if (availableColors.length > 0) {
@@ -195,7 +195,7 @@ export function useFocusAreas() {
     }
     
     // Otherwise, return a random color from the preset list
-    return presetColors[Math.floor(Math.random() * presetColors.length)];
+    return PRESET_COLORS[Math.floor(Math.random() * PRESET_COLORS.length)];
   }, [focusAreas]);
   
   return {

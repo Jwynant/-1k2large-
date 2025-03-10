@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { 
   View, 
   Text, 
@@ -13,30 +13,54 @@ import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 
 interface QuickActionButtonsProps {
-  onAddMemory: () => void;
-  onAddGoal: () => void;
+  onAddMemory?: () => void;
+  onAddGoal?: () => void;
 }
 
-export default function QuickActionButtons({ 
-  onAddMemory, 
-  onAddGoal 
-}: QuickActionButtonsProps) {
+export default function QuickActionButtons(props: QuickActionButtonsProps) {
+  const { onAddMemory, onAddGoal } = props || {};
   const colorScheme = useColorScheme();
   const isDarkMode = colorScheme === 'dark';
   const windowWidth = Dimensions.get('window').width;
   const buttonWidth = (windowWidth - 48) / 2; // 48 = padding (16*2) + gap (16)
+  const router = useRouter();
   
-  const handleButtonPress = (action: () => void) => {
+  const handleButtonPress = useCallback((action: () => void) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     action();
-  };
+  }, []);
+  
+  // Navigate to memory form
+  const navigateToMemoryForm = useCallback(() => {
+    if (onAddMemory) {
+      onAddMemory();
+    } else {
+      router.push('/content/memory');
+    }
+  }, [onAddMemory, router]);
+  
+  // Navigate to goal form
+  const navigateToGoalForm = useCallback(() => {
+    if (onAddGoal) {
+      onAddGoal();
+    } else {
+      router.push('/content/goal');
+    }
+  }, [onAddGoal, router]);
   
   return (
-    <View style={styles.container}>
+    <View 
+      style={styles.container}
+      accessibilityRole="menubar"
+      accessibilityLabel="Quick actions"
+    >
       <TouchableOpacity 
         style={[styles.actionButton, { width: buttonWidth }]}
-        onPress={() => handleButtonPress(onAddMemory)}
+        onPress={() => handleButtonPress(navigateToMemoryForm)}
         activeOpacity={0.8}
+        accessibilityRole="button"
+        accessibilityLabel="Add Memory"
+        accessibilityHint="Opens the form to add a new memory"
       >
         <LinearGradient
           colors={['#4CD964', '#34A853']}
@@ -44,7 +68,10 @@ export default function QuickActionButtons({
           end={{ x: 1, y: 1 }}
           style={styles.buttonGradient}
         >
-          <View style={styles.iconContainer}>
+          <View 
+            style={styles.iconContainer}
+            accessibilityLabel="Memory icon"
+          >
             <Ionicons name="image" size={20} color="#FFFFFF" />
           </View>
           <Text style={styles.actionButtonText}>Add Memory</Text>
@@ -54,8 +81,11 @@ export default function QuickActionButtons({
       
       <TouchableOpacity 
         style={[styles.actionButton, { width: buttonWidth }]}
-        onPress={() => handleButtonPress(onAddGoal)}
+        onPress={() => handleButtonPress(navigateToGoalForm)}
         activeOpacity={0.8}
+        accessibilityRole="button"
+        accessibilityLabel="Add Goal"
+        accessibilityHint="Opens the form to add a new goal"
       >
         <LinearGradient
           colors={['#0A84FF', '#0066CC']}
@@ -63,7 +93,10 @@ export default function QuickActionButtons({
           end={{ x: 1, y: 1 }}
           style={styles.buttonGradient}
         >
-          <View style={styles.iconContainer}>
+          <View 
+            style={styles.iconContainer}
+            accessibilityLabel="Goal icon"
+          >
             <Ionicons name="flag" size={20} color="#FFFFFF" />
           </View>
           <Text style={styles.actionButtonText}>Add Goal</Text>
@@ -79,6 +112,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     width: '100%',
+    marginBottom: 16,
   },
   actionButton: {
     borderRadius: 14,

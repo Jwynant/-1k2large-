@@ -6,64 +6,54 @@ import {
   TouchableOpacity, 
   useColorScheme,
   Image,
-  ScrollView,
-  Dimensions
+  Alert
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import * as Haptics from 'expo-haptics';
 
 interface MediaUploadFieldProps {
   label: string;
   onAddMedia: (uri: string) => void;
-  onRemoveMedia?: (index: number) => void;
-  mediaItems?: string[];
-  mediaCount?: number;
+  mediaCount: number;
   required?: boolean;
 }
 
 export default function MediaUploadField({ 
   label, 
   onAddMedia,
-  onRemoveMedia,
-  mediaItems = [],
   mediaCount,
   required = false
 }: MediaUploadFieldProps) {
   const colorScheme = useColorScheme();
   const isDarkMode = colorScheme === 'dark';
-  const screenWidth = Dimensions.get('window').width;
-  const imageSize = (screenWidth - 64) / 3; // 3 images per row with padding
   
-  // Calculate media count
-  const count = mediaItems?.length || mediaCount || 0;
-  
-  // Handle media upload
   const handleAddMedia = async () => {
-    // Request permission
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    
-    if (status !== 'granted') {
-      alert('Sorry, we need camera roll permissions to make this work!');
-      return;
-    }
-    
-    // Launch image picker
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 0.8,
-    });
-    
-    if (!result.canceled && result.assets && result.assets.length > 0) {
-      onAddMedia(result.assets[0].uri);
-    }
-  };
-  
-  // Handle remove media
-  const handleRemoveMedia = (index: number) => {
-    if (onRemoveMedia) {
-      onRemoveMedia(index);
+    try {
+      // Request permission to access the photo library
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      
+      if (status !== 'granted') {
+        Alert.alert('Permission Required', 'Please allow access to your photo library to add photos.');
+        return;
+      }
+      
+      // Launch the image picker
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+      });
+      
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        // Add the selected image to the form state
+        onAddMedia(result.assets[0].uri);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert('Error', 'Failed to add photo. Please try again.');
     }
   };
   
@@ -72,41 +62,19 @@ export default function MediaUploadField({
       <View style={styles.labelContainer}>
         <Text style={[
           styles.label,
-          isDarkMode ? styles.lightText : styles.darkText
+          isDarkMode ? styles.darkLabel : styles.lightLabel
         ]}>
           {label}
           {required && <Text style={styles.requiredStar}>*</Text>}
         </Text>
+        {mediaCount > 0 && (
+          <Text style={styles.mediaCount}>
+            {mediaCount} {mediaCount === 1 ? 'photo' : 'photos'} added
+          </Text>
+        )}
       </View>
       
-      {/* Media preview */}
-      {count > 0 && mediaItems && (
-        <ScrollView 
-          horizontal 
-          showsHorizontalScrollIndicator={false}
-          style={styles.mediaPreviewContainer}
-          contentContainerStyle={styles.mediaPreviewContent}
-        >
-          {mediaItems.map((uri, index) => (
-            <View key={index} style={styles.mediaItem}>
-              <Image 
-                source={{ uri }} 
-                style={[styles.mediaPreview, { width: imageSize, height: imageSize }]} 
-              />
-              {onRemoveMedia && (
-                <TouchableOpacity 
-                  style={styles.removeButton}
-                  onPress={() => handleRemoveMedia(index)}
-                >
-                  <Ionicons name="close-circle" size={24} color="#FF453A" />
-                </TouchableOpacity>
-              )}
-            </View>
-          ))}
-        </ScrollView>
-      )}
-      
-      <TouchableOpacity
+      <TouchableOpacity 
         style={[
           styles.uploadButton,
           isDarkMode ? styles.darkUploadButton : styles.lightUploadButton
@@ -116,15 +84,14 @@ export default function MediaUploadField({
         <Ionicons 
           name="camera" 
           size={24} 
-          color={isDarkMode ? '#FFFFFF' : '#000000'} 
+          color={isDarkMode ? "#FFFFFF" : "#000000"} 
+          style={styles.uploadIcon}
         />
         <Text style={[
           styles.uploadText,
-          isDarkMode ? styles.lightText : styles.darkText
+          isDarkMode ? styles.darkUploadText : styles.lightUploadText
         ]}>
-          {count > 0 
-            ? `${count} photo${count !== 1 ? 's' : ''} added - Add more` 
-            : 'Add photos'}
+          Choose from Library
         </Text>
       </TouchableOpacity>
     </View>
@@ -137,28 +104,34 @@ const styles = StyleSheet.create({
   },
   labelContainer: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 8,
   },
   label: {
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: '600',
   },
-  lightText: {
+  darkLabel: {
     color: '#FFFFFF',
   },
-  darkText: {
+  lightLabel: {
     color: '#000000',
   },
   requiredStar: {
-    color: '#FF453A',
+    color: '#FF3B30',
     marginLeft: 4,
+  },
+  mediaCount: {
+    fontSize: 14,
+    color: '#8E8E93',
   },
   uploadButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 8,
     padding: 16,
+    borderRadius: 8,
     borderWidth: 1,
     borderStyle: 'dashed',
   },
@@ -167,31 +140,20 @@ const styles = StyleSheet.create({
     borderColor: '#3A3A3C',
   },
   lightUploadButton: {
-    backgroundColor: '#FFFFFF',
-    borderColor: '#D1D1D6',
+    backgroundColor: '#F2F2F7',
+    borderColor: '#C7C7CC',
+  },
+  uploadIcon: {
+    marginRight: 8,
   },
   uploadText: {
     fontSize: 16,
-    marginLeft: 8,
+    fontWeight: '500',
   },
-  mediaPreviewContainer: {
-    marginBottom: 12,
+  darkUploadText: {
+    color: '#FFFFFF',
   },
-  mediaPreviewContent: {
-    paddingBottom: 8,
-  },
-  mediaItem: {
-    marginRight: 8,
-    position: 'relative',
-  },
-  mediaPreview: {
-    borderRadius: 8,
-  },
-  removeButton: {
-    position: 'absolute',
-    top: -8,
-    right: -8,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    borderRadius: 12,
+  lightUploadText: {
+    color: '#000000',
   },
 }); 

@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { ContentItem, ContentType, SelectedCell } from '../types';
 
@@ -8,6 +8,15 @@ import { ContentItem, ContentType, SelectedCell } from '../types';
 export function useContentManagement() {
   const { state, dispatch } = useAppContext();
   
+  // Memoize content by type for better performance
+  const memories = useMemo(() => {
+    return state.contentItems.filter(item => item.type === 'memory');
+  }, [state.contentItems]);
+  
+  const goals = useMemo(() => {
+    return state.contentItems.filter(item => item.type === 'goal');
+  }, [state.contentItems]);
+  
   // Get content for a specific cell
   const getCellContent = useCallback((year: number, month?: number, week?: number) => {
     // Filter content items based on date
@@ -16,7 +25,9 @@ export function useContentManagement() {
       const itemYear = itemDate.getFullYear();
       
       // If we're looking for a specific year
-      if (year !== itemYear) return false;
+      if (year !== itemYear) {
+        return false;
+      }
       
       // If we're looking for a specific month
       if (month !== undefined) {
@@ -52,7 +63,6 @@ export function useContentManagement() {
     };
     
     dispatch({ type: 'ADD_CONTENT_ITEM', payload: newItem });
-    
     return newItem;
   }, [dispatch]);
   
@@ -68,22 +78,23 @@ export function useContentManagement() {
   
   // Get all content of a specific type
   const getContentByType = useCallback((type: ContentType) => {
-    return state.contentItems.filter(item => item.type === type);
-  }, [state.contentItems]);
+    return type === 'memory' ? memories : goals;
+  }, [memories, goals]);
   
   // Get all memories
   const getMemories = useCallback(() => {
-    return getContentByType('memory');
-  }, [getContentByType]);
+    return memories;
+  }, [memories]);
   
   // Get all goals
   const getGoals = useCallback(() => {
-    return getContentByType('goal');
-  }, [getContentByType]);
+    return goals;
+  }, [goals]);
   
   // Check if a cell has any content
   const hasContent = useCallback((year: number, month?: number, week?: number) => {
-    return getCellContent(year, month, week).length > 0;
+    const content = getCellContent(year, month, week);
+    return content.length > 0;
   }, [getCellContent]);
   
   return {

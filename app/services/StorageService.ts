@@ -59,10 +59,12 @@ export class StorageService {
    */
   static async saveContentItems(contentItems: ContentItem[]): Promise<void> {
     try {
+      console.log('StorageService - Saving content items, count:', contentItems.length);
       const jsonValue = JSON.stringify(contentItems);
       await AsyncStorage.setItem(STORAGE_KEYS.CONTENT_ITEMS, jsonValue);
+      console.log('StorageService - Content items saved successfully');
     } catch (error) {
-      console.error('Error saving content items:', error);
+      console.error('StorageService - Error saving content items:', error);
     }
   }
 
@@ -182,9 +184,13 @@ export class StorageService {
   /**
    * Save user birth date to AsyncStorage
    */
-  static async saveUserBirthDate(userBirthDate: string): Promise<void> {
+  static async saveUserBirthDate(birthDate: string | null): Promise<void> {
     try {
-      await AsyncStorage.setItem(STORAGE_KEYS.USER_BIRTH_DATE, userBirthDate);
+      if (birthDate === null) {
+        await AsyncStorage.removeItem(STORAGE_KEYS.USER_BIRTH_DATE);
+      } else {
+        await AsyncStorage.setItem(STORAGE_KEYS.USER_BIRTH_DATE, birthDate);
+      }
     } catch (error) {
       console.error('Error saving user birth date:', error);
     }

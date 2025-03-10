@@ -81,9 +81,6 @@ export interface ContentItem {
   
   // For memories:
   media?: string[];
-  mood?: string;
-  location?: string;
-  people?: string[];
   
   // For insights:
   relatedGoalIds?: string[]; // Multiple connections possible
@@ -130,9 +127,7 @@ export interface ContentFormState {
   milestones?: SubGoal[];
   
   // Memory-specific fields
-  mood?: string;
-  location?: string;
-  people?: string[];
+  // Removing mediaType, emotion, isSpecialEvent
   
   // Insight-specific fields
   relatedGoalIds?: string[];
@@ -195,7 +190,17 @@ export type AppAction =
   | { type: 'LOAD_CATEGORIES'; payload: Category[] }
   | { type: 'UPDATE_USER_SETTINGS'; payload: Partial<UserSettings> }
   | { type: 'SET_THEME'; payload: 'dark' | 'light' | 'system' }
-  | { type: 'LOAD_DATA'; payload: { contentItems: ContentItem[]; seasons: Season[]; focusAreas: FocusArea[]; userSettings: UserSettings; categories?: Category[] } };
+  | { type: 'LOAD_DATA'; payload: { contentItems: ContentItem[]; seasons: Season[]; focusAreas: FocusArea[]; userSettings: UserSettings; categories?: Category[] } }
+  | { type: 'INITIALIZE_APP'; payload: { 
+      contentItems: ContentItem[]; 
+      seasons: Season[]; 
+      focusAreas: FocusArea[]; 
+      userSettings: UserSettings; 
+      categories: Category[];
+      userBirthDate: string | null;
+      theme: 'dark' | 'light' | 'system';
+    } 
+  };
 
 // Provide a default export for the types file
 // This is a dummy component to satisfy Expo Router's requirements

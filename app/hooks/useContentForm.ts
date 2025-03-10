@@ -28,11 +28,6 @@ export function useContentForm({
     emoji: initialData.emoji || '',
     media: initialData.media || [],
     categoryIds: initialData.categoryIds || [],
-    
-    // Memory-specific fields
-    mood: initialData.mood || '',
-    location: initialData.location || '',
-    people: initialData.people || [],
   });
   
   // Form errors state
@@ -68,7 +63,6 @@ export function useContentForm({
       newErrors.date = 'Date is required';
     }
     
-    // Type-specific validation
     if (type === 'goal' && !formState.focusAreaId) {
       newErrors.focusAreaId = 'Please select a focus area';
     }
@@ -77,28 +71,30 @@ export function useContentForm({
     return Object.keys(newErrors).length === 0;
   }, [formState, type]);
   
-  // Submit the form
+  // Handle form submission
   const handleSubmit = useCallback(() => {
-    // Validate form fields
+    console.log('useContentForm - handleSubmit called with type:', type);
+    console.log('useContentForm - current formState:', JSON.stringify(formState, null, 2));
+    
+    // Validate form before submission
     if (!validateForm()) {
-      return null;
+      console.error('useContentForm - form validation failed:', errors);
+      return false;
     }
     
-    // Clear errors
-    setErrors({});
-    
-    // Prepare the common content item data
-    const contentData: ContentItem = {
-      id: nanoid(),
-      type,
-      title: formState.title.trim(),
+    // Prepare content data
+    const contentData: Omit<ContentItem, 'id'> = {
+      title: formState.title,
       date: formState.date.toISOString().split('T')[0],
+      type: type,
       notes: formState.notes,
       emoji: formState.emoji,
       categoryIds: formState.categoryIds,
     };
     
-    // Add type-specific data
+    console.log('useContentForm - prepared contentData:', JSON.stringify(contentData, null, 2));
+    
+    // Add type-specific fields
     if (type === 'goal') {
       contentData.focusAreaId = formState.focusAreaId;
       contentData.progress = 0;
@@ -113,24 +109,20 @@ export function useContentForm({
       }
     } else if (type === 'memory') {
       contentData.media = formState.media;
-      
-      // Add new memory-specific fields
-      if (formState.mood) {
-        contentData.mood = formState.mood;
-      }
-      
-      if (formState.location) {
-        contentData.location = formState.location;
-      }
-      
-      if (formState.people && formState.people.length > 0) {
-        contentData.people = formState.people;
-      }
+      console.log('useContentForm - added media to memory:', formState.media);
     }
     
     // Add content item and return it
-    return addContentItem(contentData);
-  }, [formState, type, addContentItem, validateForm]);
+    try {
+      console.log('useContentForm - calling addContentItem with:', JSON.stringify(contentData, null, 2));
+      const result = addContentItem(contentData);
+      console.log('useContentForm - addContentItem result:', result);
+      return result;
+    } catch (error) {
+      console.error('useContentForm - error in addContentItem:', error);
+      return false;
+    }
+  }, [formState, type, addContentItem, validateForm, errors]);
   
   // Reset the form
   const resetForm = useCallback(() => {
@@ -141,11 +133,6 @@ export function useContentForm({
       emoji: '',
       media: [],
       categoryIds: [],
-      
-      // Reset memory-specific fields
-      mood: '',
-      location: '',
-      people: [],
     });
     setErrors({});
   }, []);

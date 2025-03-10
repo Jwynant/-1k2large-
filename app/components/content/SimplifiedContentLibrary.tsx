@@ -44,6 +44,21 @@ export default function SimplifiedContentLibrary({
     .filter(item => selectedType ? item.type === selectedType : true)
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   
+  // Log content items for debugging
+  React.useEffect(() => {
+    console.log('SimplifiedContentLibrary - contentItems count:', contentItems.length);
+    if (contentItems.length > 0) {
+      console.log('SimplifiedContentLibrary - first few items:', 
+        contentItems.slice(0, 3).map(item => ({
+          id: item.id,
+          title: item.title,
+          date: item.date,
+          type: item.type
+        }))
+      );
+    }
+  }, [contentItems]);
+  
   // Get displayed items based on expanded state
   const displayedItems = isExpanded 
     ? filteredItems 
@@ -105,10 +120,11 @@ export default function SimplifiedContentLibrary({
   
   // Navigate to content creation
   const handleAddContent = (type: 'memory' | 'goal') => {
-    router.push({
-      pathname: "/content/new",
-      params: { type }
-    } as any);
+    if (type === 'memory') {
+      router.push('/content/memory');
+    } else {
+      router.push('/content/goal');
+    }
   };
   
   // Render content item
