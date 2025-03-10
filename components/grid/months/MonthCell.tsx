@@ -14,10 +14,39 @@ type MonthCellProps = {
 };
 
 function MonthCell({ year, month, expanded, onPress, onLongPress }: MonthCellProps) {
-  const { isMonthInPast } = useDateCalculations();
+  const { getBirthDate } = useDateCalculations();
   const { getCellContent, hasContent } = useContentManagement();
   
-  const filled = isMonthInPast(year, month);
+  // Determine if this cell should be filled based on the user's age
+  const birthDate = getBirthDate();
+  
+  let filled = false;
+  let isCurrent = false;
+  
+  if (birthDate) {
+    const birthMonth = birthDate.getMonth();
+    const birthYear = birthDate.getFullYear();
+    
+    // Current date for comparison
+    const today = new Date();
+    const currentYear = today.getFullYear();
+    const currentMonth = today.getMonth();
+    
+    // Calculate total months lived
+    const totalMonthsLived = (currentYear - birthYear) * 12 + (currentMonth - birthMonth + 1);
+    
+    // Calculate how many months from birth this cell represents
+    // First, normalize the month to be relative to birth month
+    const normalizedMonth = (month < birthMonth) ? month + 12 : month;
+    const monthsFromBirth = (year - birthYear) * 12 + (normalizedMonth - birthMonth);
+    
+    // A month is in the past if the user has lived it
+    filled = monthsFromBirth >= 0 && monthsFromBirth < totalMonthsLived;
+    
+    // This is the current month if it's the last filled month
+    isCurrent = monthsFromBirth === totalMonthsLived - 1;
+  }
+  
   const contentExists = hasContent(year, month);
   const cellContent = contentExists ? getCellContent(year, month) : [];
   
@@ -42,6 +71,7 @@ function MonthCell({ year, month, expanded, onPress, onLongPress }: MonthCellPro
           styles.cell,
           expanded && styles.cellExpanded,
           filled ? styles.filled : styles.empty,
+          isCurrent && styles.current
         ]} 
       >
         {contentExists && (
@@ -59,24 +89,23 @@ const styles = StyleSheet.create({
   cell: {
     width: 16,
     height: 16,
-    borderRadius: 2,
-    margin: 1,
+    margin: 2,
+    borderRadius: 4,
     justifyContent: 'center',
     alignItems: 'center',
   },
   cellExpanded: {
-    width: 32,
-    height: 32,
-    borderRadius: 4,
-    margin: 2,
+    width: 24,
+    height: 24,
+    borderRadius: 5,
   },
   filled: {
-    backgroundColor: '#e0e0e0',
+    backgroundColor: '#FFF5EA',
   },
   empty: {
-    backgroundColor: '#f5f5f5',
+    backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: '#333',
   },
   contentIndicator: {
     width: 6,
@@ -88,6 +117,9 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
+  },
+  current: {
+    backgroundColor: '#4A90E2',
   },
 });
 

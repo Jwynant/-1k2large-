@@ -14,6 +14,11 @@ import { useDateCalculations } from '../../app/hooks/useDateCalculations';
 import { useContentManagement } from '../../app/hooks/useContentManagement';
 import { format, differenceInYears, differenceInMonths, parseISO } from 'date-fns';
 import { Season, ContentItem, TimelineColumn } from '../../app/types';
+import SeasonBlock from './SeasonBlock';
+import TimelineEvent from './TimelineEvent';
+import TimelineColumnSelector from './TimelineColumnSelector';
+import SeasonCreator from './SeasonCreator';
+import { v4 as uuidv4 } from 'uuid';
 
 // Constants for timeline layout
 const YEAR_HEIGHT = 120; // Height in pixels for one year
@@ -23,9 +28,15 @@ const COLUMN_WIDTH = 150; // Width of each column
 
 export default function TimelineView() {
   // Get app context and hooks
-  const { state } = useAppContext();
+  const { state, dispatch } = useAppContext();
   const { getPreciseAge, getLifeProgress } = useDateCalculations();
   const { getCellContent } = useContentManagement();
+  
+  // Local state
+  const [expandedSeasonId, setExpandedSeasonId] = useState<string | null>(null);
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [showColumnSelector, setShowColumnSelector] = useState(false);
+  const [showSeasonCreator, setShowSeasonCreator] = useState(false);
   
   // Get window dimensions
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
@@ -80,6 +91,39 @@ export default function TimelineView() {
     return years * YEAR_HEIGHT + (months / 12) * YEAR_HEIGHT;
   };
   
+  // Handle season press
+  const handleSeasonPress = (seasonId: string) => {
+    setExpandedSeasonId(expandedSeasonId === seasonId ? null : seasonId);
+  };
+  
+  // Handle event press
+  const handleEventPress = (eventId: string) => {
+    setSelectedEventId(eventId);
+    // TODO: Open event detail view
+  };
+  
+  // Handle column toggle
+  const handleToggleColumn = (columnId: string) => {
+    const updatedColumn = columns.find(col => col.id === columnId);
+    if (updatedColumn) {
+      dispatch({ 
+        type: 'UPDATE_TIMELINE_COLUMN', 
+        payload: { ...updatedColumn, visible: !updatedColumn.visible }
+      });
+    }
+  };
+  
+  // Handle season creation
+  const handleCreateSeason = (season: Omit<Season, 'id'>) => {
+    dispatch({
+      type: 'ADD_SEASON',
+      payload: {
+        ...season,
+        id: uuidv4()
+      }
+    });
+  };
+  
   // Render year markers
   const renderYearMarkers = () => {
     const markers = [];
@@ -113,30 +157,18 @@ export default function TimelineView() {
       const startPosition = getPositionForDate(startDate);
       const endPosition = getPositionForDate(endDate);
       const height = endPosition - startPosition;
+      const isExpanded = expandedSeasonId === season.id;
       
       return (
-        <View 
+        <SeasonBlock
           key={`season-${season.id}`}
-          style={[
-            styles.seasonBlock,
-            {
-              top: startPosition,
-              height: height > 20 ? height : 20, // Minimum height for visibility
-              left: TIMELINE_WIDTH + TIMELINE_PADDING * 2,
-              width: windowWidth - TIMELINE_WIDTH - TIMELINE_PADDING * 3
-            }
-          ]}
-        >
-          <View style={styles.seasonHeader}>
-            <Text style={styles.seasonTitle}>{season.title}</Text>
-            <Text style={styles.seasonDates}>
-              {format(startDate, 'MMM yyyy')} - {format(endDate, 'MMM yyyy')}
-            </Text>
-          </View>
-          <Text style={styles.seasonDescription} numberOfLines={2}>
-            {season.description}
-          </Text>
-        </View>
+          season={season}
+          startPosition={startPosition}
+          height={height}
+          color="#FF9500" // TODO: Use focus area color or category color
+          onPress={() => handleSeasonPress(season.id)}
+          isExpanded={isExpanded}
+        />
       );
     });
   };
@@ -157,40 +189,15 @@ export default function TimelineView() {
         (column ? column.order * (COLUMN_WIDTH + 10) : 0);
       
       return (
-        <TouchableOpacity
+        <TimelineEvent
           key={`item-${item.id}`}
-          style={[
-            styles.contentItem,
-            {
-              top: position,
-              left: leftPosition,
-              backgroundColor: getContentTypeColor(item.type)
-            }
-          ]}
-        >
-          <Text style={styles.contentItemTitle} numberOfLines={1}>
-            {item.title}
-          </Text>
-          <Text style={styles.contentItemDate}>
-            {format(date, 'MMM d, yyyy')}
-          </Text>
-        </TouchableOpacity>
+          item={item}
+          position={position}
+          leftPosition={leftPosition}
+          onPress={() => handleEventPress(item.id)}
+        />
       );
     });
-  };
-  
-  // Helper function to get color based on content type
-  const getContentTypeColor = (type: string) => {
-    switch (type) {
-      case 'memory':
-        return '#FF9500'; // Orange
-      case 'goal':
-        return '#007AFF'; // Blue
-      case 'insight':
-        return '#5856D6'; // Purple
-      default:
-        return '#8E8E93'; // Gray
-    }
   };
   
   // Scroll to current position when component mounts
@@ -216,7 +223,27 @@ export default function TimelineView() {
             <Text style={styles.columnTitle}>{column.title}</Text>
           </View>
         ))}
+        
+        {/* Column selector toggle button */}
+        <TouchableOpacity
+          style={styles.columnSelectorButton}
+          onPress={() => setShowColumnSelector(!showColumnSelector)}
+        >
+          <Ionicons 
+            name={showColumnSelector ? 'chevron-up-circle' : 'chevron-down-circle'} 
+            size={24} 
+            color="#8E8E93" 
+          />
+        </TouchableOpacity>
       </View>
+      
+      {/* Column selector */}
+      {showColumnSelector && (
+        <TimelineColumnSelector 
+          columns={columns}
+          onToggleColumn={handleToggleColumn}
+        />
+      )}
       
       {/* Main timeline scroll view */}
       <ScrollView
@@ -256,6 +283,22 @@ export default function TimelineView() {
         {/* Content items */}
         {renderContentItems()}
       </ScrollView>
+      
+      {/* Add Season Button */}
+      <TouchableOpacity
+        style={styles.addSeasonButton}
+        onPress={() => setShowSeasonCreator(true)}
+      >
+        <Ionicons name="add" size={24} color="#FFFFFF" />
+        <Text style={styles.addSeasonButtonText}>Add Season</Text>
+      </TouchableOpacity>
+      
+      {/* Season Creator Modal */}
+      <SeasonCreator
+        visible={showSeasonCreator}
+        onClose={() => setShowSeasonCreator(false)}
+        onSave={handleCreateSeason}
+      />
     </View>
   );
 }
@@ -272,6 +315,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#2C2C2E',
     borderBottomWidth: 1,
     borderBottomColor: '#3A3A3C',
+    position: 'relative',
   },
   columnHeader: {
     marginRight: 10,
@@ -332,47 +376,32 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginLeft: 8,
   },
-  seasonBlock: {
+  columnSelectorButton: {
     position: 'absolute',
-    backgroundColor: 'rgba(44, 44, 46, 0.8)',
-    borderRadius: 8,
-    padding: 10,
-    borderLeftWidth: 3,
-    borderLeftColor: '#FF9500',
+    right: 10,
+    top: 10,
+    padding: 5,
   },
-  seasonHeader: {
+  addSeasonButton: {
+    position: 'absolute',
+    bottom: 20,
+    right: 20,
+    backgroundColor: '#0A84FF',
+    borderRadius: 25,
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 5,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
   },
-  seasonTitle: {
+  addSeasonButtonText: {
     color: '#FFFFFF',
     fontWeight: '600',
     fontSize: 16,
-  },
-  seasonDates: {
-    color: '#8E8E93',
-    fontSize: 12,
-  },
-  seasonDescription: {
-    color: '#CCCCCC',
-    fontSize: 14,
-  },
-  contentItem: {
-    position: 'absolute',
-    width: COLUMN_WIDTH,
-    padding: 8,
-    borderRadius: 6,
-    zIndex: 5,
-  },
-  contentItemTitle: {
-    color: '#FFFFFF',
-    fontWeight: '500',
-    fontSize: 14,
-  },
-  contentItemDate: {
-    color: 'rgba(255, 255, 255, 0.7)',
-    fontSize: 12,
+    marginLeft: 8,
   },
 }); 

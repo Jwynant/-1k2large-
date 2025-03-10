@@ -23,8 +23,11 @@ interface MonthExpandedViewProps {
 
 export default function MonthExpandedView({ year, onClose, onMonthPress }: MonthExpandedViewProps) {
   const { hasContent, getCellContent } = useContentManagement();
-  const { isCurrentMonth, isMonthInPast, isCurrentYear } = useDateCalculations();
+  const { isCurrentMonth, isMonthInPast, isCurrentYear, getBirthDate } = useDateCalculations();
   const { width } = useWindowDimensions();
+  
+  // Get birth date information
+  const birthDate = getBirthDate();
   
   // Calculate age from the year
   const currentYear = new Date().getFullYear();
@@ -43,28 +46,75 @@ export default function MonthExpandedView({ year, onClose, onMonthPress }: Month
       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
     ];
     
-    for (let i = 0; i < 12; i++) {
-      const isCurrent = isCurrentMonth(year, i);
-      const isPast = isMonthInPast(year, i);
-      const hasContentForMonth = hasContent(year, i);
-      const content = hasContentForMonth ? getCellContent(year, i) : [];
+    if (!birthDate) {
+      // If no birth date, use calendar months
+      for (let i = 0; i < 12; i++) {
+        const isCurrent = isCurrentMonth(year, i);
+        const isPast = isMonthInPast(year, i);
+        const hasContentForMonth = hasContent(year, i);
+        const content = hasContentForMonth ? getCellContent(year, i) : [];
+        
+        monthsData.push({
+          index: i,
+          name: monthNames[i],
+          isCurrent,
+          isPast,
+          hasContent: hasContentForMonth,
+          content
+        });
+      }
+    } else {
+      // If birth date exists, start with birth month
+      const birthMonth = birthDate.getMonth();
+      const birthYear = birthDate.getFullYear();
+      const today = new Date();
+      const currentMonth = today.getMonth();
       
-      monthsData.push({
-        index: i,
-        name: monthNames[i],
-        isCurrent,
-        isPast,
-        hasContent: hasContentForMonth,
-        content
-      });
+      // Calculate total months lived
+      const totalMonthsLived = (currentYear - birthYear) * 12 + (currentMonth - birthMonth + 1);
+      
+      // Calculate months from birth to the start of this cluster
+      const monthsFromBirthToClusterStart = (year - birthYear) * 12;
+      
+      for (let i = 0; i < 12; i++) {
+        // Calculate the actual calendar month this represents
+        const actualMonth = (birthMonth + i) % 12;
+        const actualYear = year + Math.floor((birthMonth + i) / 12);
+        
+        // Calculate how many months from birth this cell represents
+        const monthsFromBirth = monthsFromBirthToClusterStart + i;
+        
+        // A month is in the past if the user has lived it
+        const isPast = monthsFromBirth >= 0 && monthsFromBirth < totalMonthsLived;
+        
+        // This is the current month if it's the last filled month
+        const isCurrent = monthsFromBirth === totalMonthsLived - 1;
+        
+        // Check if this month has content
+        const hasContentForMonth = hasContent(actualYear, actualMonth);
+        const content = hasContentForMonth ? getCellContent(actualYear, actualMonth) : [];
+        
+        monthsData.push({
+          index: actualMonth,
+          name: monthNames[actualMonth],
+          isCurrent,
+          isPast,
+          hasContent: hasContentForMonth,
+          content,
+          actualYear // Store the actual year for content lookup
+        });
+      }
     }
     
+    console.log('Generated months data:', monthsData);
     return monthsData;
-  }, [year, isCurrentMonth, isMonthInPast, hasContent, getCellContent]);
+  }, [year, isCurrentMonth, isMonthInPast, hasContent, getCellContent, birthDate, currentYear]);
 
   // Handle month press with animation
-  const handleMonthPress = (month: number) => {
+  const handleMonthPress = (month: number, actualYear?: number) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    // If we have an actual year (for birth alignment), use that
+    // Otherwise use the cluster year
     onMonthPress(month);
   };
 
@@ -97,67 +147,71 @@ export default function MonthExpandedView({ year, onClose, onMonthPress }: Month
         
         <View style={styles.monthsGridContainer}>
           <View style={styles.monthsGrid}>
-            {months.map((month, index) => {
-              // Determine cell style based on year and month
-              let cellStyle;
-              let textStyle;
-              
-              if (isPastYear) {
-                // Past year - all cells have white fill with dark text
-                cellStyle = styles.pastCell;
-                textStyle = styles.pastCellText;
-              } else if (isFutureYear) {
-                // Future year - all cells are transparent with white border and white text
-                cellStyle = styles.futureCell;
-                textStyle = styles.futureCellText;
-              } else {
-                // Current year - mixed styles based on month
-                if (month.isPast) {
-                  // Past months - white fill with dark text
+            {months.length > 0 ? (
+              months.map((month, index) => {
+                // Determine cell style based on year and month
+                let cellStyle;
+                let textStyle;
+                
+                if (isPastYear) {
+                  // Past year - all cells have white fill with dark text
                   cellStyle = styles.pastCell;
                   textStyle = styles.pastCellText;
-                } else if (month.isCurrent) {
-                  // Current month - transparent with blue border and white text
-                  cellStyle = styles.currentCell;
-                  textStyle = styles.currentCellText;
-                } else {
-                  // Future months - transparent with white border and white text
+                } else if (isFutureYear) {
+                  // Future year - all cells are transparent with white border and white text
                   cellStyle = styles.futureCell;
                   textStyle = styles.futureCellText;
+                } else {
+                  // Current year - mixed styles based on month
+                  if (month.isPast) {
+                    // Past months - white fill with dark text
+                    cellStyle = styles.pastCell;
+                    textStyle = styles.pastCellText;
+                  } else if (month.isCurrent) {
+                    // Current month - transparent with blue border and white text
+                    cellStyle = styles.currentCell;
+                    textStyle = styles.currentCellText;
+                  } else {
+                    // Future months - transparent with white border and white text
+                    cellStyle = styles.futureCell;
+                    textStyle = styles.futureCellText;
+                  }
                 }
-              }
-              
-              return (
-                <View key={month.index} style={styles.cellWrapper}>
-                  <Animated.View
-                    entering={FadeIn.delay(100 + index * 30).duration(300)}
-                    style={styles.animatedCell}
-                  >
-                    <TouchableOpacity
-                      style={[styles.monthCell, cellStyle]}
-                      onPress={() => handleMonthPress(month.index)}
-                      activeOpacity={0.7}
+                
+                return (
+                  <View key={`month-${index}`} style={styles.cellWrapper}>
+                    <Animated.View
+                      entering={FadeIn.delay(100 + index * 30).duration(300)}
+                      style={styles.animatedCell}
                     >
-                      <Text style={[textStyle, styles.monthText]}>
-                        {month.name}
-                      </Text>
-                      
-                      {month.hasContent && (
-                        <Animated.View 
-                          entering={FadeIn.delay(300 + index * 20).duration(300)}
-                          style={styles.contentIndicatorContainer}
-                        >
-                          <CellContentIndicator 
-                            content={month.content} 
-                            size="medium"
-                          />
-                        </Animated.View>
-                      )}
-                    </TouchableOpacity>
-                  </Animated.View>
-                </View>
-              );
-            })}
+                      <TouchableOpacity
+                        style={[styles.monthCell, cellStyle]}
+                        onPress={() => handleMonthPress(month.index, month.actualYear)}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={[textStyle, styles.monthText]}>
+                          {month.name}
+                        </Text>
+                        
+                        {month.hasContent && (
+                          <Animated.View 
+                            style={styles.contentIndicator}
+                            entering={FadeIn.delay(300 + index * 30).duration(300)}
+                          >
+                            <CellContentIndicator 
+                              content={month.content} 
+                              size="medium" 
+                            />
+                          </Animated.View>
+                        )}
+                      </TouchableOpacity>
+                    </Animated.View>
+                  </View>
+                );
+              })
+            ) : (
+              <Text style={styles.noDataText}>No month data available</Text>
+            )}
           </View>
         </View>
       </SafeAreaView>
@@ -227,7 +281,7 @@ const styles = StyleSheet.create({
   },
   // 1. Past cells: white fill with dark text
   pastCell: {
-    backgroundColor: '#FFFFFF', // White fill
+    backgroundColor: '#FFF5EA', // Light cream fill
   },
   pastCellText: {
     color: '#000000', // Dark text
@@ -236,9 +290,7 @@ const styles = StyleSheet.create({
   },
   // 2. Present cells: no fill with blue border and white text
   currentCell: {
-    backgroundColor: 'transparent', // No fill
-    borderWidth: 2,
-    borderColor: '#0A84FF', // Blue border
+    backgroundColor: '#4A90E2', // Blue fill
   },
   currentCellText: {
     color: '#FFFFFF', // White text
@@ -248,22 +300,28 @@ const styles = StyleSheet.create({
   // 3. Future cells: no fill with white border and white text
   futureCell: {
     backgroundColor: 'transparent', // No fill
-    borderWidth: 2,
-    borderColor: '#FFFFFF', // White border
+    borderWidth: 1,
+    borderColor: '#333333', // Dark border
   },
   futureCellText: {
     color: '#FFFFFF', // White text
     fontSize: 20,
     fontWeight: '600',
   },
-  contentIndicatorContainer: {
-    position: 'absolute',
-    bottom: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   monthText: {
     fontSize: 18,
     fontWeight: '600',
+  },
+  contentIndicator: {
+    position: 'absolute',
+    bottom: 8,
+    right: 8,
+  },
+  noDataText: {
+    padding: 20,
+    textAlign: 'center',
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#8E8E93',
   },
 }); 

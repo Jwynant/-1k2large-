@@ -52,7 +52,10 @@ export default function GridContainer() {
     isCurrentMonth, 
     isCurrentWeek, 
     getPreciseAge,
-    getLifeProgress
+    getLifeProgress,
+    getStartMonth,
+    getAlignedDate,
+    getYearOffset
   } = useDateCalculations();
   
   // Local state
@@ -120,28 +123,58 @@ export default function GridContainer() {
   const gridWidth = windowWidth;
   const gridHeight = windowHeight - 100; // Further reduced to give more space to the grid
   
-  // Generate clusters based on current year and user lifespan
+  // Generate clusters based on birth year and user lifespan
   const clusters = useMemo(() => {
-    const currentYear = new Date().getFullYear();
-    const lifespan = 83; // Default lifespan, could be from settings
-    
-    // Get the user's birth year from the birth date
+    const lifespan = state.userSettings?.lifeExpectancy || 83;
     const birthDate = state.userBirthDate ? new Date(state.userBirthDate) : null;
-    const birthYear = birthDate ? birthDate.getFullYear() : currentYear;
     
-    // Start from birth year and show future up to typical lifespan
-    const startYear = birthYear; // Start from birth year
-    const endYear = birthYear + lifespan; // Show future up to typical lifespan
+    if (!birthDate) {
+      const currentYear = new Date().getFullYear();
+      return [{ year: currentYear, isCurrent: true, isPast: false }];
+    }
+    
+    const birthYear = birthDate.getFullYear();
+    
+    // Start from birth year
+    let startYear = birthYear;
+    let endYear = startYear + lifespan - 1;
     
     const clusterArray: Cluster[] = [];
+    const today = new Date();
+    const currentYear = today.getFullYear();
+    const currentMonth = today.getMonth();
+    
     for (let year = startYear; year <= endYear; year++) {
+      // Determine if this is the current year
+      const isCurrent = year === currentYear;
+      
+      // For the birth year and current year, we need special handling
+      // For years in between, all months are in the past
+      let isPast = false;
+      
+      if (year < currentYear && year > birthYear) {
+        // Years between birth and current are fully in the past
+        isPast = true;
+      } else if (year === birthYear && year === currentYear) {
+        // Both birth year and current year - check if any months have passed
+        isPast = birthDate.getMonth() <= currentMonth;
+      } else if (year === birthYear) {
+        // Birth year - some months are in the past
+        isPast = true;
+      } else if (year === currentYear) {
+        // Current year - some months are in the past
+        isPast = true;
+      }
+      
       clusterArray.push({
         year,
-        isCurrent: year === currentYear
+        isCurrent,
+        isPast
       });
     }
+    
     return clusterArray;
-  }, [state.userBirthDate]);
+  }, [state.userBirthDate, state.userSettings?.lifeExpectancy]);
   
   // Use the centralized age calculation
   const preciseAge = useMemo(() => {

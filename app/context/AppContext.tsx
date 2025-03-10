@@ -47,7 +47,8 @@ const AppContext = createContext<{
       },
       notificationsEnabled: true,
       showCompletedGoals: true,
-      weekStartsOnMonday: false
+      weekStartsOnMonday: false,
+      gridAlignment: 'birth' // Default to birth date alignment
     },
     theme: 'dark',
   },
@@ -81,7 +82,8 @@ const initialState: AppState = {
     },
     notificationsEnabled: true,
     showCompletedGoals: true,
-    weekStartsOnMonday: false
+    weekStartsOnMonday: false,
+    gridAlignment: 'birth' // Default to birth date alignment
   },
   theme: 'dark',
 };

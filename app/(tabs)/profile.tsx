@@ -1,15 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, Switch, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppContext } from '../context/AppContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useColorScheme } from 'react-native';
+import { useRouter } from 'expo-router';
+import { BirthDateModal, LifeExpectancyModal, ThemeModal } from '../components/profile';
+import * as Haptics from 'expo-haptics';
 
 export default function ProfileScreen() {
   const { state, dispatch } = useAppContext();
   const { userSettings } = state;
   const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
+  const isDark = state.theme === 'system' ? colorScheme === 'dark' : state.theme === 'dark';
+  const router = useRouter();
 
   // State for settings toggles
   const [notificationsEnabled, setNotificationsEnabled] = useState(
@@ -22,15 +26,27 @@ export default function ProfileScreen() {
     userSettings?.weekStartsOnMonday ?? false
   );
   
-  // Local state for demo purposes - would be in userSettings in a real app
+  // State for modals
+  const [birthDateModalVisible, setBirthDateModalVisible] = useState(false);
+  const [lifeExpectancyModalVisible, setLifeExpectancyModalVisible] = useState(false);
+  const [themeModalVisible, setThemeModalVisible] = useState(false);
+  
+  // Local state for user data
   const [name, setName] = useState('Jamie Smith');
   const [email, setEmail] = useState('jamie@example.com');
-  const [birthdate, setBirthdate] = useState('1985-07-15');
+  
+  // Get birth date from app context
+  const birthDate = state.userBirthDate ? new Date(state.userBirthDate) : new Date(1990, 0, 1);
+  
+  // Format birth date for display
+  const formattedBirthDate = birthDate.toISOString().split('T')[0];
+  
+  // Get life expectancy from user settings
+  const lifeExpectancy = userSettings?.lifeExpectancy || 83;
   
   // Calculate age
-  const calculateAge = (birthdate: string) => {
+  const calculateAge = (birthDate: Date) => {
     const today = new Date();
-    const birthDate = new Date(birthdate);
     let age = today.getFullYear() - birthDate.getFullYear();
     const monthDifference = today.getMonth() - birthDate.getMonth();
     
@@ -48,6 +64,7 @@ export default function ProfileScreen() {
       type: 'UPDATE_USER_SETTINGS',
       payload: { ...userSettings, notificationsEnabled: value }
     });
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
   
   const handleToggleCompletedGoals = (value: boolean) => {
@@ -56,6 +73,7 @@ export default function ProfileScreen() {
       type: 'UPDATE_USER_SETTINGS',
       payload: { ...userSettings, showCompletedGoals: value }
     });
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
   
   const handleToggleWeekStart = (value: boolean) => {
@@ -64,13 +82,39 @@ export default function ProfileScreen() {
       type: 'UPDATE_USER_SETTINGS',
       payload: { ...userSettings, weekStartsOnMonday: value }
     });
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
   
   // Calculate life progress
   const calculateLifeProgress = () => {
-    const age = calculateAge(birthdate);
-    // Assuming average lifespan of 90 years
-    return Math.min(Math.round((age / 90) * 100), 100);
+    const age = calculateAge(birthDate);
+    return Math.min(Math.round((age / lifeExpectancy) * 100), 100);
+  };
+
+  // Navigate to debug screen
+  const navigateToDebug = () => {
+    router.push('/debug');
+  };
+  
+  // Handle birth date change
+  const handleBirthDateChange = (date: Date) => {
+    dispatch({ 
+      type: 'SET_USER_BIRTH_DATE', 
+      payload: date.toISOString().split('T')[0] 
+    });
+  };
+  
+  // Handle life expectancy change
+  const handleLifeExpectancyChange = (years: number) => {
+    dispatch({
+      type: 'UPDATE_USER_SETTINGS',
+      payload: { ...userSettings, lifeExpectancy: years }
+    });
+  };
+  
+  // Handle theme change
+  const handleThemeChange = (theme: 'dark' | 'light' | 'system') => {
+    dispatch({ type: 'SET_THEME', payload: theme });
   };
   
   return (
@@ -92,7 +136,7 @@ export default function ProfileScreen() {
           
           <View style={styles.statsContainer}>
             <View style={styles.statItem}>
-              <Text style={styles.statValue}>{calculateAge(birthdate)}</Text>
+              <Text style={styles.statValue}>{calculateAge(birthDate)}</Text>
               <Text style={styles.statLabel}>Age</Text>
             </View>
             
@@ -116,29 +160,53 @@ export default function ProfileScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Personal</Text>
           
-          <Pressable style={styles.settingItem}>
+          <Pressable 
+            style={styles.settingItem}
+            onPress={() => {
+              setBirthDateModalVisible(true);
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            }}
+          >
             <Ionicons name="calendar" size={24} color="#0A84FF" style={styles.settingIcon} />
             <View style={styles.settingContent}>
               <Text style={styles.settingLabel}>Birthdate</Text>
-              <Text style={styles.settingValue}>{birthdate}</Text>
+              <Text style={styles.settingValue}>{formattedBirthDate}</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color="#8E8E93" />
           </Pressable>
           
-          <Pressable style={styles.settingItem}>
+          <Pressable 
+            style={styles.settingItem}
+            onPress={() => {
+              setLifeExpectancyModalVisible(true);
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            }}
+          >
             <Ionicons name="hourglass" size={24} color="#FF9500" style={styles.settingIcon} />
             <View style={styles.settingContent}>
               <Text style={styles.settingLabel}>Life Expectancy</Text>
-              <Text style={styles.settingValue}>90 years</Text>
+              <Text style={styles.settingValue}>{lifeExpectancy} years</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color="#8E8E93" />
           </Pressable>
           
-          <Pressable style={styles.settingItem}>
+          <Pressable 
+            style={styles.settingItem}
+            onPress={() => {
+              setThemeModalVisible(true);
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            }}
+          >
             <Ionicons name="color-palette" size={24} color="#4CD964" style={styles.settingIcon} />
             <View style={styles.settingContent}>
               <Text style={styles.settingLabel}>Theme</Text>
-              <Text style={styles.settingValue}>{isDark ? 'Dark' : 'Light'}</Text>
+              <Text style={styles.settingValue}>
+                {state.theme === 'system' 
+                  ? 'System' 
+                  : state.theme === 'dark' 
+                    ? 'Dark' 
+                    : 'Light'}
+              </Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color="#8E8E93" />
           </Pressable>
@@ -185,6 +253,26 @@ export default function ProfileScreen() {
               thumbColor="#FFFFFF"
             />
           </View>
+          
+          <View style={styles.settingItem}>
+            <Ionicons name="grid" size={24} color="#4CD964" style={styles.settingIcon} />
+            <View style={styles.settingContent}>
+              <Text style={styles.settingLabel}>Calendar Year Alignment</Text>
+              <Text style={styles.settingDescription}>Align grid with calendar years instead of birth date</Text>
+            </View>
+            <Switch
+              value={userSettings?.gridAlignment === 'calendar'}
+              onValueChange={(value) => {
+                dispatch({
+                  type: 'UPDATE_USER_SETTINGS',
+                  payload: { ...userSettings, gridAlignment: value ? 'calendar' : 'birth' }
+                });
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              }}
+              trackColor={{ false: '#3A3A3C', true: '#4CD964' }}
+              thumbColor="#FFFFFF"
+            />
+          </View>
         </View>
         
         <View style={styles.section}>
@@ -216,10 +304,47 @@ export default function ProfileScreen() {
           </Pressable>
         </View>
         
+        <View style={[styles.section, { marginTop: 30 }]}>
+          <Text style={styles.sectionTitle}>Developer Options</Text>
+          
+          <Pressable 
+            style={styles.debugButton}
+            onPress={navigateToDebug}
+          >
+            <Ionicons name="bug-outline" size={24} color="#FFFFFF" />
+            <Text style={styles.debugButtonText}>Debug Menu</Text>
+            <View style={styles.debugButtonIconContainer}>
+              <Ionicons name="chevron-forward" size={20} color="#999" />
+            </View>
+          </Pressable>
+        </View>
+        
         <Pressable style={styles.logoutButton}>
           <Text style={styles.logoutButtonText}>Log Out</Text>
         </Pressable>
       </ScrollView>
+      
+      {/* Modals */}
+      <BirthDateModal
+        visible={birthDateModalVisible}
+        onClose={() => setBirthDateModalVisible(false)}
+        currentDate={birthDate}
+        onSave={handleBirthDateChange}
+      />
+      
+      <LifeExpectancyModal
+        visible={lifeExpectancyModalVisible}
+        onClose={() => setLifeExpectancyModalVisible(false)}
+        currentLifeExpectancy={lifeExpectancy}
+        onSave={handleLifeExpectancyChange}
+      />
+      
+      <ThemeModal
+        visible={themeModalVisible}
+        onClose={() => setThemeModalVisible(false)}
+        currentTheme={state.theme || 'system'}
+        onSave={handleThemeChange}
+      />
     </SafeAreaView>
   );
 }
@@ -332,6 +457,11 @@ const styles = StyleSheet.create({
     color: '#8E8E93',
     marginTop: 2,
   },
+  settingDescription: {
+    fontSize: 14,
+    color: '#8E8E93',
+    marginTop: 2,
+  },
   logoutButton: {
     marginTop: 24,
     marginHorizontal: 16,
@@ -344,5 +474,22 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '600',
     fontSize: 16,
+  },
+  debugButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 10,
+    padding: 12,
+  },
+  debugButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    marginLeft: 12,
+    flex: 1,
+  },
+  debugButtonIconContainer: {
+    marginLeft: 'auto',
   },
 }); 

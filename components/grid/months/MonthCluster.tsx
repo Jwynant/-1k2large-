@@ -21,7 +21,7 @@ function MonthCluster({
   onLongPress,
   hasContent
 }: MonthClusterProps) {
-  const { isCurrentMonth, isMonthInPast } = useDateCalculations();
+  const { isCurrentMonth, isMonthInPast, getStartMonth, getBirthDate } = useDateCalculations();
   const clusterRef = useRef<View>(null);
 
   const handleMonthPress = useCallback((month: number) => {
@@ -58,34 +58,76 @@ function MonthCluster({
   const simplifiedGridLayout = useMemo(() => {
     // Create a simplified visual representation of the months in a 3x4 grid
     const rows = [];
-    const currentYear = new Date().getFullYear();
-    const currentMonth = new Date().getMonth();
+    const birthDate = getBirthDate();
     
-    for (let rowIndex = 0; rowIndex < 4; rowIndex++) {
-      const rowMonths = [];
-      for (let colIndex = 0; colIndex < 3; colIndex++) {
-        const month = rowIndex * 3 + colIndex;
-        const isPast = isMonthInPast(year, month);
-        const hasContentForMonth = hasContent(year, month);
-        const isCurrent = year === currentYear && month === currentMonth;
-        
-        rowMonths.push(
-          <View 
-            key={month} 
-            style={[
-              styles.simplifiedCell,
-              isPast ? styles.simplifiedCellFilled : styles.simplifiedCellEmpty,
-              isCurrent && styles.simplifiedCellCurrent,
-              hasContentForMonth && styles.simplifiedCellWithContent
-            ]} 
-          />
+    if (!birthDate) {
+      // Fallback rendering if no birth date
+      for (let rowIndex = 0; rowIndex < 4; rowIndex++) {
+        const rowMonths = [];
+        for (let colIndex = 0; colIndex < 3; colIndex++) {
+          rowMonths.push(
+            <View 
+              key={rowIndex * 3 + colIndex} 
+              style={[styles.simplifiedCell, styles.simplifiedCellEmpty]} 
+            />
+          );
+        }
+        rows.push(<View key={rowIndex} style={styles.simplifiedRow}>{rowMonths}</View>);
+      }
+    } else {
+      // Get birth month (0-11)
+      const birthMonth = birthDate.getMonth();
+      const birthYear = birthDate.getFullYear();
+      
+      // Current date for comparison
+      const today = new Date();
+      const currentYear = today.getFullYear();
+      const currentMonth = today.getMonth();
+      
+      // Calculate total months lived
+      const totalMonthsLived = (currentYear - birthYear) * 12 + (currentMonth - birthMonth + 1);
+      
+      // Calculate months from birth to the start of this cluster
+      const monthsFromBirthToClusterStart = (year - birthYear) * 12;
+      
+      for (let rowIndex = 0; rowIndex < 4; rowIndex++) {
+        const rowMonths = [];
+        for (let colIndex = 0; colIndex < 3; colIndex++) {
+          // Position in this cluster (0-11)
+          const positionInCluster = rowIndex * 3 + colIndex;
+          
+          // Calculate how many months from birth this cell represents
+          const monthsFromBirth = monthsFromBirthToClusterStart + positionInCluster;
+          
+          // A month is in the past if the user has lived it
+          const isPast = monthsFromBirth >= 0 && monthsFromBirth < totalMonthsLived;
+          
+          // This is the current month if it's the last filled month
+          const isCurrent = monthsFromBirth === totalMonthsLived - 1;
+          
+          // Check if this month has content
+          const actualMonth = (birthMonth + positionInCluster) % 12;
+          const actualYear = year + Math.floor((birthMonth + positionInCluster) / 12);
+          const hasContentForMonth = hasContent(actualYear, actualMonth);
+          
+          rowMonths.push(
+            <View 
+              key={positionInCluster} 
+              style={[
+                styles.simplifiedCell,
+                isPast ? styles.simplifiedCellFilled : styles.simplifiedCellEmpty,
+                isCurrent && styles.simplifiedCellCurrent,
+                hasContentForMonth && styles.simplifiedCellWithContent
+              ]} 
+            />
+          );
+        }
+        rows.push(
+          <View key={rowIndex} style={styles.simplifiedRow}>
+            {rowMonths}
+          </View>
         );
       }
-      rows.push(
-        <View key={rowIndex} style={styles.simplifiedRow}>
-          {rowMonths}
-        </View>
-      );
     }
     
     return (
@@ -95,7 +137,7 @@ function MonthCluster({
         </View>
       </View>
     );
-  }, [year, isMonthInPast, hasContent]);
+  }, [year, hasContent, getBirthDate]);
 
   return (
     <Pressable 
@@ -169,6 +211,10 @@ const styles = StyleSheet.create({
   },
   simplifiedCellCurrent: {
     backgroundColor: '#007AFF',
+  },
+  simplifiedCellWithContent: {
+    borderWidth: 2,
+    borderColor: '#0366d6', // Accent color
   },
 });
 

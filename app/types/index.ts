@@ -20,6 +20,7 @@ export interface SelectedCell {
 export interface Cluster {
   year: number;
   isCurrent: boolean;
+  isPast: boolean; // Added to indicate if the year is in the past
 }
 
 // Focus Area Types
@@ -113,6 +114,7 @@ export interface UserSettings {
   notificationsEnabled: boolean;
   showCompletedGoals: boolean;
   weekStartsOnMonday: boolean;
+  gridAlignment: 'birth' | 'calendar'; // 'birth' for birth date alignment, 'calendar' for calendar year alignment
 }
 
 // Form Types
