@@ -9,6 +9,7 @@ import { format } from 'date-fns';
 import { ContentItem, FocusArea } from '../types';
 import { useRouter } from 'expo-router';
 import AddGoalButton from '../components/goals/AddGoalButton';
+import SimplifiedFocusAreas from '../components/focus/SimplifiedFocusAreas';
 
 // Simple Goals Dashboard Component
 function GoalsDashboard({ activeGoals, focusAreas }: { activeGoals: ContentItem[], focusAreas: FocusArea[] }) {
@@ -226,34 +227,9 @@ export default function TodayScreen() {
          
         {/* Focus Areas Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Today's Focus</Text>
-          <View style={styles.focusCard}>
-            {orderedFocusAreas.length > 0 ? (
-              orderedFocusAreas.map((area, index) => (
-                <View key={area.id} style={styles.focusItem}>
-                  <View style={[styles.focusColor, { backgroundColor: area.color }]} />
-                  <View style={styles.focusContent}>
-                    <Text style={styles.focusName}>{area.name}</Text>
-                    <Text style={styles.focusPriority}>
-                      {area.priorityLevel.charAt(0).toUpperCase() + area.priorityLevel.slice(1)}
-                    </Text>
-                  </View>
-                  <View style={styles.focusGoals}>
-                    <Ionicons name="flag" size={16} color="#AEAEB2" />
-                    <Text style={styles.focusGoalsText}>
-                      {activeGoals.filter(goal => goal.focusAreaId === area.id).length} goals
-                    </Text>
-                  </View>
-                </View>
-              ))
-            ) : (
-              <View style={styles.emptyFocus}>
-                <Text style={styles.emptyText}>No focus areas defined</Text>
-                <TouchableOpacity style={styles.emptyButton}>
-                  <Text style={styles.emptyButtonText}>Set Focus Areas</Text>
-                </TouchableOpacity>
-              </View>
-            )}
+          <Text style={styles.sectionTitle}>Focus Areas</Text>
+          <View style={styles.focusAreasContainer}>
+            <SimplifiedFocusAreas />
           </View>
         </View>
         
@@ -472,64 +448,6 @@ const styles = StyleSheet.create({
     color: '#AEAEB2',
     marginLeft: 8,
   },
-  // Focus Card Styles
-  focusCard: {
-    backgroundColor: '#2C2C2E',
-    borderRadius: 16,
-    padding: 16,
-  },
-  focusItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  focusColor: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    marginRight: 12,
-  },
-  focusContent: {
-    flex: 1,
-  },
-  focusName: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#FFFFFF',
-  },
-  focusPriority: {
-    fontSize: 14,
-    color: '#AEAEB2',
-  },
-  focusGoals: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  focusGoalsText: {
-    fontSize: 12,
-    color: '#AEAEB2',
-    marginLeft: 4,
-  },
-  emptyFocus: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-  },
-  emptyText: {
-    fontSize: 16,
-    color: '#AEAEB2',
-    marginBottom: 12,
-  },
-  emptyButton: {
-    backgroundColor: '#0A84FF',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 16,
-  },
-  emptyButtonText: {
-    color: '#FFFFFF',
-    fontWeight: '500',
-  },
   // Quick Actions Styles
   actionsContainer: {
     flexDirection: 'row',
@@ -547,5 +465,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#FFFFFF',
     marginTop: 8,
+  },
+  // Focus Areas Styles
+  focusAreasContainer: {
+    backgroundColor: '#2C2C2E',
+    borderRadius: 16,
+    overflow: 'hidden',
+    marginBottom: 16,
+    minHeight: 200,
   },
 }); 

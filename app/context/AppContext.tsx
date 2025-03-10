@@ -11,7 +11,6 @@ import {
   SelectedCell,
   FocusArea,
   UserSettings,
-  TimelineColumn
 } from '../types';
 import { migrateFocusAreas, needsFocusAreaMigration } from '../utils/migrations';
 import { DEFAULT_CATEGORIES } from '../hooks/useCategories';
@@ -27,7 +26,7 @@ const AppContext = createContext<{
     accentColor: '#007AFF',
     viewMode: 'months',
     viewState: 'grid',
-    displayMode: 'grid', // Default to grid view
+    displayMode: 'grid', // Default to grid view only
     selectedYear: null,
     selectedMonth: null,
     selectedWeek: null,
@@ -36,13 +35,11 @@ const AppContext = createContext<{
     seasons: [],
     focusAreas: [],
     categories: [],
-    timelineColumns: [], // Initialize empty timeline columns
     userSettings: {
       lifeExpectancy: 83, // Default 83 years (approximately 1000 months)
       notifications: {
         goalDeadlines: true,
         priorityReminders: true,
-        reflectionPrompts: true,
         memoryCapture: true
       },
       notificationsEnabled: true,
@@ -62,7 +59,7 @@ const initialState: AppState = {
   accentColor: '#007AFF',
   viewMode: 'months',
   viewState: 'grid',
-  displayMode: 'grid', // Default to grid view
+  displayMode: 'grid', // Always grid view
   selectedYear: null,
   selectedMonth: null,
   selectedWeek: null,
@@ -71,13 +68,11 @@ const initialState: AppState = {
   seasons: [],
   focusAreas: [],
   categories: [],
-  timelineColumns: [], // Initialize empty timeline columns
   userSettings: {
     lifeExpectancy: 83, // Default 83 years (approximately 1000 months)
     notifications: {
       goalDeadlines: true,
       priorityReminders: true,
-      reflectionPrompts: true,
       memoryCapture: true
     },
     notificationsEnabled: true,
@@ -98,20 +93,11 @@ function appReducer(state: AppState, action: AppAction): AppState {
     case 'SET_ACCENT_COLOR':
       return { ...state, accentColor: action.payload };
     case 'SET_VIEW_MODE':
-      return {
-        ...state,
-        viewMode: action.payload
-      };
+      return { ...state, viewMode: action.payload };
     case 'SET_VIEW_STATE':
-      return {
-        ...state,
-        viewState: action.payload
-      };
+      return { ...state, viewState: action.payload };
     case 'SET_DISPLAY_MODE':
-      return {
-        ...state,
-        displayMode: action.payload
-      };
+      return { ...state, displayMode: action.payload };
     case 'SELECT_YEAR':
       return { ...state, selectedYear: action.payload };
     case 'SELECT_MONTH':
@@ -120,8 +106,6 @@ function appReducer(state: AppState, action: AppAction): AppState {
       return { ...state, selectedWeek: action.payload };
     case 'SELECT_CELL':
       return { ...state, selectedCell: action.payload };
-    case 'SET_THEME':
-      return { ...state, theme: action.payload };
     case 'ADD_CONTENT_ITEM':
       return { 
         ...state, 
@@ -157,38 +141,30 @@ function appReducer(state: AppState, action: AppAction): AppState {
         seasons: state.seasons.filter(season => season.id !== action.payload) 
       };
     case 'ADD_FOCUS_AREA':
-      return {
-        ...state,
-        focusAreas: [...state.focusAreas, action.payload]
+      return { 
+        ...state, 
+        focusAreas: [...state.focusAreas, action.payload] 
       };
     case 'UPDATE_FOCUS_AREA':
-      return {
-        ...state,
-        focusAreas: state.focusAreas.map(area =>
+      return { 
+        ...state, 
+        focusAreas: state.focusAreas.map(area => 
           area.id === action.payload.id ? action.payload : area
-        )
+        ) 
       };
     case 'DELETE_FOCUS_AREA':
-      return {
-        ...state,
-        focusAreas: state.focusAreas.filter(area => area.id !== action.payload)
+      return { 
+        ...state, 
+        focusAreas: state.focusAreas.filter(area => area.id !== action.payload) 
       };
     case 'REORDER_FOCUS_AREAS':
-      // Reorder based on the array of IDs representing the new order
+      const reorderedAreas = action.payload.map(id => 
+        state.focusAreas.find(area => area.id === id)
+      ).filter(area => area !== undefined) as FocusArea[];
+      
       return {
         ...state,
-        focusAreas: action.payload.map(id => 
-          // Find the focus area with matching ID
-          state.focusAreas.find(area => area.id === id)!
-        ).filter(Boolean) // Filter out any undefined values
-      };
-    case 'UPDATE_USER_SETTINGS':
-      return {
-        ...state,
-        userSettings: {
-          ...state.userSettings,
-          ...action.payload
-        }
+        focusAreas: reorderedAreas
       };
     case 'ADD_CATEGORY':
       return {
@@ -198,55 +174,42 @@ function appReducer(state: AppState, action: AppAction): AppState {
     case 'UPDATE_CATEGORY':
       return {
         ...state,
-        categories: state.categories.map(category => 
+        categories: state.categories.map(category =>
           category.id === action.payload.id ? action.payload : category
         )
       };
     case 'DELETE_CATEGORY':
-      // Remove the category and also remove references to it from content
       return {
         ...state,
-        categories: state.categories.filter(category => category.id !== action.payload),
-        focusAreas: state.focusAreas.map(area => ({
-          ...area,
-          categoryIds: area.categoryIds?.filter(id => id !== action.payload) || []
-        })),
-        contentItems: state.contentItems.map(item => ({
-          ...item,
-          categoryIds: item.categoryIds?.filter(id => id !== action.payload) || []
-        }))
+        categories: state.categories.filter(category => category.id !== action.payload)
       };
     case 'LOAD_CATEGORIES':
       return {
         ...state,
         categories: action.payload
       };
+    case 'UPDATE_USER_SETTINGS':
+      return {
+        ...state,
+        userSettings: {
+          ...state.userSettings,
+          ...action.payload
+        }
+      };
+    case 'SET_THEME':
+      return {
+        ...state,
+        theme: action.payload
+      };
     case 'LOAD_DATA':
-      return { 
-        ...state, 
-        contentItems: action.payload.contentItems || [],
-        seasons: action.payload.seasons || [],
-        focusAreas: action.payload.focusAreas || [],
-        categories: action.payload.categories || [],
-        userSettings: action.payload.userSettings || initialState.userSettings,
+      return {
+        ...state,
+        contentItems: action.payload.contentItems,
+        seasons: action.payload.seasons,
+        focusAreas: action.payload.focusAreas,
+        userSettings: action.payload.userSettings,
+        categories: action.payload.categories || state.categories,
         isLoading: false
-      };
-    case 'ADD_TIMELINE_COLUMN':
-      return {
-        ...state,
-        timelineColumns: [...state.timelineColumns, action.payload]
-      };
-    case 'UPDATE_TIMELINE_COLUMN':
-      return {
-        ...state,
-        timelineColumns: state.timelineColumns.map(column => 
-          column.id === action.payload.id ? action.payload : column
-        )
-      };
-    case 'DELETE_TIMELINE_COLUMN':
-      return {
-        ...state,
-        timelineColumns: state.timelineColumns.filter(column => column.id !== action.payload)
       };
     default:
       return state;
@@ -257,97 +220,79 @@ function appReducer(state: AppState, action: AppAction): AppState {
 export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(appReducer, initialState);
   
-  // Load data when the component mounts
+  // Load data from storage on initial render
   useEffect(() => {
     async function loadData() {
       try {
-        // Set loading state
-        dispatch({ type: 'SET_LOADING', payload: true });
+        // Load content items
+        const contentItems = await StorageService.getContentItems();
         
-        // Load user data from storage
-        const userData = await StorageService.getUserData();
+        // Load seasons
+        const seasons = await StorageService.getSeasons();
         
-        if (userData) {
-          // Apply migrations if needed
-          const needsMigration = userData.focusAreas && needsFocusAreaMigration(userData.focusAreas);
-          let focusAreas = userData.focusAreas || [];
-          
-          if (needsMigration) {
-            console.log('Migrating focus areas to include priorityLevel');
-            focusAreas = migrateFocusAreas(focusAreas);
-          }
-          
-          // Initialize categories if they don't exist
-          let categories = userData.categories || [];
-          if (categories.length === 0) {
-            console.log('Initializing default categories');
-            categories = DEFAULT_CATEGORIES.map(cat => ({
-              ...cat,
-              id: Date.now().toString(36) + Math.random().toString(36).substring(2)
-            }));
-          }
-          
-          // Load all data into state
-          dispatch({
-            type: 'LOAD_DATA',
-            payload: {
-              contentItems: userData.contentItems || [],
-              seasons: userData.seasons || [],
-              focusAreas: focusAreas,
-              categories: categories,
-              userSettings: userData.userSettings || initialState.userSettings
-            }
-          });
-          
-          // Set other state values
-          if (userData.userBirthDate) {
-            dispatch({ type: 'SET_USER_BIRTH_DATE', payload: userData.userBirthDate });
-          }
-          
-          if (userData.accentColor) {
-            dispatch({ type: 'SET_ACCENT_COLOR', payload: userData.accentColor });
-          }
-          
-          if (userData.theme) {
-            dispatch({ type: 'SET_THEME', payload: userData.theme });
-          }
-        } else {
-          dispatch({ type: 'SET_LOADING', payload: false });
+        // Load focus areas
+        let focusAreas = await StorageService.getFocusAreas();
+        
+        // Check if focus areas need migration
+        if (needsFocusAreaMigration(focusAreas)) {
+          focusAreas = migrateFocusAreas(focusAreas);
+          await StorageService.saveFocusAreas(focusAreas);
         }
+        
+        // Load user settings
+        const userSettings = await StorageService.getUserSettings();
+        
+        // Load categories
+        const categories = await StorageService.getCategories();
+        
+        // Load user birth date
+        const userBirthDate = await StorageService.getUserBirthDate();
+        if (userBirthDate) {
+          dispatch({ type: 'SET_USER_BIRTH_DATE', payload: userBirthDate });
+        }
+        
+        // Load theme
+        const theme = await StorageService.getTheme();
+        if (theme) {
+          dispatch({ type: 'SET_THEME', payload: theme });
+        }
+        
+        // Dispatch loaded data
+        dispatch({ 
+          type: 'LOAD_DATA', 
+          payload: { 
+            contentItems: contentItems || [], 
+            seasons: seasons || [], 
+            focusAreas: focusAreas || [],
+            userSettings: userSettings || initialState.userSettings,
+            categories: categories || DEFAULT_CATEGORIES
+          } 
+        });
       } catch (error) {
         console.error('Error loading data:', error);
         dispatch({ type: 'SET_LOADING', payload: false });
       }
     }
-
+    
     loadData();
   }, []);
   
   // Save data to storage when state changes
   useEffect(() => {
     if (!state.isLoading) {
-      StorageService.saveUserData({
-        userBirthDate: state.userBirthDate,
-        accentColor: state.accentColor,
-        contentItems: state.contentItems,
-        seasons: state.seasons,
-        focusAreas: state.focusAreas,
-        categories: state.categories,
-        userSettings: state.userSettings,
-        theme: state.theme,
-      });
+      StorageService.saveContentItems(state.contentItems);
+      StorageService.saveSeasons(state.seasons);
+      StorageService.saveFocusAreas(state.focusAreas);
+      StorageService.saveUserSettings(state.userSettings);
+      StorageService.saveCategories(state.categories);
+      
+      if (state.userBirthDate) {
+        StorageService.saveUserBirthDate(state.userBirthDate);
+      }
+      
+      StorageService.saveTheme(state.theme);
     }
-  }, [
-    state.userBirthDate, 
-    state.accentColor, 
-    state.contentItems, 
-    state.seasons, 
-    state.focusAreas, 
-    state.categories, 
-    state.userSettings, 
-    state.theme, 
-    state.isLoading
-  ]);
+  }, [state]);
   
   return (
     <AppContext.Provider value={{ state, dispatch }}>
@@ -356,7 +301,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   );
 }
 
-// Custom hook to use the context
+// Custom hook for using the app context
 export function useAppContext() {
   const context = useContext(AppContext);
   if (!context) {

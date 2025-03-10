@@ -3,7 +3,7 @@ import { useAppContext } from '../context/AppContext';
 import { ContentItem, ContentType, SelectedCell } from '../types';
 
 /**
- * Custom hook for managing content (memories, lessons, goals, reflections)
+ * Custom hook for managing content (memories and goals)
  */
 export function useContentManagement() {
   const { state, dispatch } = useAppContext();
@@ -81,11 +81,6 @@ export function useContentManagement() {
     return getContentByType('goal');
   }, [getContentByType]);
   
-  // Get all insights
-  const getInsights = useCallback(() => {
-    return getContentByType('insight');
-  }, [getContentByType]);
-  
   // Check if a cell has any content
   const hasContent = useCallback((year: number, month?: number, week?: number) => {
     return getCellContent(year, month, week).length > 0;
@@ -100,7 +95,6 @@ export function useContentManagement() {
     getContentByType,
     getMemories,
     getGoals,
-    getInsights,
     hasContent,
   };
 }

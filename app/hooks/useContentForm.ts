@@ -26,7 +26,6 @@ export function useContentForm({
     notes: initialData.notes || '',
     date: initialData.date || new Date(),
     emoji: initialData.emoji || '',
-    importance: initialData.importance || 3,
     media: initialData.media || [],
     categoryIds: initialData.categoryIds || [],
   });
@@ -120,13 +119,6 @@ export function useContentForm({
       }
     } else if (type === 'memory') {
       contentData.media = formState.media;
-      contentData.mediaType = formState.mediaType;
-      contentData.emotion = formState.emotion;
-      contentData.isSpecialEvent = formState.isSpecialEvent;
-    } else if (type === 'insight') {
-      contentData.importance = formState.importance;
-      contentData.relatedGoalIds = formState.relatedGoalIds;
-      contentData.relatedMemoryIds = formState.relatedMemoryIds;
     }
     
     // Add content item and return it
@@ -140,7 +132,6 @@ export function useContentForm({
       notes: '',
       date: new Date(),
       emoji: '',
-      importance: 3,
       media: [],
       categoryIds: [],
     });

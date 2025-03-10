@@ -42,18 +42,9 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Grid',
+          title: 'Home',
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? "grid" : "grid-outline"} size={24} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="focus"
-        options={{
-          title: 'Focus',
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? "compass" : "compass-outline"} size={24} color={color} />
+            <Ionicons name={focused ? "home" : "home-outline"} size={24} color={color} />
           ),
         }}
       />
@@ -69,7 +60,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="content"
         options={{
-          title: 'Content',
+          title: 'Library',
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={focused ? "library" : "library-outline"} size={24} color={color} />
           ),

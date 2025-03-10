@@ -1,7 +1,7 @@
 // View and Navigation Types
 export type ViewMode = 'weeks' | 'months' | 'years';
 export type ViewState = 'grid' | 'cluster';
-export type DisplayMode = 'grid' | 'timeline';
+export type DisplayMode = 'grid';
 
 // Grid Types
 export interface ClusterPosition {
@@ -33,7 +33,6 @@ export interface Category {
   color: string;
   icon?: string;
   description?: string;
-  parentId?: string; // For hierarchical categories (optional)
 }
 
 export interface FocusArea {
@@ -49,7 +48,7 @@ export interface FocusArea {
 }
 
 // Content Types
-export type ContentType = 'memory' | 'goal' | 'insight';
+export type ContentType = 'memory' | 'goal';
 
 export interface SubGoal {
   id: string;
@@ -60,7 +59,7 @@ export interface SubGoal {
 
 export interface MediaItem {
   uri: string;
-  type: 'photo' | 'video' | 'audio';
+  type: 'photo';
 }
 
 export interface ContentItem {
@@ -82,9 +81,6 @@ export interface ContentItem {
   
   // For memories:
   media?: string[];
-  mediaType?: 'photo' | 'video' | 'audio';
-  emotion?: string; // Free text entry
-  isSpecialEvent?: boolean; // For annual recognition
   
   // For insights:
   relatedGoalIds?: string[]; // Multiple connections possible
@@ -107,7 +103,6 @@ export interface UserSettings {
   notifications: {
     goalDeadlines: boolean;
     priorityReminders: boolean;
-    reflectionPrompts: boolean;
     memoryCapture: boolean;
   };
   // Added properties for profile settings
@@ -123,7 +118,6 @@ export interface ContentFormState {
   notes: string;
   date: Date;
   emoji: string;
-  importance: number;
   media: string[];
   categoryIds: string[]; // Add category support
   
@@ -134,9 +128,7 @@ export interface ContentFormState {
   milestones?: SubGoal[];
   
   // Memory-specific fields
-  mediaType?: 'photo' | 'video' | 'audio';
-  emotion?: string;
-  isSpecialEvent?: boolean;
+  // Removing mediaType, emotion, isSpecialEvent
   
   // Insight-specific fields
   relatedGoalIds?: string[];
@@ -170,7 +162,6 @@ export interface AppState {
   categories: Category[]; // NEW: Global categories list
   userSettings: UserSettings;
   theme: 'dark' | 'light' | 'system';
-  timelineColumns: TimelineColumn[];
 }
 
 export type AppAction = 
@@ -190,9 +181,6 @@ export type AppAction =
   | { type: 'ADD_SEASON'; payload: Season }
   | { type: 'UPDATE_SEASON'; payload: Season }
   | { type: 'DELETE_SEASON'; payload: string }
-  | { type: 'ADD_TIMELINE_COLUMN'; payload: TimelineColumn }
-  | { type: 'UPDATE_TIMELINE_COLUMN'; payload: TimelineColumn }
-  | { type: 'DELETE_TIMELINE_COLUMN'; payload: string }
   | { type: 'ADD_FOCUS_AREA'; payload: FocusArea }
   | { type: 'UPDATE_FOCUS_AREA'; payload: FocusArea }
   | { type: 'DELETE_FOCUS_AREA'; payload: string }
@@ -204,24 +192,6 @@ export type AppAction =
   | { type: 'UPDATE_USER_SETTINGS'; payload: Partial<UserSettings> }
   | { type: 'SET_THEME'; payload: 'dark' | 'light' | 'system' }
   | { type: 'LOAD_DATA'; payload: { contentItems: ContentItem[]; seasons: Season[]; focusAreas: FocusArea[]; userSettings: UserSettings; categories?: Category[] } };
-
-// Timeline Types
-export interface TimelineColumn {
-  id: string;
-  title: string;
-  color: string;
-  icon?: string;
-  order: number;
-  visible: boolean;
-}
-
-export interface TimelineEvent {
-  id: string;
-  contentItemId: string;
-  columnId: string;
-  date: string;
-  type: ContentType;
-}
 
 // Provide a default export for the types file
 // This is a dummy component to satisfy Expo Router's requirements

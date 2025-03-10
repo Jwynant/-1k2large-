@@ -19,8 +19,6 @@ import MonthExpandedView from './months/MonthExpandedView';
 import BottomSheet from '../ui/BottomSheet';
 import CellDetailView from './CellDetailView';
 import ViewModeToggle from '../ui/ViewModeToggle';
-import DisplayModeToggle from '../ui/DisplayModeToggle';
-import TimelineView from '../timeline/TimelineView';
 import { useGridNavigation } from '../../app/hooks/useGridNavigation';
 import { useContentManagement } from '../../app/hooks/useContentManagement';
 import { useDateCalculations } from '../../app/hooks/useDateCalculations';
@@ -115,9 +113,8 @@ export default function GridContainer() {
     };
   });
   
-  // Get app context for user data and display mode
+  // Get app context for user data
   const { state, dispatch } = useAppContext();
-  const displayMode = state.displayMode || 'grid'; // Default to grid if not set
   
   // Calculate grid dimensions
   const gridWidth = windowWidth;
@@ -397,25 +394,12 @@ export default function GridContainer() {
     );
   }, [detailSheetVisible, selectedCell, handleCellDetailClose, detailViewOverlayAnimatedStyles, fromMonthView, handleBackToMonthView]);
   
-  // Handle display mode toggle
-  const handleDisplayModeChange = useCallback((mode: DisplayMode) => {
-    dispatch({ type: 'SET_DISPLAY_MODE', payload: mode });
-  }, [dispatch]);
-  
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerTopRow}>
           <Text style={styles.dateText}>{formattedDate}</Text>
-          
-          {/* Display mode toggle (grid/timeline) */}
-          <View style={styles.displayModeToggleContainer}>
-            <DisplayModeToggle 
-              currentMode={displayMode}
-              onModeChange={handleDisplayModeChange}
-            />
-          </View>
         </View>
         
         {/* Age text */}
@@ -430,28 +414,22 @@ export default function GridContainer() {
           </View>
         </View>
         
-        {/* View mode toggle - only show in grid mode */}
-        {displayMode === 'grid' && (
-          <View style={styles.toggleContainer}>
-            <ViewModeToggle 
-              currentMode={viewMode}
-              onModeChange={setViewMode}
-            />
-          </View>
-        )}
+        {/* View mode toggle */}
+        <View style={styles.toggleContainer}>
+          <ViewModeToggle 
+            currentMode={viewMode}
+            onModeChange={setViewMode}
+          />
+        </View>
       </View>
       
       {/* Main content area */}
       <View style={styles.gridContainer}>
-        {displayMode === 'grid' ? (
-          renderGridView()
-        ) : (
-          <TimelineView />
-        )}
+        {renderGridView()}
       </View>
       
-      {/* Month expanded view - only in grid mode */}
-      {displayMode === 'grid' && renderMonthExpandedView()}
+      {/* Month expanded view */}
+      {renderMonthExpandedView()}
       
       {/* Cell detail view */}
       {renderCellDetailView()}
@@ -499,56 +477,50 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   ageText: {
-    fontSize: 12, 
-    color: '#FFFFFF', // White text
-    fontWeight: '500',
-    opacity: 0.8,
-    marginTop: 2,
+    fontSize: 28,
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+    marginTop: 4,
+    paddingHorizontal: 16,
   },
   progressContainer: {
-    height: 12, // Further reduced height
-    backgroundColor: '#2C2C2E', // iOS system gray 6
-    borderRadius: 6,
+    height: 6,
+    backgroundColor: '#2C2C2E',
+    borderRadius: 3,
+    marginTop: 8,
+    marginHorizontal: 16,
     overflow: 'hidden',
-    position: 'relative',
-    marginTop: 6,
-    marginBottom: 0,
   },
   progressBar: {
     height: '100%',
-    backgroundColor: '#0A84FF', // iOS blue
-    borderRadius: 6,
+    backgroundColor: '#0A84FF',
+    borderRadius: 3,
   },
   progressBarLabels: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    position: 'absolute',
-    left: 6,
-    right: 6,
-    top: 0,
-    bottom: 0,
-    alignItems: 'center',
+    marginTop: 4,
+    marginHorizontal: 2,
   },
   progressText: {
-    fontSize: 9, // Further reduced font size
-    color: '#FFFFFF',
-    fontWeight: '600',
+    fontSize: 12,
+    color: '#8E8E93',
   },
   progressLifespan: {
-    fontSize: 9, // Further reduced font size
-    color: '#FFFFFF',
-    fontWeight: '500',
-    opacity: 0.7,
+    fontSize: 12,
+    color: '#8E8E93',
   },
   toggleContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: 8,
+  },
+  displayModeToggleContainer: {
     alignItems: 'flex-end',
-    paddingLeft: 8,
   },
   gridContainer: {
     flex: 1,
-    padding: 4, // Reduced padding
   },
-  // New styles for animated modals
   animatedModalContainer: {
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
@@ -557,30 +529,17 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#000',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
   },
   expandedViewContainer: {
     width: '90%',
-    height: '85%',
-    backgroundColor: '#121212',
+    maxHeight: '80%',
+    backgroundColor: '#1C1C1E',
     borderRadius: 16,
     overflow: 'hidden',
   },
-  detailViewContainer: {
-    width: '85%',
-    maxHeight: '80%',
-    borderRadius: 16,
-  },
   detailViewOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#000',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  displayModeToggleContainer: {
-    position: 'absolute',
-    right: 16,
-    top: 0,
-    zIndex: 10,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    zIndex: 1000,
   },
 });
