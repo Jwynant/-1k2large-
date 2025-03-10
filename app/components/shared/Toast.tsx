@@ -108,10 +108,12 @@ export default function Toast({
         <Text style={styles.message}>{message}</Text>
         <TouchableOpacity 
           onPress={handleDismiss}
+          accessible={true}
           accessibilityLabel="Dismiss"
           accessibilityHint="Dismisses the notification"
+          testID="toast-dismiss-button"
         >
-          <Ionicons name="close" size={20} color="#AEAEB2" />
+          <Ionicons name="close" size={24} color="#AEAEB2" />
         </TouchableOpacity>
       </View>
     </Animated.View>

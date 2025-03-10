@@ -45,8 +45,8 @@ interface NetworkProviderProps {
 
 // Network provider component
 export function NetworkProvider({ children }: NetworkProviderProps) {
-  const [netInfo, setNetInfo] = useState<NetInfoState>({
-    type: NetInfoStateType.unknown,
+  const [netInfo, setNetInfo] = useState<any>({
+    type: 'unknown',
     isConnected: true,
     isInternetReachable: null,
     details: null,
