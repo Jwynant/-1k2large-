@@ -23,7 +23,7 @@ interface MonthExpandedViewProps {
 
 export default function MonthExpandedView({ year, onClose, onMonthPress }: MonthExpandedViewProps) {
   const { hasContent, getCellContent } = useContentManagement();
-  const { isCurrentMonth, isMonthInPast, isCurrentYear, getBirthDate } = useDateCalculations();
+  const { isCurrentMonth, isMonthInPast, isCurrentYear, getBirthDate, getAgeForYear } = useDateCalculations();
   const { width } = useWindowDimensions();
   
   // Get birth date information
@@ -31,10 +31,33 @@ export default function MonthExpandedView({ year, onClose, onMonthPress }: Month
   
   // Calculate age from the year
   const currentYear = new Date().getFullYear();
-  const age = currentYear - year;
+  
+  // Get the correct age for this year based on birth date
+  const age = getAgeForYear(year);
+  
   const isCurrentYearSelected = isCurrentYear(year);
   const isPastYear = year < currentYear;
   const isFutureYear = year > currentYear;
+  
+  // Calculate the date range for this birth-aligned year
+  const dateRange = useMemo(() => {
+    if (!birthDate) return `${year}`;
+    
+    const birthMonth = birthDate.getMonth();
+    const birthDay = birthDate.getDate();
+    
+    // Format the start and end dates of this birth-aligned year
+    const startDate = new Date(year, birthMonth, birthDay);
+    const endDate = new Date(year + 1, birthMonth, birthDay - 1);
+    
+    // Format dates as MMM YYYY
+    const formatDate = (date: Date) => {
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      return `${months[date.getMonth()]} ${date.getFullYear()}`;
+    };
+    
+    return `${formatDate(startDate)} - ${formatDate(endDate)}`;
+  }, [year, birthDate]);
   
   // Generate month data with proper indicators
   const months = useMemo(() => {
@@ -139,8 +162,14 @@ export default function MonthExpandedView({ year, onClose, onMonthPress }: Month
             style={styles.titleContainer}
             entering={FadeIn.delay(50).duration(300)}
           >
-            <Text style={styles.yearTitle}>{year}</Text>
-            <Text style={styles.ageTitle}>Age {age}</Text>
+            <Text style={styles.yearTitle}>{dateRange}</Text>
+            <Text style={styles.ageTitle}>
+              {age !== null ? (
+                isPastYear ? `Age ${age}` : 
+                isFutureYear ? `In ${Math.abs(currentYear - year)} years` : 
+                'Current Year'
+              ) : 'Before Birth'}
+            </Text>
           </Animated.View>
           <View style={styles.placeholder} />
         </View>
@@ -149,34 +178,29 @@ export default function MonthExpandedView({ year, onClose, onMonthPress }: Month
           <View style={styles.monthsGrid}>
             {months.length > 0 ? (
               months.map((month, index) => {
-                // Determine cell style based on year and month
+                // Determine cell style based on month state, not year state
                 let cellStyle;
                 let textStyle;
                 
-                if (isPastYear) {
-                  // Past year - all cells have white fill with dark text
+                if (month.isPast) {
+                  // Past months - white fill with dark text
                   cellStyle = styles.pastCell;
                   textStyle = styles.pastCellText;
-                } else if (isFutureYear) {
-                  // Future year - all cells are transparent with white border and white text
+                } else if (month.isCurrent) {
+                  // Current month - blue fill with white text
+                  cellStyle = styles.currentCell;
+                  textStyle = styles.currentCellText;
+                } else {
+                  // Future months - transparent with white border and white text
                   cellStyle = styles.futureCell;
                   textStyle = styles.futureCellText;
-                } else {
-                  // Current year - mixed styles based on month
-                  if (month.isPast) {
-                    // Past months - white fill with dark text
-                    cellStyle = styles.pastCell;
-                    textStyle = styles.pastCellText;
-                  } else if (month.isCurrent) {
-                    // Current month - blue fill with white text
-                    cellStyle = styles.currentCell;
-                    textStyle = styles.currentCellText;
-                  } else {
-                    // Future months - transparent with white border and white text
-                    cellStyle = styles.futureCell;
-                    textStyle = styles.futureCellText;
-                  }
                 }
+                
+                // Check if this is the first month of a new calendar year (January)
+                const isYearBoundary = month.index === 0 && index > 0;
+                
+                // Get the actual year for display
+                const displayYear = month.actualYear || year;
                 
                 return (
                   <View key={`month-${index}`} style={styles.cellWrapper}>
@@ -189,21 +213,18 @@ export default function MonthExpandedView({ year, onClose, onMonthPress }: Month
                         onPress={() => handleMonthPress(month.index, month.actualYear)}
                         activeOpacity={0.7}
                       >
-                        <Text style={[textStyle, styles.monthText]}>
-                          {month.name}
-                        </Text>
-                        
                         {month.hasContent && (
-                          <Animated.View 
-                            style={styles.contentIndicator}
-                            entering={FadeIn.delay(300 + index * 30).duration(300)}
-                          >
-                            <CellContentIndicator 
-                              content={month.content} 
-                              size="medium" 
-                            />
-                          </Animated.View>
+                          <View style={styles.contentDot} />
                         )}
+                        
+                        <View style={styles.monthLabelContainer}>
+                          <Text style={[textStyle, styles.monthText]}>
+                            {month.name}
+                          </Text>
+                          <Text style={[textStyle, styles.yearText]}>
+                            '{displayYear.toString().slice(-2)}
+                          </Text>
+                        </View>
                       </TouchableOpacity>
                     </Animated.View>
                   </View>
@@ -288,14 +309,24 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '600',
   },
-  // 2. Present cells: no fill with blue border and white text
+  // 2. Present cells: enhanced styling for better visibility
   currentCell: {
-    backgroundColor: '#4A90E2', // Blue fill
+    backgroundColor: '#007AFF', // Brighter blue fill
+    borderWidth: 2,
+    borderColor: '#4FC3F7', // Light blue border for glow effect
+    shadowColor: '#4FC3F7',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 5,
+    elevation: 6, // For Android
   },
   currentCellText: {
     color: '#FFFFFF', // White text
-    fontSize: 20,
-    fontWeight: '600',
+    fontSize: 22, // Larger font size
+    fontWeight: '700', // Bolder text
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   // 3. Future cells: no fill with white border and white text
   futureCell: {
@@ -308,14 +339,30 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '600',
   },
+  monthLabelContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   monthText: {
     fontSize: 18,
     fontWeight: '600',
+    lineHeight: 22,
   },
-  contentIndicator: {
+  yearText: {
+    fontSize: 11,
+    fontWeight: '500',
+    marginTop: -2,
+    opacity: 0.8, // Slightly transparent to be less prominent than the month
+  },
+  contentDot: {
     position: 'absolute',
-    bottom: 8,
+    top: 8,
     right: 8,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#FF9500', // Orange dot
+    opacity: 0.9,
   },
   noDataText: {
     padding: 20,

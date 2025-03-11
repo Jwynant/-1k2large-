@@ -14,13 +14,37 @@ interface WeekExpandedViewProps {
 
 export default function WeekExpandedView({ year, onClose, onWeekPress }: WeekExpandedViewProps) {
   const { hasContent, getCellContent } = useContentManagement();
-  const { isCurrentWeek, isWeekInPast, getBirthDate, getWeekNumber } = useDateCalculations();
+  const { isCurrentWeek, isWeekInPast, getBirthDate, getWeekNumber, getAgeForYear } = useDateCalculations();
   const { width, height } = useWindowDimensions();
   
   // Determine year state
   const currentYear = new Date().getFullYear();
   const isPastYear = year < currentYear;
   const isFutureYear = year > currentYear;
+  
+  // Get the correct age for this year based on birth date
+  const age = getAgeForYear(year);
+  
+  // Calculate the date range for this birth-aligned year
+  const dateRange = useMemo(() => {
+    if (!getBirthDate()) return `${year}`;
+    
+    const birthDate = getBirthDate()!;
+    const birthMonth = birthDate.getMonth();
+    const birthDay = birthDate.getDate();
+    
+    // Format the start and end dates of this birth-aligned year
+    const startDate = new Date(year, birthMonth, birthDay);
+    const endDate = new Date(year + 1, birthMonth, birthDay - 1);
+    
+    // Format dates as MMM YYYY
+    const formatDate = (date: Date) => {
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      return `${months[date.getMonth()]} ${date.getFullYear()}`;
+    };
+    
+    return `${formatDate(startDate)} - ${formatDate(endDate)}`;
+  }, [year, getBirthDate]);
   
   // Generate week data with proper indicators
   const weeks = useMemo(() => {
@@ -137,11 +161,13 @@ export default function WeekExpandedView({ year, onClose, onWeekPress }: WeekExp
               <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
             </TouchableOpacity>
             <View style={styles.titleContainer}>
-              <Text style={styles.yearTitle}>{year}</Text>
+              <Text style={styles.yearTitle}>{dateRange}</Text>
               <Text style={styles.ageTitle}>
-                {isPastYear && `Age ${currentYear - year}`}
-                {isFutureYear && `In ${Math.abs(currentYear - year)} years`}
-                {!isPastYear && !isFutureYear && 'Current Year'}
+                {age !== null ? (
+                  isPastYear ? `Age ${age}` : 
+                  isFutureYear ? `In ${Math.abs(currentYear - year)} years` : 
+                  'Current Year'
+                ) : 'Before Birth'}
               </Text>
             </View>
             <View style={{ width: 40 }} />
@@ -156,11 +182,11 @@ export default function WeekExpandedView({ year, onClose, onWeekPress }: WeekExp
                 { width: (cellSize + cellMargin * 2) * cellsPerRow, maxHeight: (cellSize + cellMargin * 2) * rowCount }
               ]}>
                 {weeks.map((week) => {
-                  // Determine cell style based on year and week
+                  // Determine cell style based on week state, not year state
                   let cellStyle;
                   
-                  if (isPastYear || week.isPast) {
-                    // Past years or past weeks - white fill
+                  if (week.isPast) {
+                    // Past weeks - white fill
                     cellStyle = styles.pastCell;
                   } else if (week.isCurrent) {
                     // Current week - blue border
@@ -181,12 +207,7 @@ export default function WeekExpandedView({ year, onClose, onWeekPress }: WeekExp
                       onPress={() => onWeekPress(week.index)}
                     >
                       {week.hasContent && (
-                        <View style={styles.contentIndicatorContainer}>
-                          <CellContentIndicator 
-                            content={week.content} 
-                            size="small" 
-                          />
-                        </View>
+                        <View style={styles.contentDot} />
                       )}
                     </TouchableOpacity>
                   );
@@ -272,11 +293,16 @@ const styles = StyleSheet.create({
   pastCell: {
     backgroundColor: '#FFFFFF',
   },
-  // Current cells: transparent with blue border
+  // Current cells: enhanced styling for better visibility
   currentCell: {
-    backgroundColor: 'transparent',
-    borderWidth: 1.5,
-    borderColor: '#0A84FF',
+    backgroundColor: '#007AFF', // Bright blue fill instead of transparent
+    borderWidth: 2,
+    borderColor: '#4FC3F7', // Light blue border for glow effect
+    shadowColor: '#4FC3F7',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 4,
+    elevation: 5, // For Android
   },
   // Future cells: transparent with white border
   futureCell: {
@@ -284,10 +310,14 @@ const styles = StyleSheet.create({
     borderWidth: 0.5,
     borderColor: '#FFFFFF',
   },
-  contentIndicatorContainer: {
+  contentDot: {
     position: 'absolute',
-    bottom: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-  }
+    top: 3,
+    right: 3,
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#FF9500', // Orange dot
+    opacity: 0.9,
+  },
 }); 

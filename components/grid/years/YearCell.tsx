@@ -2,7 +2,6 @@ import { StyleSheet, Pressable, View, Text } from 'react-native';
 import { useState } from 'react';
 import { MotiView } from 'moti';
 import { useContentManagement } from '../../../app/hooks/useContentManagement';
-import CellContentIndicator from '../CellContentIndicator';
 
 type YearCellProps = {
   year: number;
@@ -26,10 +25,7 @@ export default function YearCell({
   onLongPress 
 }: YearCellProps) {
   const [isPressed, setIsPressed] = useState(false);
-  const { getCellContent } = useContentManagement();
   
-  const cellContent = hasContent ? getCellContent(year) : [];
-
   const handleLongPress = (event: any) => {
     if (onLongPress) {
       // Get the position of the press for the quick add menu
@@ -40,6 +36,9 @@ export default function YearCell({
       onLongPress(position);
     }
   };
+
+  // Display the age if available, otherwise show the year
+  const displayText = age !== null ? age : year;
 
   return (
     <Pressable 
@@ -65,22 +64,17 @@ export default function YearCell({
           duration: 150
         }}
       >
+        {hasContent && (
+          <View style={styles.contentDot} />
+        )}
+        
         <Text style={[
           styles.yearText,
           isPast ? styles.pastYearText : styles.futureYearText,
           isBirthYear && styles.birthYearText
         ]}>
-          {age}
+          {displayText}
         </Text>
-        
-        {hasContent && (
-          <View style={styles.indicatorContainer}>
-            <CellContentIndicator 
-              content={cellContent} 
-              size="small" 
-            />
-          </View>
-        )}
       </MotiView>
     </Pressable>
   );
@@ -135,9 +129,14 @@ const styles = StyleSheet.create({
     color: '#00c853', // Green text for birth year
     fontWeight: '700',
   },
-  indicatorContainer: {
+  contentDot: {
     position: 'absolute',
-    bottom: 1,
-    right: 1,
+    top: 2,
+    right: 2,
+    width: 3,
+    height: 3,
+    borderRadius: 1.5,
+    backgroundColor: '#FF9500', // Orange dot
+    opacity: 0.9,
   }
 });

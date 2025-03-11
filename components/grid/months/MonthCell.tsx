@@ -3,7 +3,6 @@ import { memo, useCallback } from 'react';
 import { MotiView } from 'moti';
 import { useDateCalculations } from '../../../app/hooks/useDateCalculations';
 import { useContentManagement } from '../../../app/hooks/useContentManagement';
-import CellContentIndicator from '../CellContentIndicator';
 
 type MonthCellProps = {
   year: number;
@@ -75,10 +74,7 @@ function MonthCell({ year, month, expanded, onPress, onLongPress }: MonthCellPro
         ]} 
       >
         {contentExists && (
-          <CellContentIndicator 
-            content={cellContent} 
-            size={expanded ? 'medium' : 'small'} 
-          />
+          <View style={styles.contentDot} />
         )}
       </MotiView>
     </Pressable>
@@ -107,16 +103,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#333',
   },
-  contentIndicator: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#4A90E2',
-  },
-  contentIndicatorExpanded: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+  contentDot: {
+    position: 'absolute',
+    top: 2,
+    right: 2,
+    width: 3,
+    height: 3,
+    borderRadius: 1.5,
+    backgroundColor: '#FF9500', // Orange dot
+    opacity: 0.9,
   },
   current: {
     backgroundColor: '#4A90E2',
