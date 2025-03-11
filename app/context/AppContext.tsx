@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useReducer, ReactNode, useEffect, useRef, useMemo, useCallback } from 'react';
+import React, { createContext, useContext, useReducer, ReactNode, useEffect, useRef } from 'react';
 import { StorageService } from '../services/StorageService';
 import { 
   AppState, 
@@ -11,112 +11,11 @@ import {
   SelectedCell,
   FocusArea,
   UserSettings,
-  Category,
 } from '../types';
 import { migrateFocusAreas, needsFocusAreaMigration } from '../utils/migrations';
 import { DEFAULT_CATEGORIES } from '../hooks/useCategories';
 
-// Split the context into smaller, more focused contexts
-// 1. User data context (rarely changes)
-const UserContext = createContext<{
-  userBirthDate: string | null;
-  userSettings: UserSettings;
-  theme: string;
-  accentColor: string;
-  setUserBirthDate: (date: string | null) => void;
-  setUserSettings: (settings: UserSettings) => void;
-  setTheme: (theme: string) => void;
-  setAccentColor: (color: string) => void;
-}>({
-  userBirthDate: null,
-  userSettings: {
-    lifeExpectancy: 83,
-    notifications: {
-      goalDeadlines: true,
-      priorityReminders: true,
-      memoryCapture: true
-    },
-    notificationsEnabled: true,
-    showCompletedGoals: true,
-    weekStartsOnMonday: false,
-  },
-  theme: 'dark',
-  accentColor: '#007AFF',
-  setUserBirthDate: () => null,
-  setUserSettings: () => null,
-  setTheme: () => null,
-  setAccentColor: () => null,
-});
-
-// 2. View state context (changes frequently)
-const ViewContext = createContext<{
-  viewMode: ViewMode;
-  viewState: ViewState;
-  displayMode: DisplayMode;
-  selectedYear: number | null;
-  selectedMonth: number | null;
-  selectedWeek: number | null;
-  selectedCell: SelectedCell | null;
-  setViewMode: (mode: ViewMode) => void;
-  setViewState: (state: ViewState) => void;
-  setDisplayMode: (mode: DisplayMode) => void;
-  selectYear: (year: number | null) => void;
-  selectMonth: (month: number | null) => void;
-  selectWeek: (week: number | null) => void;
-  selectCell: (cell: SelectedCell | null) => void;
-}>({
-  viewMode: 'months',
-  viewState: 'grid',
-  displayMode: 'grid',
-  selectedYear: null,
-  selectedMonth: null,
-  selectedWeek: null,
-  selectedCell: null,
-  setViewMode: () => null,
-  setViewState: () => null,
-  setDisplayMode: () => null,
-  selectYear: () => null,
-  selectMonth: () => null,
-  selectWeek: () => null,
-  selectCell: () => null,
-});
-
-// 3. Content context (changes when content is added/edited)
-const ContentContext = createContext<{
-  contentItems: ContentItem[];
-  seasons: Season[];
-  focusAreas: FocusArea[];
-  categories: Category[];
-  isLoading: boolean;
-  addContentItem: (item: ContentItem) => void;
-  updateContentItem: (id: string, item: ContentItem) => void;
-  deleteContentItem: (id: string) => void;
-  addSeason: (season: Season) => void;
-  updateSeason: (id: string, season: Season) => void;
-  deleteSeason: (id: string) => void;
-  addFocusArea: (area: FocusArea) => void;
-  updateFocusArea: (id: string, area: FocusArea) => void;
-  deleteFocusArea: (id: string) => void;
-  setCategories: (categories: Category[]) => void;
-}>({
-  contentItems: [],
-  seasons: [],
-  focusAreas: [],
-  categories: [],
-  isLoading: true,
-  addContentItem: () => null,
-  updateContentItem: () => null,
-  deleteContentItem: () => null,
-  addSeason: () => null,
-  updateSeason: () => null,
-  deleteSeason: () => null,
-  addFocusArea: () => null,
-  updateFocusArea: () => null,
-  deleteFocusArea: () => null,
-  setCategories: () => null,
-});
-
-// For backward compatibility, maintain the original AppContext
+// Create the context
 const AppContext = createContext<{
   state: AppState;
   dispatch: React.Dispatch<AppAction>;
@@ -127,7 +26,7 @@ const AppContext = createContext<{
     accentColor: '#007AFF',
     viewMode: 'months',
     viewState: 'grid',
-    displayMode: 'grid',
+    displayMode: 'grid', // Default to grid view only
     selectedYear: null,
     selectedMonth: null,
     selectedWeek: null,
@@ -136,9 +35,8 @@ const AppContext = createContext<{
     seasons: [],
     focusAreas: [],
     categories: [],
-    timelineColumns: [],
     userSettings: {
-      lifeExpectancy: 83,
+      lifeExpectancy: 83, // Default 83 years (approximately 1000 months)
       notifications: {
         goalDeadlines: true,
         priorityReminders: true,
@@ -160,7 +58,7 @@ const initialState: AppState = {
   accentColor: '#007AFF',
   viewMode: 'months',
   viewState: 'grid',
-  displayMode: 'grid',
+  displayMode: 'grid', // Always grid view
   selectedYear: null,
   selectedMonth: null,
   selectedWeek: null,
@@ -169,9 +67,8 @@ const initialState: AppState = {
   seasons: [],
   focusAreas: [],
   categories: [],
-  timelineColumns: [],
   userSettings: {
-    lifeExpectancy: 83,
+    lifeExpectancy: 83, // Default 83 years (approximately 1000 months)
     notifications: {
       goalDeadlines: true,
       priorityReminders: true,
@@ -293,11 +190,6 @@ function appReducer(state: AppState, action: AppAction): AppState {
         ...state,
         categories: action.payload
       };
-    case 'SET_CATEGORIES':
-      return {
-        ...state,
-        categories: action.payload
-      };
     case 'UPDATE_USER_SETTINGS':
       return {
         ...state,
@@ -311,13 +203,6 @@ function appReducer(state: AppState, action: AppAction): AppState {
         ...state,
         theme: action.payload
       };
-    case 'UPDATE_TIMELINE_COLUMN':
-      return {
-        ...state,
-        timelineColumns: state.timelineColumns.map(column => 
-          column.id === action.payload.id ? action.payload : column
-        )
-      };
     case 'LOAD_DATA':
       return {
         ...state,
@@ -326,7 +211,6 @@ function appReducer(state: AppState, action: AppAction): AppState {
         focusAreas: action.payload.focusAreas,
         userSettings: action.payload.userSettings,
         categories: action.payload.categories || state.categories,
-        timelineColumns: action.payload.timelineColumns || state.timelineColumns,
         isLoading: false
       };
     case 'INITIALIZE_APP':
@@ -343,9 +227,10 @@ function appReducer(state: AppState, action: AppAction): AppState {
 // Provider component
 export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(appReducer, initialState);
-  const storageService = useRef(new StorageService());
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const prevStateRef = useRef<AppState>(initialState);
   
-  // Load data from storage on mount
+  // Load data from storage on initial render - optimized to load in parallel
   useEffect(() => {
     async function loadData() {
       try {
@@ -386,7 +271,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
             focusAreas: processedFocusAreas || [],
             userSettings: userSettings || initialState.userSettings,
             categories: categories || DEFAULT_CATEGORIES,
-            timelineColumns: [], // Initialize with empty array
             userBirthDate: userBirthDate || null,
             theme: theme || 'dark'
           } 
@@ -402,148 +286,87 @@ export function AppProvider({ children }: { children: ReactNode }) {
     loadData();
   }, []);
   
-  // Save data to storage when state changes
+  // Save data to storage when state changes, with debounce and change detection
   useEffect(() => {
-    if (!state.isLoading) {
-      // Use individual save methods instead of a non-existent saveData method
-      const saveState = async () => {
-        try {
-          await StorageService.saveContentItems(state.contentItems);
-          await StorageService.saveSeasons(state.seasons);
-          await StorageService.saveFocusAreas(state.focusAreas);
-          await StorageService.saveUserSettings(state.userSettings);
-          await StorageService.saveCategories(state.categories);
-          if (state.userBirthDate) {
-            await StorageService.saveUserBirthDate(state.userBirthDate);
-          }
-          await StorageService.saveTheme(state.theme);
-        } catch (error) {
-          console.error('Error saving state:', error);
-        }
-      };
-      
-      saveState();
+    if (state.isLoading) return;
+    
+    // Clear any existing timeout
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
     }
+    
+    // Set a new timeout to save data after a delay
+    saveTimeoutRef.current = setTimeout(async () => {
+      const prevState = prevStateRef.current;
+      const savePromises = [];
+      
+      // Only save data that has actually changed
+      if (JSON.stringify(prevState.contentItems) !== JSON.stringify(state.contentItems)) {
+        savePromises.push(StorageService.saveContentItems(state.contentItems));
+      }
+      
+      if (JSON.stringify(prevState.seasons) !== JSON.stringify(state.seasons)) {
+        savePromises.push(StorageService.saveSeasons(state.seasons));
+      }
+      
+      if (JSON.stringify(prevState.focusAreas) !== JSON.stringify(state.focusAreas)) {
+        savePromises.push(StorageService.saveFocusAreas(state.focusAreas));
+      }
+      
+      if (JSON.stringify(prevState.userSettings) !== JSON.stringify(state.userSettings)) {
+        savePromises.push(StorageService.saveUserSettings(state.userSettings));
+      }
+      
+      if (JSON.stringify(prevState.categories) !== JSON.stringify(state.categories)) {
+        savePromises.push(StorageService.saveCategories(state.categories));
+      }
+      
+      if (prevState.userBirthDate !== state.userBirthDate && state.userBirthDate) {
+        savePromises.push(StorageService.saveUserBirthDate(state.userBirthDate));
+      }
+      
+      if (prevState.theme !== state.theme) {
+        savePromises.push(StorageService.saveTheme(state.theme));
+      }
+      
+      // Only log and execute if there are changes to save
+      if (savePromises.length > 0) {
+        console.log(`Saving ${savePromises.length} changed data items to storage...`);
+        
+        try {
+          await Promise.all(savePromises);
+          console.log('App state saved successfully');
+        } catch (error) {
+          console.error('Error saving app state:', error);
+        }
+      }
+      
+      // Update the previous state reference
+      prevStateRef.current = { ...state };
+    }, 500); // 500ms debounce
+    
+    // Cleanup function to clear the timeout if the component unmounts
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
   }, [state]);
   
-  // Create memoized values and handlers for UserContext
-  const userContextValue = useMemo(() => ({
-    userBirthDate: state.userBirthDate,
-    userSettings: state.userSettings,
-    theme: state.theme,
-    accentColor: state.accentColor,
-    setUserBirthDate: (date: string | null) => 
-      dispatch({ type: 'SET_USER_BIRTH_DATE', payload: date || '' }),
-    setUserSettings: (settings: UserSettings) => 
-      dispatch({ type: 'UPDATE_USER_SETTINGS', payload: settings }),
-    setTheme: (theme: string) => 
-      dispatch({ type: 'SET_THEME', payload: theme as 'dark' | 'light' | 'system' }),
-    setAccentColor: (color: string) => 
-      dispatch({ type: 'SET_ACCENT_COLOR', payload: color }),
-  }), [
-    state.userBirthDate, 
-    state.userSettings, 
-    state.theme, 
-    state.accentColor
-  ]);
-  
-  // Create memoized values and handlers for ViewContext
-  const viewContextValue = useMemo(() => ({
-    viewMode: state.viewMode,
-    viewState: state.viewState,
-    displayMode: state.displayMode,
-    selectedYear: state.selectedYear,
-    selectedMonth: state.selectedMonth,
-    selectedWeek: state.selectedWeek,
-    selectedCell: state.selectedCell,
-    setViewMode: (mode: ViewMode) => 
-      dispatch({ type: 'SET_VIEW_MODE', payload: mode }),
-    setViewState: (viewState: ViewState) => 
-      dispatch({ type: 'SET_VIEW_STATE', payload: viewState }),
-    setDisplayMode: (mode: DisplayMode) => 
-      dispatch({ type: 'SET_DISPLAY_MODE', payload: mode }),
-    selectYear: (year: number | null) => 
-      dispatch({ type: 'SELECT_YEAR', payload: year }),
-    selectMonth: (month: number | null) => 
-      dispatch({ type: 'SELECT_MONTH', payload: month }),
-    selectWeek: (week: number | null) => 
-      dispatch({ type: 'SELECT_WEEK', payload: week }),
-    selectCell: (cell: SelectedCell | null) => 
-      dispatch({ type: 'SELECT_CELL', payload: cell }),
-  }), [
-    state.viewMode,
-    state.viewState,
-    state.displayMode,
-    state.selectedYear,
-    state.selectedMonth,
-    state.selectedWeek,
-    state.selectedCell
-  ]);
-  
-  // Create memoized values and handlers for ContentContext
-  const contentContextValue = useMemo(() => ({
-    contentItems: state.contentItems,
-    seasons: state.seasons,
-    focusAreas: state.focusAreas,
-    categories: state.categories,
-    isLoading: state.isLoading,
-    addContentItem: (item: ContentItem) => 
-      dispatch({ type: 'ADD_CONTENT_ITEM', payload: item }),
-    updateContentItem: (id: string, item: ContentItem) => 
-      dispatch({ type: 'UPDATE_CONTENT_ITEM', payload: { ...item, id } }),
-    deleteContentItem: (id: string) => 
-      dispatch({ type: 'DELETE_CONTENT_ITEM', payload: id }),
-    addSeason: (season: Season) => 
-      dispatch({ type: 'ADD_SEASON', payload: season }),
-    updateSeason: (id: string, season: Season) => 
-      dispatch({ type: 'UPDATE_SEASON', payload: { ...season, id } }),
-    deleteSeason: (id: string) => 
-      dispatch({ type: 'DELETE_SEASON', payload: id }),
-    addFocusArea: (area: FocusArea) => 
-      dispatch({ type: 'ADD_FOCUS_AREA', payload: area }),
-    updateFocusArea: (id: string, area: FocusArea) => 
-      dispatch({ type: 'UPDATE_FOCUS_AREA', payload: { ...area, id } }),
-    deleteFocusArea: (id: string) => 
-      dispatch({ type: 'DELETE_FOCUS_AREA', payload: id }),
-    setCategories: (categories: Category[]) => 
-      dispatch({ type: 'SET_CATEGORIES', payload: categories }),
-  }), [
-    state.contentItems,
-    state.seasons,
-    state.focusAreas,
-    state.categories,
-    state.isLoading
-  ]);
-  
-  // Provide the contexts in a nested structure
   return (
     <AppContext.Provider value={{ state, dispatch }}>
-      <UserContext.Provider value={userContextValue}>
-        <ViewContext.Provider value={viewContextValue}>
-          <ContentContext.Provider value={contentContextValue}>
-            {children}
-          </ContentContext.Provider>
-        </ViewContext.Provider>
-      </UserContext.Provider>
+      {children}
     </AppContext.Provider>
   );
 }
 
-// Custom hooks to use the contexts
+// Custom hook for using the app context
 export function useAppContext() {
-  return useContext(AppContext);
-}
-
-export function useUserContext() {
-  return useContext(UserContext);
-}
-
-export function useViewContext() {
-  return useContext(ViewContext);
-}
-
-export function useContentContext() {
-  return useContext(ContentContext);
+  const context = useContext(AppContext);
+  if (!context) {
+    throw new Error('useAppContext must be used within an AppProvider');
+  }
+  return context;
 }
 
 // Export the provider as default to satisfy Expo Router

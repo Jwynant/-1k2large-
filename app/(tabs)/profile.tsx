@@ -1,17 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, Switch } from 'react-native';
-import { Image } from 'expo-image';
+import { View, Text, StyleSheet, ScrollView, Pressable, Switch, Image } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useAppContext } from '../context/AppContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useColorScheme } from 'react-native';
 import { useRouter } from 'expo-router';
 import { BirthDateModal, LifeExpectancyModal, ThemeModal } from '../components/profile';
 import * as Haptics from 'expo-haptics';
-import { useIcons } from '../components/shared/IconProvider';
-
-// Add a placeholder for profile images
-const PLACEHOLDER_AVATAR = 'https://via.placeholder.com/150';
-const blurhash = '|rF?hV%2WCj[ayj[a|j[az_NaeWBj@ayfRayfQfQM{M|azj[azf6fQfQfQIpWXofj[ayj[j[fQayWCoeoeaya}j[ayfQa{oLj?j[WVj[ayayj[fQoff7azayj[ayj[j[ayofayayayj[fQj[ayayj[ayfjj[j[ayjuayj[';
+import { MaterialIcons } from '@expo/vector-icons';
 
 export default function ProfileScreen() {
   const { state, dispatch } = useAppContext();
@@ -19,8 +15,6 @@ export default function ProfileScreen() {
   const colorScheme = useColorScheme();
   const isDark = state.theme === 'system' ? colorScheme === 'dark' : state.theme === 'dark';
   const router = useRouter();
-  const [avatarLoading, setAvatarLoading] = useState(false);
-  const { Icon, MaterialIcon } = useIcons();
 
   // State for settings toggles
   const [notificationsEnabled, setNotificationsEnabled] = useState(
@@ -131,18 +125,10 @@ export default function ProfileScreen() {
         <View style={styles.header}>
           <View style={styles.profileImageContainer}>
             <View style={styles.profileImage}>
-              <Image
-                source={require('../../assets/profile.jpg')}
-                style={styles.profileImage}
-                placeholder={blurhash}
-                contentFit="cover"
-                transition={300}
-                onLoadStart={() => setAvatarLoading(true)}
-                onLoad={() => setAvatarLoading(false)}
-              />
+              <Ionicons name="person" size={60} color="#FFFFFF" />
             </View>
             <View style={styles.editProfileButton}>
-              <Icon name="create" size={16} color="#FFFFFF" />
+              <Ionicons name="pencil" size={16} color="#FFFFFF" />
             </View>
           </View>
           
@@ -182,12 +168,12 @@ export default function ProfileScreen() {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
             }}
           >
-            <Icon name="calendar" size={24} color="#0A84FF" style={styles.settingIcon} />
+            <Ionicons name="calendar" size={24} color="#0A84FF" style={styles.settingIcon} />
             <View style={styles.settingContent}>
               <Text style={styles.settingLabel}>Birthdate</Text>
               <Text style={styles.settingValue}>{formattedBirthDate}</Text>
             </View>
-            <Icon name="chevron-forward" size={20} color="#8E8E93" />
+            <Ionicons name="chevron-forward" size={20} color="#8E8E93" />
           </Pressable>
           
           <Pressable 
@@ -197,12 +183,12 @@ export default function ProfileScreen() {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
             }}
           >
-            <Icon name="time" size={24} color="#FF9500" style={styles.settingIcon} />
+            <Ionicons name="hourglass" size={24} color="#FF9500" style={styles.settingIcon} />
             <View style={styles.settingContent}>
               <Text style={styles.settingLabel}>Life Expectancy</Text>
               <Text style={styles.settingValue}>{lifeExpectancy} years</Text>
             </View>
-            <Icon name="chevron-forward" size={20} color="#8E8E93" />
+            <Ionicons name="chevron-forward" size={20} color="#8E8E93" />
           </Pressable>
           
           <Pressable 
@@ -212,7 +198,7 @@ export default function ProfileScreen() {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
             }}
           >
-            <Icon name="settings" size={24} color="#4CD964" style={styles.settingIcon} />
+            <Ionicons name="color-palette" size={24} color="#4CD964" style={styles.settingIcon} />
             <View style={styles.settingContent}>
               <Text style={styles.settingLabel}>Theme</Text>
               <Text style={styles.settingValue}>
@@ -223,7 +209,7 @@ export default function ProfileScreen() {
                     : 'Light'}
               </Text>
             </View>
-            <Icon name="chevron-forward" size={20} color="#8E8E93" />
+            <Ionicons name="chevron-forward" size={20} color="#8E8E93" />
           </Pressable>
         </View>
         
@@ -231,7 +217,7 @@ export default function ProfileScreen() {
           <Text style={styles.sectionTitle}>Preferences</Text>
           
           <View style={styles.settingItem}>
-            <Icon name="notifications" size={24} color="#5856D6" style={styles.settingIcon} />
+            <Ionicons name="notifications" size={24} color="#5856D6" style={styles.settingIcon} />
             <View style={styles.settingContent}>
               <Text style={styles.settingLabel}>Notifications</Text>
             </View>
@@ -244,7 +230,7 @@ export default function ProfileScreen() {
           </View>
           
           <View style={styles.settingItem}>
-            <Icon name="checkmark" size={24} color="#0A84FF" style={styles.settingIcon} />
+            <Ionicons name="checkbox" size={24} color="#0A84FF" style={styles.settingIcon} />
             <View style={styles.settingContent}>
               <Text style={styles.settingLabel}>Show Completed Goals</Text>
             </View>
@@ -257,7 +243,7 @@ export default function ProfileScreen() {
           </View>
           
           <View style={styles.settingItem}>
-            <Icon name="calendar" size={24} color="#FF9500" style={styles.settingIcon} />
+            <Ionicons name="calendar" size={24} color="#FF9500" style={styles.settingIcon} />
             <View style={styles.settingContent}>
               <Text style={styles.settingLabel}>Week Starts on Monday</Text>
             </View>
@@ -274,28 +260,28 @@ export default function ProfileScreen() {
           <Text style={styles.sectionTitle}>App</Text>
           
           <Pressable style={styles.settingItem}>
-            <Icon name="share-social" size={24} color="#64D2FF" style={styles.settingIcon} />
+            <Ionicons name="share-social" size={24} color="#64D2FF" style={styles.settingIcon} />
             <View style={styles.settingContent}>
               <Text style={styles.settingLabel}>Share App</Text>
             </View>
-            <Icon name="chevron-forward" size={20} color="#8E8E93" />
+            <Ionicons name="chevron-forward" size={20} color="#8E8E93" />
           </Pressable>
           
           <Pressable style={styles.settingItem}>
-            <Icon name="star" size={24} color="#FF9500" style={styles.settingIcon} />
+            <Ionicons name="star" size={24} color="#FF9500" style={styles.settingIcon} />
             <View style={styles.settingContent}>
               <Text style={styles.settingLabel}>Rate App</Text>
             </View>
-            <Icon name="chevron-forward" size={20} color="#8E8E93" />
+            <Ionicons name="chevron-forward" size={20} color="#8E8E93" />
           </Pressable>
           
           <Pressable style={styles.settingItem}>
-            <Icon name="information-circle" size={24} color="#0A84FF" style={styles.settingIcon} />
+            <Ionicons name="information-circle" size={24} color="#0A84FF" style={styles.settingIcon} />
             <View style={styles.settingContent}>
               <Text style={styles.settingLabel}>About</Text>
               <Text style={styles.settingValue}>Version 1.0.0</Text>
             </View>
-            <Icon name="chevron-forward" size={20} color="#8E8E93" />
+            <Ionicons name="chevron-forward" size={20} color="#8E8E93" />
           </Pressable>
         </View>
         
@@ -306,10 +292,10 @@ export default function ProfileScreen() {
             style={styles.debugButton}
             onPress={navigateToDebug}
           >
-            <Icon name="bug-outline" size={24} color="#FFFFFF" />
+            <Ionicons name="bug-outline" size={24} color="#FFFFFF" />
             <Text style={styles.debugButtonText}>Debug Menu</Text>
             <View style={styles.debugButtonIconContainer}>
-              <Icon name="chevron-forward" size={20} color="#999" />
+              <Ionicons name="chevron-forward" size={20} color="#999" />
             </View>
           </Pressable>
         </View>

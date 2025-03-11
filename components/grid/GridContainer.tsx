@@ -158,13 +158,22 @@ export default function GridContainer() {
     // The current year in the life grid is the birth year + adjusted age
     const currentGridYear = birthYear + adjustedAge;
     
-    // Pre-calculate isPast condition for better performance
     for (let year = startYear; year <= endYear; year++) {
       // Determine if this is the current year in the life grid
+      // This is different from the calendar year - it's based on birth date
       const isCurrent = year === currentGridYear;
       
-      // Simplified past calculation
-      const isPast = year < currentGridYear;
+      // For the birth year and current year, we need special handling
+      // For years in between, all months are in the past
+      let isPast = false;
+      
+      if (year < currentGridYear) {
+        // Years before the current grid year are fully in the past
+        isPast = true;
+      } else if (year === currentGridYear) {
+        // Current grid year - some months are in the past
+        isPast = true;
+      }
       
       clusterArray.push({
         year,
@@ -324,33 +333,18 @@ export default function GridContainer() {
     }
   }, [viewMode, activeViewMode, fadeAnim]);
   
-  // Optimize the renderGridView function
+  // Modify the renderGridView function to use the activeViewMode instead of viewMode
   const renderGridView = useCallback(() => {
-    // Create memoized handlers to prevent unnecessary re-renders
-    const handleYearSelectMemo = useCallback((year: number) => {
-      handleYearSelect(year);
-    }, [handleYearSelect]);
-    
-    const handleCellPressMemo = useCallback((year: number, month?: number, week?: number) => {
-      handleCellPress(year, month, week);
-    }, [handleCellPress]);
-    
-    const handleCellLongPressMemo = useCallback((year: number, month?: number, week?: number, position?: Position) => {
-      handleCellLongPress(year, month, week, position);
-    }, [handleCellLongPress]);
-    
-    const handleClusterPressMemo = useCallback((year: number, position: Position) => {
-      openMonthExpandedView(year, position);
-    }, [openMonthExpandedView]);
-    
     switch (activeViewMode) {
       case 'years':
         return (
           <YearGridView
             clusters={clusters}
-            onCellPress={handleCellPressMemo}
-            onLongPress={handleCellLongPressMemo}
-            onClusterPress={handleYearSelectMemo}
+            onCellPress={handleCellPress}
+            onLongPress={handleCellLongPress}
+            onClusterPress={(year, position) => {
+              handleYearSelect(year);
+            }}
             hasContent={hasContent}
           />
         );
@@ -358,9 +352,12 @@ export default function GridContainer() {
         return (
           <MonthGridView
             clusters={clusters}
-            onCellPress={handleCellPressMemo}
-            onLongPress={handleCellLongPressMemo}
-            onClusterPress={handleClusterPressMemo}
+            onCellPress={handleCellPress}
+            onLongPress={handleCellLongPress}
+            onClusterPress={(year, position) => {
+              // Open our custom MonthExpandedView
+              openMonthExpandedView(year);
+            }}
             hasContent={hasContent}
           />
         );
@@ -368,10 +365,11 @@ export default function GridContainer() {
         return (
           <WeekGridView
             clusters={clusters}
-            onCellPress={handleCellPressMemo}
-            onLongPress={handleCellLongPressMemo}
+            onCellPress={handleCellPress}
+            onLongPress={handleCellLongPress}
             onClusterPress={(year, position) => {
               // WeekGridView now handles expanded view internally
+              // We still need to pass the handler for position tracking
             }}
             hasContent={hasContent}
           />
@@ -379,15 +377,7 @@ export default function GridContainer() {
       default:
         return null;
     }
-  }, [
-    activeViewMode, 
-    clusters, 
-    hasContent,
-    handleCellPress,
-    handleCellLongPress,
-    handleYearSelect,
-    openMonthExpandedView
-  ]);
+  }, [activeViewMode, handleYearSelect, handleCellLongPress, handleCellPress, clusters, hasContent, openMonthExpandedView]);
   
   // Render month expanded view with enhanced animation
   const renderMonthExpandedView = useCallback(() => {

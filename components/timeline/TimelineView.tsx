@@ -73,11 +73,11 @@ export default function TimelineView() {
     });
   }, [state.seasons]);
   
-  // Default columns if none are saved
+  // Default columns if none exist
   const defaultColumns: TimelineColumn[] = [
-    { id: 'personal', title: 'Personal', color: '#FF9500', order: 0, visible: true, type: 'content' as const },
-    { id: 'career', title: 'Career', color: '#007AFF', order: 1, visible: true, type: 'content' as const },
-    { id: 'health', title: 'Health', color: '#4CD964', order: 2, visible: true, type: 'content' as const }
+    { id: 'personal', title: 'Personal', color: '#FF9500', order: 0, visible: true },
+    { id: 'career', title: 'Career', color: '#007AFF', order: 1, visible: true },
+    { id: 'health', title: 'Health', color: '#4CD964', order: 2, visible: true }
   ];
   
   // Use existing columns or default ones

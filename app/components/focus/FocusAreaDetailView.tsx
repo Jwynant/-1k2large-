@@ -23,10 +23,6 @@ const PRIORITY_COLORS = {
   essential: '#ffd700', // Gold/Amber
   important: '#47a9ff', // Royal Blue
   supplemental: '#cd602a', // Bronze/Copper
-  // Legacy priority levels for backward compatibility
-  primary: '#ffd700',    // Same as essential
-  secondary: '#47a9ff',  // Same as important
-  tertiary: '#cd602a',   // Same as supplemental
 };
 
 interface FocusAreaDetailViewProps {

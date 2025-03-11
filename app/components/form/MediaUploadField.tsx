@@ -5,12 +5,12 @@ import {
   StyleSheet, 
   TouchableOpacity, 
   useColorScheme,
+  Image,
   Alert
 } from 'react-native';
-import { Image } from 'expo-image';
+import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
-import { useIcons } from '../shared/IconProvider';
 
 interface MediaUploadFieldProps {
   label: string;
@@ -27,7 +27,6 @@ export default function MediaUploadField({
 }: MediaUploadFieldProps) {
   const colorScheme = useColorScheme();
   const isDarkMode = colorScheme === 'dark';
-  const { Icon } = useIcons();
   
   const handleAddMedia = async () => {
     try {
@@ -39,14 +38,12 @@ export default function MediaUploadField({
         return;
       }
       
-      // Launch the image picker with optimized settings
+      // Launch the image picker
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [4, 3],
-        quality: 0.8, // Reduced quality for better performance
-        allowsMultipleSelection: false, // Ensure single selection for better UX
-        exif: false, // Don't need EXIF data, reduces memory usage
+        quality: 0.8,
       });
       
       if (!result.canceled && result.assets && result.assets.length > 0) {
@@ -84,7 +81,7 @@ export default function MediaUploadField({
         ]}
         onPress={handleAddMedia}
       >
-        <Icon 
+        <Ionicons 
           name="camera" 
           size={24} 
           color={isDarkMode ? "#FFFFFF" : "#000000"} 

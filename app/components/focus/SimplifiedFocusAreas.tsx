@@ -25,48 +25,32 @@ import { useRouter } from 'expo-router';
 // Get screen dimensions for responsive sizing
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-// Priority level colors
+// Priority level colors - moved outside component to avoid recreation
 const PRIORITY_COLORS = {
   essential: '#ffd700', // Gold/Amber
   important: '#47a9ff', // Royal Blue
   supplemental: '#cd602a', // Bronze/Copper
-  // Legacy priority levels for backward compatibility
-  primary: '#ffd700',    // Same as essential
-  secondary: '#47a9ff',  // Same as important
-  tertiary: '#cd602a',   // Same as supplemental
 };
 
-// Priority level labels
+// Priority level descriptions - moved outside component to avoid recreation
+const PRIORITY_DESCRIPTIONS = {
+  essential: 'Must-have focus areas that are critical to your success',
+  important: 'Key areas that matter but with some flexibility',
+  supplemental: 'Nice-to-have areas to develop when time allows'
+};
+
+// Priority level limits - moved outside component to avoid recreation
+const PRIORITY_LIMITS = {
+  essential: 3,
+  important: 5, 
+  supplemental: 7
+};
+
+// Priority level labels - moved outside component to avoid recreation
 const PRIORITY_LABELS = {
   essential: 'Essential',
   important: 'Important',
-  supplemental: 'Supplemental',
-  // Legacy priority levels for backward compatibility
-  primary: 'Primary',
-  secondary: 'Secondary',
-  tertiary: 'Tertiary',
-};
-
-// Priority level limits
-const PRIORITY_LIMITS = {
-  essential: 3,
-  important: 5,
-  supplemental: 7,
-  // Legacy priority levels for backward compatibility
-  primary: 3,
-  secondary: 5,
-  tertiary: 7,
-};
-
-// Priority level descriptions
-const PRIORITY_DESCRIPTIONS = {
-  essential: 'Core areas that define your identity and purpose',
-  important: 'Significant areas that enhance your life quality',
-  supplemental: 'Additional areas that add richness to your life',
-  // Legacy priority levels for backward compatibility
-  primary: 'Core areas that define your identity and purpose',
-  secondary: 'Significant areas that enhance your life quality',
-  tertiary: 'Additional areas that add richness to your life',
+  supplemental: 'Supplemental'
 };
 
 // Priority level styles - for enhanced visual hierarchy
@@ -100,38 +84,7 @@ const PRIORITY_STYLES = {
     shadowOpacity: 0.1,
     shadowRadius: 1,
     elevation: 2,
-  },
-  // Legacy priority levels for backward compatibility
-  primary: {
-    backgroundColor: '#1A1700', // Same as essential
-    borderColor: PRIORITY_COLORS.primary,
-    borderWidth: 2,
-    shadowColor: PRIORITY_COLORS.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 3,
-    elevation: 5,
-  },
-  secondary: {
-    backgroundColor: '#001A33', // Same as important
-    borderColor: PRIORITY_COLORS.secondary,
-    borderWidth: 1.5,
-    shadowColor: PRIORITY_COLORS.secondary,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    elevation: 3,
-  },
-  tertiary: {
-    backgroundColor: '#1A0D00', // Same as supplemental
-    borderColor: PRIORITY_COLORS.tertiary,
-    borderWidth: 1,
-    shadowColor: PRIORITY_COLORS.tertiary,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 1,
-    elevation: 2,
-  },
+  }
 };
 
 // Memoized FocusAreaCard component to prevent unnecessary re-renders

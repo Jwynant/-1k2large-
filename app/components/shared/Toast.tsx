@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useIcons } from './IconProvider';
 
 type ToastType = 'success' | 'error' | 'info' | 'warning';
 
@@ -23,7 +23,6 @@ export default function Toast({
   const insets = useSafeAreaInsets();
   const opacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(-20)).current;
-  const { Icon } = useIcons();
   
   // Get icon and color based on toast type
   const getToastConfig = (type: ToastType) => {
@@ -105,7 +104,7 @@ export default function Toast({
       accessibilityLiveRegion="assertive"
     >
       <View style={styles.content}>
-        <Icon name={icon as any} size={24} color={color} style={styles.icon} />
+        <Ionicons name={icon as any} size={24} color={color} style={styles.icon} />
         <Text style={styles.message}>{message}</Text>
         <TouchableOpacity 
           onPress={handleDismiss}
@@ -114,7 +113,7 @@ export default function Toast({
           accessibilityHint="Dismisses the notification"
           testID="toast-dismiss-button"
         >
-          <Icon name="close" size={24} color="#AEAEB2" />
+          <Ionicons name="close" size={24} color="#AEAEB2" />
         </TouchableOpacity>
       </View>
     </Animated.View>

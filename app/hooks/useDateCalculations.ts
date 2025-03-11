@@ -1,11 +1,10 @@
 import { useCallback, useMemo } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { SelectedCell } from '../types';
-import { format, differenceInDays, differenceInMonths, differenceInYears, addYears, addMonths, startOfWeek, getWeek, getMonth, getYear, isSameWeek, isSameMonth, isSameYear, isAfter, isBefore, startOfMonth, endOfMonth, startOfYear, endOfYear } from 'date-fns';
+import { format, differenceInDays, differenceInMonths, differenceInYears, addYears, addMonths } from 'date-fns';
 
 /**
  * Custom hook for date and time calculations
- * Optimized with memoization for expensive calculations
  */
 export function useDateCalculations() {
   const { state } = useAppContext();
@@ -27,7 +26,6 @@ export function useDateCalculations() {
   // Memoize current year, month, and week for frequent comparisons
   const currentYear = useMemo(() => today.getFullYear(), [today]);
   const currentMonth = useMemo(() => today.getMonth(), [today]);
-  const currentWeek = useMemo(() => getWeek(today), [today]);
   
   // Calculate user's current age in years (integer)
   const userAge = useMemo((): number | null => {
@@ -100,72 +98,26 @@ export function useDateCalculations() {
     return preciseAge;
   }, [preciseAge]);
   
-  // Memoize life progress calculation
+  // Calculate life progress percentage
   const getLifeProgress = useCallback((lifeExpectancy: number = 80): number => {
     if (!birthDate) return 0;
     
-    // Calculate total days in expected lifespan
-    const totalDays = lifeExpectancy * 365.25; // Account for leap years
+    // Calculate total milliseconds in the expected lifespan
+    const lifespanMs = lifeExpectancy * 365.25 * 24 * 60 * 60 * 1000;
     
-    // Calculate days lived so far
-    const daysLived = differenceInDays(today, birthDate);
+    // Calculate how much time has been lived so far
+    const livedMs = today.getTime() - birthDate.getTime();
     
-    // Calculate progress percentage
-    const progress = (daysLived / totalDays) * 100;
-    
-    // Ensure progress is between 0 and 100
-    return Math.max(0, Math.min(100, progress));
+    // Calculate the percentage (capped at 100%)
+    const percentage = (livedMs / lifespanMs) * 100;
+    return Math.min(100, Math.max(0, percentage));
   }, [birthDate, today]);
-  
-  // Optimize week-related calculations with memoization
-  const isWeekInPast = useCallback((year: number, week: number): boolean => {
-    if (!birthDate) return false;
-    
-    // Current date info
-    const currentYear = today.getFullYear();
-    const currentWeek = getWeek(today);
-    
-    // Simple year comparison first (most cases will be resolved here)
-    if (year < currentYear) return true;
-    if (year > currentYear) return false;
-    
-    // For current year, compare weeks
-    return week < currentWeek;
-  }, [birthDate, today]);
-  
-  const isCurrentWeek = useCallback((year: number, week: number): boolean => {
-    return year === currentYear && week === currentWeek;
-  }, [currentYear, currentWeek]);
-  
-  // Optimize month-related calculations with memoization
-  const isMonthInPast = useCallback((year: number, month: number): boolean => {
-    if (!birthDate) return false;
-    
-    // Simple year comparison first
-    if (year < currentYear) return true;
-    if (year > currentYear) return false;
-    
-    // For current year, compare months
-    return month < currentMonth;
-  }, [birthDate, currentYear, currentMonth]);
-  
-  const isCurrentMonth = useCallback((year: number, month: number): boolean => {
-    return year === currentYear && month === currentMonth;
-  }, [currentYear, currentMonth]);
-  
-  // Optimize year-related calculations
-  const isYearInPast = useCallback((year: number): boolean => {
-    return year < currentYear;
-  }, [currentYear]);
-  
-  const isCurrentYear = useCallback((year: number): boolean => {
-    return year === currentYear;
-  }, [currentYear]);
   
   // Check if a year is the user's birth year
   const isUserBirthYear = useCallback((year: number): boolean => {
     if (!birthDate) return false;
-    return year === birthDate.getFullYear();
+    
+    return birthDate.getFullYear() === year;
   }, [birthDate]);
   
   // Get the week number of a date
@@ -180,6 +132,9 @@ export function useDateCalculations() {
     const weekNum = Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
     return weekNum;
   }, []);
+  
+  // Memoize current week for frequent comparisons
+  const currentWeek = useMemo(() => getWeekNumber(today), [getWeekNumber, today]);
   
   // Get the start month based on birth date
   const getStartMonth = useCallback((): number => {
@@ -216,6 +171,107 @@ export function useDateCalculations() {
       };
     }
   }, [getStartMonth]);
+  
+  // Calculate if a month is in the past (i.e., between birth date and current date)
+  const isMonthInPast = useCallback((year: number, month: number) => {
+    if (!birthDate) {
+      return false;
+    }
+    
+    const birthYear = birthDate.getFullYear();
+    const birthMonth = birthDate.getMonth();
+    
+    // Calculate total months lived by the user
+    const totalMonthsLived = (currentYear - birthYear) * 12 + (currentMonth - birthMonth + 1);
+    
+    // Calculate how many months this cell is from the birth date
+    let monthsFromBirth;
+    
+    // If this is the birth year (year 0 in the grid), months start from birth month
+    if (year === birthYear) {
+      // In birth year, only months >= birth month are valid
+      monthsFromBirth = month - birthMonth;
+    } else {
+      // For subsequent years, calculate total months from birth
+      const yearsFromBirth = year - birthYear;
+      monthsFromBirth = yearsFromBirth * 12 + (month - birthMonth);
+    }
+    
+    // A month is "in the past" if the user has lived it
+    return monthsFromBirth >= 0 && monthsFromBirth < totalMonthsLived;
+  }, [birthDate, currentYear, currentMonth]);
+  
+  // Calculate if a week is in the past (i.e., between birth date and current date)
+  const isWeekInPast = useCallback((year: number, week: number) => {
+    if (!birthDate) {
+      // If no birth date is set, just compare with current date
+      return year < currentYear || (year === currentYear && week < currentWeek);
+    }
+    
+    const birthYear = birthDate.getFullYear();
+    const birthWeek = getWeekNumber(birthDate);
+    
+    // A week is "in the past" if it's after or equal to birth week/year and before current week/year
+    if (year < birthYear) {
+      return false; // Before birth year
+    } else if (year === birthYear) {
+      return week >= birthWeek && (year < currentYear || (year === currentYear && week < currentWeek));
+    } else {
+      return year < currentYear || (year === currentYear && week < currentWeek);
+    }
+  }, [birthDate, currentYear, currentWeek, getWeekNumber]);
+  
+  // Calculate if a year is in the past (i.e., between birth year and current year)
+  const isYearInPast = useCallback((year: number) => {
+    if (!birthDate) {
+      // If no birth date is set, just compare with current year
+      return year < currentYear;
+    }
+    
+    const birthYear = birthDate.getFullYear();
+    
+    // A year is "in the past" if it's after or equal to birth year and before current year
+    return year >= birthYear && year < currentYear;
+  }, [birthDate, currentYear]);
+  
+  // Calculate if a year is the current year
+  const isCurrentYear = useCallback((year: number) => {
+    return year === currentYear;
+  }, [currentYear]);
+  
+  // Check if a month is the current month
+  const isCurrentMonth = useCallback((year: number, month: number): boolean => {
+    if (!birthDate) {
+      return year === currentYear && month === currentMonth;
+    }
+    
+    const birthYear = birthDate.getFullYear();
+    const birthMonth = birthDate.getMonth();
+    
+    // For birth alignment, we need to check if this is the current month relative to birth month
+    // Calculate how many months from birth to current date
+    const totalMonthsLived = (currentYear - birthYear) * 12 + (currentMonth - birthMonth);
+    
+    // Calculate how many months this cell is from the birth date
+    let monthsFromBirth;
+    
+    if (year === birthYear) {
+      // In birth year, only months >= birth month are valid
+      monthsFromBirth = month - birthMonth;
+    } else {
+      // For subsequent years, calculate total months from birth
+      const yearsFromBirth = year - birthYear;
+      monthsFromBirth = yearsFromBirth * 12 + (month - birthMonth);
+    }
+    
+    // This is the current month if months from birth equals total months lived
+    return monthsFromBirth === totalMonthsLived;
+  }, [birthDate, currentYear, currentMonth]);
+  
+  // Calculate if a week is the current week
+  const isCurrentWeek = useCallback((year: number, week: number) => {
+    return year === currentYear && week === currentWeek;
+  }, [currentYear, currentWeek]);
   
   // Get the date range for a specific month
   const getMonthDateRange = useCallback((year: number, month: number) => {
@@ -259,25 +315,28 @@ export function useDateCalculations() {
   }, [formatDate, getWeekDateRange]);
   
   return {
-    getBirthDate,
-    getUserAge,
-    userAge,
-    getAgeForYear,
-    getYearLabel,
-    getPreciseAge,
-    getLifeProgress,
-    isWeekInPast,
-    isCurrentWeek,
     isMonthInPast,
-    isCurrentMonth,
+    isWeekInPast,
     isYearInPast,
     isCurrentYear,
-    isUserBirthYear,
+    isCurrentMonth,
+    isCurrentWeek,
     getWeekNumber,
     getMonthDateRange,
     getWeekDateRange,
     formatDate,
     formatDateFromCell,
+    // New age calculation methods
+    getBirthDate,
+    getUserAge,
+    getAgeForYear,
+    getYearLabel,
+    getPreciseAge,
+    getLifeProgress,
+    isUserBirthYear,
+    // Legacy method for backward compatibility
+    userAge: getAgeForYear,
+    // New utility methods
     getStartMonth,
     getYearOffset,
     getAlignedDate,
