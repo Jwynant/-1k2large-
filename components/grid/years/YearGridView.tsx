@@ -1,8 +1,17 @@
-import { View, StyleSheet, ScrollView, Text, useWindowDimensions } from 'react-native';
-import { memo, useMemo } from 'react';
+import { View, StyleSheet, Text, useWindowDimensions } from 'react-native';
+import { memo, useMemo, useCallback, useRef, useEffect } from 'react';
+import { FlashList } from '@shopify/flash-list';
 import YearCell from './YearCell';
 import { useAppContext } from '../../../app/context/AppContext';
 import { useDateCalculations } from '../../../app/hooks/useDateCalculations';
+import { useResponsiveLayout } from '../../../app/hooks/useResponsiveLayout';
+
+// Define a row item type for FlashList
+type RowItem = {
+  id: string;
+  years: number[];
+  rowIndex: number;
+};
 
 export type YearGridViewProps = {
   clusters: { year: number; isCurrent: boolean }[];
@@ -19,9 +28,19 @@ function YearGridView({
   onClusterPress,
   hasContent
 }: YearGridViewProps) {
-  const { width } = useWindowDimensions();
+  const { width, height: windowHeight } = useWindowDimensions();
   const { state } = useAppContext();
   const { getAgeForYear, isUserBirthYear } = useDateCalculations();
+  const { horizontalPadding } = useResponsiveLayout();
+  
+  // Create a ref for the FlashList
+  const flashListRef = useRef<FlashList<RowItem>>(null);
+  
+  // Track if initial scroll has been performed
+  const hasScrolledRef = useRef(false);
+  
+  // Define the estimated row height for calculations
+  const estimatedItemSize = 36; // Height of a row
   
   // Get the current year to determine which cells should be filled
   const currentYear = new Date().getFullYear();
@@ -48,54 +67,144 @@ function YearGridView({
     return rows;
   }, [clusters]);
 
-  // Fallback if no years
-  if (yearRows.length === 0) {
+  // Create a flat data structure for FlashList
+  const rowData = useMemo(() => {
+    return yearRows.map((years, index) => ({
+      id: `row-${index}`,
+      years,
+      rowIndex: index
+    }));
+  }, [yearRows]);
+
+  // Find the index of the row containing the current year
+  const currentRowIndex = useMemo(() => {
+    return findCurrentYearIndex(rowData, currentYear);
+  }, [rowData, currentYear]);
+
+  // Calculate the offset to center the current row
+  const calculateCenteredOffset = useCallback(() => {
+    // Get the header height (approximate)
+    const headerHeight = 150; // Adjust based on your actual header height
+    
+    // Calculate the available viewport height
+    const viewportHeight = windowHeight - headerHeight;
+    
+    // Calculate how many rows can fit in half the viewport
+    const halfViewportRows = Math.floor(viewportHeight / (estimatedItemSize * 2));
+    
+    // Calculate the offset to center the current row
+    // If currentRowIndex is less than halfViewportRows, we don't need to scroll
+    if (currentRowIndex < halfViewportRows) {
+      return 0;
+    }
+    
+    // Calculate the offset to center the current row
+    const offset = (currentRowIndex - halfViewportRows) * estimatedItemSize;
+    
+    return offset;
+  }, [currentRowIndex, windowHeight, estimatedItemSize]);
+
+  // Scroll to center the current row after initial render
+  useEffect(() => {
+    if (flashListRef.current && rowData.length > 0 && !hasScrolledRef.current) {
+      // Use a small timeout to ensure the list is fully rendered before scrolling
+      const timer = setTimeout(() => {
+        const offset = calculateCenteredOffset();
+        flashListRef.current?.scrollToOffset({ offset, animated: false });
+        hasScrolledRef.current = true;
+      }, 50);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [rowData, calculateCenteredOffset]);
+
+  // Reset scroll flag when data changes significantly
+  useEffect(() => {
+    hasScrolledRef.current = false;
+  }, [clusters.length]);
+
+  // Render a row item for FlashList
+  const renderRow = useCallback(({ item }: { item: RowItem }) => {
     return (
-      <ScrollView style={styles.container}>
+      <View style={styles.yearRow}>
+        {item.years.map((year: number) => {
+          const isPast = year < currentYear;
+          const isCurrent = year === currentYear;
+          const hasContentForYear = hasContent(year);
+          const age = getAgeForYear(year);
+          const isBirthYear = isUserBirthYear(year);
+          
+          return (
+            <YearCell 
+              key={year} 
+              year={year}
+              age={age}
+              isPast={isPast}
+              isCurrent={isCurrent}
+              isBirthYear={isBirthYear}
+              hasContent={hasContentForYear}
+              onPress={() => onCellPress(year)}
+              onLongPress={(position) => 
+                onLongPress(year, undefined, undefined, position)
+              }
+            />
+          );
+        })}
+      </View>
+    );
+  }, [currentYear, hasContent, getAgeForYear, isUserBirthYear, onCellPress, onLongPress]);
+
+  // Key extractor for FlashList
+  const keyExtractor = useCallback((item: RowItem) => item.id, []);
+
+  // Fallback if no years
+  if (rowData.length === 0) {
+    return (
+      <View style={styles.container}>
         <View style={styles.gridLayout}>
           <View style={styles.yearsContainer}>
             <Text style={styles.emptyText}>No years available</Text>
           </View>
         </View>
-      </ScrollView>
+      </View>
     );
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+    <View style={styles.container}>
       <View style={styles.gridLayout}>
         <View style={styles.yearsContainer}>
-          {yearRows.map((yearsInRow, rowIndex) => (
-            <View key={rowIndex} style={styles.yearRow}>
-              {yearsInRow.map((year: number) => {
-                const isPast = year < currentYear;
-                const isCurrent = year === currentYear;
-                const hasContentForYear = hasContent(year);
-                const age = getAgeForYear(year);
-                const isBirthYear = isUserBirthYear(year);
-                
-                return (
-                  <YearCell 
-                    key={year} 
-                    year={year}
-                    age={age}
-                    isPast={isPast}
-                    isCurrent={isCurrent}
-                    isBirthYear={isBirthYear}
-                    hasContent={hasContentForYear}
-                    onPress={() => onCellPress(year)}
-                    onLongPress={(position) => 
-                      onLongPress(year, undefined, undefined, position)
-                    }
-                  />
-                );
-              })}
-            </View>
-          ))}
+          <FlashList
+            ref={flashListRef}
+            data={rowData}
+            renderItem={renderRow}
+            keyExtractor={keyExtractor}
+            estimatedItemSize={estimatedItemSize}
+            showsVerticalScrollIndicator={true}
+            contentContainerStyle={styles.contentContainer}
+            maintainVisibleContentPosition={{
+              minIndexForVisible: 0,
+            }}
+            overrideItemLayout={(layout, item) => {
+              layout.size = estimatedItemSize;
+            }}
+          />
         </View>
       </View>
-    </ScrollView>
+    </View>
   );
+}
+
+// Helper function to find the index of the row containing the current year
+function findCurrentYearIndex(rowData: RowItem[], currentYear: number): number {
+  for (let i = 0; i < rowData.length; i++) {
+    if (rowData[i].years.includes(currentYear)) {
+      return i;
+    }
+  }
+  
+  // Default to the middle if current year not found
+  return Math.floor(rowData.length / 2);
 }
 
 const styles = StyleSheet.create({

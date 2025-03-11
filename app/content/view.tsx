@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -10,6 +11,10 @@ import { ContentItem } from '../types';
 import { useContentManagement } from '../hooks/useContentManagement';
 import { useAppContext } from '../context/AppContext';
 
+// Add a placeholder for images
+const PLACEHOLDER_IMAGE = 'https://via.placeholder.com/300';
+const blurhash = '|rF?hV%2WCj[ayj[a|j[az_NaeWBj@ayfRayfQfQM{M|azj[azf6fQfQfQIpWXofj[ayj[j[fQayWCoeoeaya}j[ayfQa{oLj?j[WVj[ayayj[fQoff7azayj[ayj[j[ayofayayayj[fQj[ayayj[ayfjj[j[ayjuayj[';
+
 export default function ContentViewScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ id: string }>();
@@ -17,6 +22,7 @@ export default function ContentViewScreen() {
   
   const [contentItem, setContentItem] = useState<ContentItem | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [imageLoading, setImageLoading] = useState(false);
   
   useEffect(() => {
     if (params.id) {
@@ -139,9 +145,13 @@ export default function ContentViewScreen() {
             {contentItem.media.map((mediaUrl, index) => (
               <Image
                 key={index}
-                source={{ uri: mediaUrl }}
+                source={{ uri: mediaUrl || PLACEHOLDER_IMAGE }}
                 style={styles.mediaImage}
-                resizeMode="cover"
+                placeholder={blurhash}
+                contentFit="cover"
+                transition={300}
+                onLoadStart={() => setImageLoading(true)}
+                onLoad={() => setImageLoading(false)}
               />
             ))}
           </View>

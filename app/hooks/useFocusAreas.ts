@@ -34,6 +34,10 @@ const PRIORITY_LIMITS = {
   essential: 3, // Max 3 essential focus areas
   important: 5, // Max 5 important focus areas
   supplemental: 7, // Max 7 supplemental focus areas
+  // Legacy priority levels for backward compatibility
+  primary: 3,
+  secondary: 5,
+  tertiary: 7,
 };
 
 /**
@@ -72,6 +76,13 @@ export function useFocusAreas() {
       important: focusAreas.filter(area => area.priorityLevel === 'important')
         .sort((a, b) => a.rank - b.rank),
       supplemental: focusAreas.filter(area => area.priorityLevel === 'supplemental')
+        .sort((a, b) => a.rank - b.rank),
+      // Legacy priority levels for backward compatibility
+      primary: focusAreas.filter(area => area.priorityLevel === 'primary')
+        .sort((a, b) => a.rank - b.rank),
+      secondary: focusAreas.filter(area => area.priorityLevel === 'secondary')
+        .sort((a, b) => a.rank - b.rank),
+      tertiary: focusAreas.filter(area => area.priorityLevel === 'tertiary')
         .sort((a, b) => a.rank - b.rank)
     };
   }, [focusAreas]);

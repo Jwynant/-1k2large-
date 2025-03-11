@@ -24,7 +24,7 @@ export interface Cluster {
 }
 
 // Focus Area Types
-export type PriorityLevel = 'essential' | 'important' | 'supplemental';
+export type PriorityLevel = 'essential' | 'important' | 'supplemental' | 'primary' | 'secondary' | 'tertiary';
 
 // Category type for the global category system
 export interface Category {
@@ -48,7 +48,7 @@ export interface FocusArea {
 }
 
 // Content Types
-export type ContentType = 'memory' | 'goal';
+export type ContentType = 'memory' | 'goal' | 'lesson' | 'reflection' | 'insight';
 
 export interface SubGoal {
   id: string;
@@ -132,6 +132,7 @@ export interface ContentFormState {
   // Insight-specific fields
   relatedGoalIds?: string[];
   relatedMemoryIds?: string[];
+  importance?: number; // Rating from 1-5
 }
 
 export interface ContentFormErrors {
@@ -141,6 +142,17 @@ export interface ContentFormErrors {
   emoji?: string;
   deadline?: string;
   focusAreaId?: string;
+}
+
+// Timeline Types
+export interface TimelineColumn {
+  id: string;
+  title: string;
+  visible: boolean;
+  order: number;
+  type: 'date' | 'content' | 'custom';
+  color: string;
+  width?: number;
 }
 
 // App State Types
@@ -159,6 +171,7 @@ export interface AppState {
   seasons: Season[];
   focusAreas: FocusArea[];
   categories: Category[]; // NEW: Global categories list
+  timelineColumns: TimelineColumn[]; // Timeline configuration
   userSettings: UserSettings;
   theme: 'dark' | 'light' | 'system';
 }
@@ -188,15 +201,18 @@ export type AppAction =
   | { type: 'UPDATE_CATEGORY'; payload: Category }
   | { type: 'DELETE_CATEGORY'; payload: string }
   | { type: 'LOAD_CATEGORIES'; payload: Category[] }
+  | { type: 'SET_CATEGORIES'; payload: Category[] }
   | { type: 'UPDATE_USER_SETTINGS'; payload: Partial<UserSettings> }
   | { type: 'SET_THEME'; payload: 'dark' | 'light' | 'system' }
-  | { type: 'LOAD_DATA'; payload: { contentItems: ContentItem[]; seasons: Season[]; focusAreas: FocusArea[]; userSettings: UserSettings; categories?: Category[] } }
+  | { type: 'UPDATE_TIMELINE_COLUMN'; payload: TimelineColumn }
+  | { type: 'LOAD_DATA'; payload: { contentItems: ContentItem[]; seasons: Season[]; focusAreas: FocusArea[]; userSettings: UserSettings; categories?: Category[]; timelineColumns?: TimelineColumn[] } }
   | { type: 'INITIALIZE_APP'; payload: { 
       contentItems: ContentItem[]; 
       seasons: Season[]; 
       focusAreas: FocusArea[]; 
       userSettings: UserSettings; 
       categories: Category[];
+      timelineColumns: TimelineColumn[];
       userBirthDate: string | null;
       theme: 'dark' | 'light' | 'system';
     } 

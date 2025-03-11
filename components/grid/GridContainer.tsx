@@ -1,7 +1,7 @@
-import { View, Text, StyleSheet, Pressable, Dimensions, Alert, Modal, TouchableWithoutFeedback, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Dimensions, Alert, Modal, TouchableWithoutFeedback, useWindowDimensions, ActivityIndicator, Animated } from 'react-native';
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { MotiView } from 'moti';
-import { Animated, ScrollView } from 'react-native';
+import { ScrollView } from 'react-native';
 import Reanimated, { 
   useSharedValue, 
   useAnimatedStyle, 
@@ -81,6 +81,13 @@ export default function GridContainer() {
   const detailViewOpacity = useSharedValue(0);
   const detailViewScale = useSharedValue(0.95);
   
+  // Simplify the animation approach to prevent crashes
+  const gridOpacity = useSharedValue(1);
+  const [activeViewMode, setActiveViewMode] = useState<ViewMode>(viewMode);
+  
+  // Use Animated instead of Reanimated for simpler animation
+  const fadeAnim = useRef(new Animated.Value(1)).current;
+  
   // Animated styles - define these at the component level, not inside render functions
   const expandedViewAnimatedStyles = useAnimatedStyle(() => {
     return {
@@ -151,22 +158,13 @@ export default function GridContainer() {
     // The current year in the life grid is the birth year + adjusted age
     const currentGridYear = birthYear + adjustedAge;
     
+    // Pre-calculate isPast condition for better performance
     for (let year = startYear; year <= endYear; year++) {
       // Determine if this is the current year in the life grid
-      // This is different from the calendar year - it's based on birth date
       const isCurrent = year === currentGridYear;
       
-      // For the birth year and current year, we need special handling
-      // For years in between, all months are in the past
-      let isPast = false;
-      
-      if (year < currentGridYear) {
-        // Years before the current grid year are fully in the past
-        isPast = true;
-      } else if (year === currentGridYear) {
-        // Current grid year - some months are in the past
-        isPast = true;
-      }
+      // Simplified past calculation
+      const isPast = year < currentGridYear;
       
       clusterArray.push({
         year,
@@ -302,18 +300,57 @@ export default function GridContainer() {
     }
   }, [handleCellDetailClose, selectedCell, openMonthExpandedView]);
   
-  // Render the appropriate grid view based on view mode
+  // Update active view mode when viewMode changes with animation
+  useEffect(() => {
+    if (activeViewMode !== viewMode) {
+      // Fade out
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }).start(() => {
+        // Update the active view mode after fade out
+        setActiveViewMode(viewMode);
+        
+        // Fade in after a short delay
+        setTimeout(() => {
+          Animated.timing(fadeAnim, {
+            toValue: 1,
+            duration: 300,
+            useNativeDriver: true,
+          }).start();
+        }, 100);
+      });
+    }
+  }, [viewMode, activeViewMode, fadeAnim]);
+  
+  // Optimize the renderGridView function
   const renderGridView = useCallback(() => {
-    switch (viewMode) {
+    // Create memoized handlers to prevent unnecessary re-renders
+    const handleYearSelectMemo = useCallback((year: number) => {
+      handleYearSelect(year);
+    }, [handleYearSelect]);
+    
+    const handleCellPressMemo = useCallback((year: number, month?: number, week?: number) => {
+      handleCellPress(year, month, week);
+    }, [handleCellPress]);
+    
+    const handleCellLongPressMemo = useCallback((year: number, month?: number, week?: number, position?: Position) => {
+      handleCellLongPress(year, month, week, position);
+    }, [handleCellLongPress]);
+    
+    const handleClusterPressMemo = useCallback((year: number, position: Position) => {
+      openMonthExpandedView(year, position);
+    }, [openMonthExpandedView]);
+    
+    switch (activeViewMode) {
       case 'years':
         return (
           <YearGridView
             clusters={clusters}
-            onCellPress={handleCellPress}
-            onLongPress={handleCellLongPress}
-            onClusterPress={(year, position) => {
-              handleYearSelect(year);
-            }}
+            onCellPress={handleCellPressMemo}
+            onLongPress={handleCellLongPressMemo}
+            onClusterPress={handleYearSelectMemo}
             hasContent={hasContent}
           />
         );
@@ -321,12 +358,9 @@ export default function GridContainer() {
         return (
           <MonthGridView
             clusters={clusters}
-            onCellPress={handleCellPress}
-            onLongPress={handleCellLongPress}
-            onClusterPress={(year, position) => {
-              // Open our custom MonthExpandedView
-              openMonthExpandedView(year);
-            }}
+            onCellPress={handleCellPressMemo}
+            onLongPress={handleCellLongPressMemo}
+            onClusterPress={handleClusterPressMemo}
             hasContent={hasContent}
           />
         );
@@ -334,11 +368,10 @@ export default function GridContainer() {
         return (
           <WeekGridView
             clusters={clusters}
-            onCellPress={handleCellPress}
-            onLongPress={handleCellLongPress}
+            onCellPress={handleCellPressMemo}
+            onLongPress={handleCellLongPressMemo}
             onClusterPress={(year, position) => {
               // WeekGridView now handles expanded view internally
-              // We still need to pass the handler for position tracking
             }}
             hasContent={hasContent}
           />
@@ -346,8 +379,16 @@ export default function GridContainer() {
       default:
         return null;
     }
-  }, [viewMode, handleYearSelect, handleCellLongPress, handleCellPress, clusters, hasContent, openMonthExpandedView]);
-
+  }, [
+    activeViewMode, 
+    clusters, 
+    hasContent,
+    handleCellPress,
+    handleCellLongPress,
+    handleYearSelect,
+    openMonthExpandedView
+  ]);
+  
   // Render month expanded view with enhanced animation
   const renderMonthExpandedView = useCallback(() => {
     if (!monthViewVisible) return null;
@@ -428,10 +469,10 @@ export default function GridContainer() {
         </View>
       </View>
       
-      {/* Main content area */}
-      <View style={styles.gridContainer}>
+      {/* Grid view with fade animation */}
+      <Animated.View style={[styles.gridContainer, { opacity: fadeAnim }]}>
         {renderGridView()}
-      </View>
+      </Animated.View>
       
       {/* Month expanded view */}
       {renderMonthExpandedView()}
@@ -546,5 +587,10 @@ const styles = StyleSheet.create({
   detailViewOverlay: {
     backgroundColor: 'rgba(0, 0, 0, 0.7)',
     zIndex: 1000,
+  },
+  loadingContainer: {
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    borderRadius: 10,
+    padding: 20,
   },
 });
