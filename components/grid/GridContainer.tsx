@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, Pressable, Dimensions, Alert, Modal, TouchableWithoutFeedback, useWindowDimensions, ActivityIndicator, Animated } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Dimensions, Alert, Modal as RNModal, TouchableWithoutFeedback, useWindowDimensions, ActivityIndicator, Animated } from 'react-native';
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { MotiView } from 'moti';
 import { ScrollView } from 'react-native';
@@ -16,6 +16,7 @@ import YearGridView from './years/YearGridView';
 import MonthGridView from './months/MonthGridView';
 import WeekGridView from './weeks/WeekGridView';
 import MonthExpandedView from './months/MonthExpandedView';
+import WeekExpandedView from './weeks/WeekExpandedView';
 import BottomSheet from '../ui/BottomSheet';
 import CellDetailView from './CellDetailView';
 import ViewModeToggle from '../ui/ViewModeToggle';
@@ -62,6 +63,8 @@ export default function GridContainer() {
   const [quickAddPosition, setQuickAddPosition] = useState<Position>({ x: 0, y: 0 });
   const [monthViewVisible, setMonthViewVisible] = useState(false);
   const [selectedYearForMonthView, setSelectedYearForMonthView] = useState<number | null>(null);
+  const [weekViewVisible, setWeekViewVisible] = useState(false);
+  const [selectedYearForWeekView, setSelectedYearForWeekView] = useState<number | null>(null);
   const [selectedClusterPosition, setSelectedClusterPosition] = useState({ x: 0, y: 0 });
   const [fromMonthView, setFromMonthView] = useState(false);
   
@@ -76,6 +79,11 @@ export default function GridContainer() {
   const expandedViewOpacity = useSharedValue(0);
   const expandedViewScale = useSharedValue(0.95);
   const expandedViewTranslateY = useSharedValue(100);
+  
+  // Animation values for week expanded view
+  const weekExpandedViewOpacity = useSharedValue(0);
+  const weekExpandedViewScale = useSharedValue(0.95);
+  const weekExpandedViewTranslateY = useSharedValue(100);
   
   // Animation values for cell detail view
   const detailViewOpacity = useSharedValue(0);
@@ -117,6 +125,17 @@ export default function GridContainer() {
   const detailViewOverlayAnimatedStyles = useAnimatedStyle(() => {
     return {
       opacity: detailViewOpacity.value * 0.7, // Dim the background
+    };
+  });
+  
+  // Animated styles for week expanded view
+  const weekExpandedViewAnimatedStyles = useAnimatedStyle(() => {
+    return {
+      opacity: weekExpandedViewOpacity.value,
+      transform: [
+        { scale: weekExpandedViewScale.value },
+        { translateY: weekExpandedViewTranslateY.value }
+      ],
     };
   });
   
@@ -233,38 +252,38 @@ export default function GridContainer() {
   }, []);
   
   // Open month expanded view with animation
-  const openMonthExpandedView = useCallback((year: number, position?: Position) => {
-    // Store the position of the cluster that was clicked for origin-based animation
-    if (position) {
-      setSelectedClusterPosition(position);
-    }
-    
+  const openMonthExpandedView = (year: number, position?: { x: number, y: number, width: number, height: number }) => {
     setSelectedYearForMonthView(year);
     
-    // Start animations
+    // Reset animation values
     expandedViewOpacity.value = 0;
-    expandedViewScale.value = 0.95;
-    expandedViewTranslateY.value = 50;
+    expandedViewScale.value = 0.9;
+    expandedViewTranslateY.value = 20;
     
-    // Animate in the expanded view
-    expandedViewOpacity.value = withTiming(1, { duration: 300, easing: Easing.out(Easing.ease) });
-    expandedViewScale.value = withSpring(1, { damping: 15, stiffness: 100 });
-    expandedViewTranslateY.value = withTiming(0, { duration: 300, easing: Easing.out(Easing.ease) });
-    
+    // Make the view visible immediately
     setMonthViewVisible(true);
-  }, []);
+    
+    // Use requestAnimationFrame to ensure the view is mounted before starting animations
+    requestAnimationFrame(() => {
+      // Start animations
+      expandedViewOpacity.value = withTiming(1, { duration: 300 });
+      expandedViewScale.value = withTiming(1, { duration: 300 });
+      expandedViewTranslateY.value = withTiming(0, { duration: 300 });
+    });
+  };
 
   // Close month expanded view with animation
-  const closeMonthExpandedView = useCallback(() => {
-    // Animate out
-    expandedViewOpacity.value = withTiming(0, { duration: 250, easing: Easing.in(Easing.ease) }, () => {
-      // When animation is complete, hide the view
-      runOnJS(setMonthViewVisible)(false);
-      runOnJS(setSelectedYearForMonthView)(null);
-    });
-    expandedViewScale.value = withTiming(0.95, { duration: 250 });
-    expandedViewTranslateY.value = withTiming(50, { duration: 250 });
-  }, []);
+  const closeMonthExpandedView = () => {
+    // Start animations
+    expandedViewOpacity.value = withTiming(0, { duration: 200 });
+    expandedViewScale.value = withTiming(0.9, { duration: 200 });
+    expandedViewTranslateY.value = withTiming(20, { duration: 200 });
+    
+    // Hide the view after animations complete
+    setTimeout(() => {
+      setMonthViewVisible(false);
+    }, 200);
+  };
 
   // Handle month press in the expanded view
   const handleMonthPress = useCallback((month: number) => {
@@ -333,7 +352,49 @@ export default function GridContainer() {
     }
   }, [viewMode, activeViewMode, fadeAnim]);
   
-  // Modify the renderGridView function to use the activeViewMode instead of viewMode
+  // Open week expanded view with animation
+  const openWeekExpandedView = (year: number, position?: { x: number, y: number, width: number, height: number }) => {
+    setSelectedYearForWeekView(year);
+    
+    // Reset animation values
+    weekExpandedViewOpacity.value = 0;
+    weekExpandedViewScale.value = 0.9;
+    weekExpandedViewTranslateY.value = 20;
+    
+    // Make the view visible immediately
+    setWeekViewVisible(true);
+    
+    // Use requestAnimationFrame to ensure the view is mounted before starting animations
+    requestAnimationFrame(() => {
+      // Start animations
+      weekExpandedViewOpacity.value = withTiming(1, { duration: 300 });
+      weekExpandedViewScale.value = withTiming(1, { duration: 300 });
+      weekExpandedViewTranslateY.value = withTiming(0, { duration: 300 });
+    });
+  };
+
+  // Close week expanded view with animation
+  const closeWeekExpandedView = () => {
+    // Start animations
+    weekExpandedViewOpacity.value = withTiming(0, { duration: 200 });
+    weekExpandedViewScale.value = withTiming(0.9, { duration: 200 });
+    weekExpandedViewTranslateY.value = withTiming(20, { duration: 200 });
+    
+    // Hide the view after animations complete
+    setTimeout(() => {
+      setWeekViewVisible(false);
+    }, 200);
+  };
+
+  // Handle week press in the expanded view
+  const handleWeekPress = useCallback((week: number) => {
+    if (selectedYearForWeekView !== null) {
+      handleCellPress(selectedYearForWeekView, undefined, week);
+      closeWeekExpandedView();
+    }
+  }, [selectedYearForWeekView, handleCellPress]);
+  
+  // Render the grid view based on the current view mode
   const renderGridView = useCallback(() => {
     switch (activeViewMode) {
       case 'years':
@@ -355,58 +416,67 @@ export default function GridContainer() {
             onCellPress={handleCellPress}
             onLongPress={handleCellLongPress}
             onClusterPress={(year, position) => {
-              // Open our custom MonthExpandedView
-              openMonthExpandedView(year);
+              console.log('Month cluster pressed:', year, position);
+              // Open our custom MonthExpandedView with position
+              openMonthExpandedView(year, position);
             }}
             hasContent={hasContent}
           />
         );
       case 'weeks':
         return (
-          <WeekGridView
+          <WeekGridView 
             clusters={clusters}
             onCellPress={handleCellPress}
             onLongPress={handleCellLongPress}
-            onClusterPress={(year, position) => {
-              // WeekGridView now handles expanded view internally
-              // We still need to pass the handler for position tracking
-            }}
+            onClusterPress={openWeekExpandedView}
             hasContent={hasContent}
           />
         );
       default:
         return null;
     }
-  }, [activeViewMode, handleYearSelect, handleCellLongPress, handleCellPress, clusters, hasContent, openMonthExpandedView]);
+  }, [activeViewMode, handleYearSelect, handleCellLongPress, handleCellPress, clusters, hasContent, openMonthExpandedView, openWeekExpandedView]);
   
-  // Render month expanded view with enhanced animation
-  const renderMonthExpandedView = useCallback(() => {
+  // Render the month expanded view
+  const renderMonthExpandedView = () => {
     if (!monthViewVisible) return null;
     
     return (
-      <View style={styles.animatedModalContainer}>
-        <Reanimated.View 
-          style={[styles.modalOverlay, expandedViewOverlayAnimatedStyles]} 
-          pointerEvents="auto"
-        >
-          <Pressable 
-            style={{ flex: 1 }} 
-            onPress={closeMonthExpandedView}
-          />
-        </Reanimated.View>
-        
-        <Reanimated.View style={[styles.expandedViewContainer, expandedViewAnimatedStyles]}>
-          {selectedYearForMonthView !== null && (
-            <MonthExpandedView
-              year={selectedYearForMonthView}
-              onClose={closeMonthExpandedView}
-              onMonthPress={handleMonthPress}
-            />
-          )}
-        </Reanimated.View>
-      </View>
+      <Reanimated.View 
+        style={[
+          styles.expandedViewContainer,
+          expandedViewAnimatedStyles
+        ]}
+      >
+        <MonthExpandedView 
+          year={selectedYearForMonthView || 0} 
+          onMonthPress={(month) => handleMonthPress(selectedYearForMonthView || 0, month)}
+          onClose={closeMonthExpandedView}
+        />
+      </Reanimated.View>
     );
-  }, [monthViewVisible, selectedYearForMonthView, closeMonthExpandedView, handleMonthPress, expandedViewAnimatedStyles, expandedViewOverlayAnimatedStyles]);
+  };
+  
+  // Render week expanded view
+  const renderWeekExpandedView = () => {
+    if (!weekViewVisible) return null;
+    
+    return (
+      <Reanimated.View 
+        style={[
+          styles.expandedViewContainer,
+          weekExpandedViewAnimatedStyles
+        ]}
+      >
+        <WeekExpandedView 
+          year={selectedYearForWeekView || 0} 
+          onWeekPress={handleWeekPress}
+          onClose={closeWeekExpandedView}
+        />
+      </Reanimated.View>
+    );
+  };
   
   // Render the cell detail view if a cell is selected with enhanced animation
   const renderCellDetailView = useCallback(() => {
@@ -466,6 +536,9 @@ export default function GridContainer() {
       
       {/* Month expanded view */}
       {renderMonthExpandedView()}
+      
+      {/* Week expanded view */}
+      {renderWeekExpandedView()}
       
       {/* Cell detail view */}
       {renderCellDetailView()}
@@ -557,22 +630,39 @@ const styles = StyleSheet.create({
   gridContainer: {
     flex: 1,
   },
-  animatedModalContainer: {
-    ...StyleSheet.absoluteFillObject,
+  modalContainer: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     zIndex: 1000,
   },
   modalOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
   },
-  expandedViewContainer: {
+  modalContent: {
     width: '90%',
     maxHeight: '80%',
     backgroundColor: '#1C1C1E',
     borderRadius: 16,
     overflow: 'hidden',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    zIndex: 10,
+    borderWidth: 1,
+    borderColor: '#3A3A3C',
   },
   detailViewOverlay: {
     backgroundColor: 'rgba(0, 0, 0, 0.7)',
@@ -582,5 +672,22 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.7)',
     borderRadius: 10,
     padding: 20,
+  },
+  expandedViewContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 1000,
+  },
+  monthViewOpacity: {
+    opacity: 0,
+  },
+  monthViewScale: {
+    scale: 0.9,
+  },
+  monthViewTranslateY: {
+    translateY: 20,
   },
 });

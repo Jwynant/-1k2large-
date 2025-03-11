@@ -5,7 +5,6 @@ import { FlashList } from '@shopify/flash-list';
 import WeekCluster from './WeekCluster';
 import { useDateCalculations } from '../../../app/hooks/useDateCalculations';
 import { useAppContext } from '../../../app/context/AppContext';
-import WeekExpandedView from './WeekExpandedView';
 import { useResponsiveLayout } from '../../../app/hooks/useResponsiveLayout';
 
 // Define a cluster type for better type safety
@@ -38,7 +37,6 @@ function WeekGridView({
   const { state } = useAppContext();
   const { horizontalPadding } = useResponsiveLayout();
   const { height: windowHeight } = useWindowDimensions();
-  const [expandedCluster, setExpandedCluster] = useState<number | null>(null);
   
   // Create a ref for the FlashList
   const flashListRef = useRef<FlashList<RowItem>>(null);
@@ -140,7 +138,7 @@ function WeekGridView({
 
   // Scroll to center the current row after initial render
   useEffect(() => {
-    if (flashListRef.current && rowData.length > 0 && !hasScrolledRef.current && !expandedCluster) {
+    if (flashListRef.current && rowData.length > 0 && !hasScrolledRef.current) {
       // Use a small timeout to ensure the list is fully rendered before scrolling
       const timer = setTimeout(() => {
         const offset = calculateCenteredOffset();
@@ -150,30 +148,28 @@ function WeekGridView({
       
       return () => clearTimeout(timer);
     }
-  }, [rowData, calculateCenteredOffset, expandedCluster]);
+  }, [rowData, calculateCenteredOffset]);
 
   // Reset scroll flag when data changes significantly
   useEffect(() => {
     hasScrolledRef.current = false;
   }, [clusters.length]);
 
+  // Handle cluster press to open expanded view
   const handleClusterPress = useCallback((year: number, position: { x: number, y: number, width: number, height: number }) => {
+    // Call the onClusterPress prop which will be handled by GridContainer
     onClusterPress(year, position);
-    setExpandedCluster(year);
   }, [onClusterPress]);
   
-  const handleCloseExpanded = useCallback(() => {
-    setExpandedCluster(null);
-    // Reset scroll flag to allow re-centering when returning from expanded view
-    hasScrolledRef.current = false;
+  // Handle week press in expanded view - this is now handled by GridContainer
+  const handleWeekPress = useCallback((week: number) => {
+    // This is now handled by GridContainer
   }, []);
   
-  const handleWeekPress = useCallback((week: number) => {
-    if (expandedCluster !== null) {
-      onCellPress(expandedCluster, undefined, week);
-      setExpandedCluster(null);
-    }
-  }, [expandedCluster, onCellPress]);
+  // Handle close expanded view - this is now handled by GridContainer
+  const handleCloseExpanded = useCallback(() => {
+    // This is now handled by GridContainer
+  }, []);
 
   // Render a row item for FlashList
   const renderRow = useCallback(({ item }: { item: RowItem }) => {
@@ -218,16 +214,6 @@ function WeekGridView({
 
   // Key extractor for FlashList
   const keyExtractor = useCallback((item: RowItem) => item.id, []);
-
-  if (expandedCluster !== null) {
-    return (
-      <WeekExpandedView 
-        year={expandedCluster}
-        onClose={handleCloseExpanded}
-        onWeekPress={handleWeekPress}
-      />
-    );
-  }
 
   // Fallback if no rows were calculated
   if (rowData.length === 0) {

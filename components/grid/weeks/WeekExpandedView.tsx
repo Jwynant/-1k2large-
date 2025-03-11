@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useContentManagement } from '../../../app/hooks/useContentManagement';
 import { useDateCalculations } from '../../../app/hooks/useDateCalculations';
 import CellContentIndicator from '../CellContentIndicator';
+import Animated, { FadeIn } from 'react-native-reanimated';
 
 interface WeekExpandedViewProps {
   year: number;
@@ -50,7 +51,6 @@ export default function WeekExpandedView({ year, onClose, onWeekPress }: WeekExp
       
       // Current date for comparison
       const today = new Date();
-      const currentYear = today.getFullYear();
       const currentWeek = getWeekNumber(today);
       
       // Calculate total weeks lived
@@ -99,78 +99,104 @@ export default function WeekExpandedView({ year, onClose, onWeekPress }: WeekExp
   const cellsPerRow = 4;
   const rowCount = 13;
   const cellMargin = 2;
-  const containerPadding = 16;
+  const containerPadding = 14;
   const headerHeight = 80;
-  const footerSpace = 120;
-  const additionalPadding = 20;
+  const footerSpace = 110;
+  const additionalPadding = 15;
   
   // Calculate available space
   const availableWidth = width - (containerPadding * 2) - additionalPadding;
   const availableHeight = height - headerHeight - footerSpace - (containerPadding * 2) - additionalPadding;
   
   // Calculate cell size based on available space
-  const cellWidthFromWidth = (availableWidth / cellsPerRow) - (cellMargin * 3);
-  const cellHeightFromHeight = (availableHeight / rowCount) - (cellMargin * 3);
+  const cellWidthFromWidth = (availableWidth / cellsPerRow) - (cellMargin * 2);
+  const cellHeightFromHeight = (availableHeight / rowCount) - (cellMargin * 2);
   
   // Use the smaller dimension to ensure cells are square and fit within both width and height constraints
-  // Add a size reduction factor to ensure everything fits
-  const cellSize = Math.min(cellWidthFromWidth, cellHeightFromHeight) * 0.8;
+  // Adjusted size factor from 0.9 to 0.85 to make cells slightly smaller
+  const cellSize = Math.min(cellWidthFromWidth, cellHeightFromHeight) * 0.85;
+
+  const handleBackPress = () => {
+    onClose();
+  };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.yearLabelContainer}>
-          <Text style={styles.yearLabel}>{year}</Text>
+    <Animated.View 
+      style={styles.container}
+      entering={FadeIn.duration(300)}
+    >
+      <SafeAreaView style={{ flex: 1 }}>
+        <View style={styles.topBuffer} />
+        <View style={styles.content}>
+          <View style={styles.header}>
+            <TouchableOpacity 
+              style={styles.backButton}
+              onPress={handleBackPress}
+              hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+            >
+              <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
+            </TouchableOpacity>
+            <View style={styles.titleContainer}>
+              <Text style={styles.yearTitle}>{year}</Text>
+              <Text style={styles.ageTitle}>
+                {isPastYear && `Age ${currentYear - year}`}
+                {isFutureYear && `In ${Math.abs(currentYear - year)} years`}
+                {!isPastYear && !isFutureYear && 'Current Year'}
+              </Text>
+            </View>
+            <View style={{ width: 40 }} />
+          </View>
+          <ScrollView 
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={styles.gridContainer}>
+              <View style={[
+                styles.weeksGrid,
+                { width: (cellSize + cellMargin * 2) * cellsPerRow, maxHeight: (cellSize + cellMargin * 2) * rowCount }
+              ]}>
+                {weeks.map((week) => {
+                  // Determine cell style based on year and week
+                  let cellStyle;
+                  
+                  if (isPastYear || week.isPast) {
+                    // Past years or past weeks - white fill
+                    cellStyle = styles.pastCell;
+                  } else if (week.isCurrent) {
+                    // Current week - blue border
+                    cellStyle = styles.currentCell;
+                  } else {
+                    // Future weeks - white border
+                    cellStyle = styles.futureCell;
+                  }
+                  
+                  return (
+                    <TouchableOpacity
+                      key={week.index}
+                      style={[
+                        styles.weekCell,
+                        { width: cellSize, height: cellSize, margin: cellMargin },
+                        cellStyle
+                      ]}
+                      onPress={() => onWeekPress(week.index)}
+                    >
+                      {week.hasContent && (
+                        <View style={styles.contentIndicatorContainer}>
+                          <CellContentIndicator 
+                            content={week.content} 
+                            size="small" 
+                          />
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+          </ScrollView>
         </View>
-        <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-          <Ionicons name="close" size={24} color="#FFFFFF" />
-        </TouchableOpacity>
-      </View>
-      
-      <View style={styles.gridContainer}>
-        <View style={[
-          styles.weeksGrid,
-          { width: (cellSize + cellMargin * 2) * cellsPerRow, maxHeight: (cellSize + cellMargin * 2) * rowCount }
-        ]}>
-          {weeks.map((week) => {
-            // Determine cell style based on year and week
-            let cellStyle;
-            
-            if (isPastYear || week.isPast) {
-              // Past years or past weeks - white fill
-              cellStyle = styles.pastCell;
-            } else if (week.isCurrent) {
-              // Current week - blue border
-              cellStyle = styles.currentCell;
-            } else {
-              // Future weeks - white border
-              cellStyle = styles.futureCell;
-            }
-            
-            return (
-              <TouchableOpacity
-                key={week.index}
-                style={[
-                  styles.weekCell,
-                  { width: cellSize, height: cellSize, margin: cellMargin },
-                  cellStyle
-                ]}
-                onPress={() => onWeekPress(week.index)}
-              >
-                {week.hasContent && (
-                  <View style={styles.contentIndicatorContainer}>
-                    <CellContentIndicator 
-                      content={week.content} 
-                      size="small" 
-                    />
-                  </View>
-                )}
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </View>
-    </SafeAreaView>
+      </SafeAreaView>
+    </Animated.View>
   );
 }
 
@@ -179,31 +205,56 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#121212',
   },
+  topBuffer: {
+    height: 30,
+  },
+  content: {
+    flex: 1,
+  },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    height: 60,
+    paddingVertical: 16,
+    marginBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#2C2C2E',
   },
-  yearLabelContainer: {
-    alignItems: 'flex-start',
+  backButton: {
+    padding: 10,
+    backgroundColor: 'rgba(60, 60, 67, 0.3)',
+    borderRadius: 20,
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  yearLabel: {
-    fontSize: 22,
+  titleContainer: {
+    alignItems: 'center',
+  },
+  yearTitle: {
+    fontSize: 24,
     fontWeight: '700',
     color: '#FFFFFF',
+    marginBottom: 4,
   },
-  closeButton: {
-    padding: 8,
+  ageTitle: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#AEAEB2',
+  },
+  scrollContent: {
+    flexGrow: 1,
+    alignItems: 'center',
+    paddingTop: 8,
   },
   gridContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 6,
   },
   weeksGrid: {
     flexDirection: 'row',

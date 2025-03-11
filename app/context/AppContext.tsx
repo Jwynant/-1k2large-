@@ -103,7 +103,11 @@ function appReducer(state: AppState, action: AppAction): AppState {
     case 'SELECT_WEEK':
       return { ...state, selectedWeek: action.payload };
     case 'SELECT_CELL':
-      return { ...state, selectedCell: action.payload };
+      console.log('AppContext - SELECT_CELL action received:', action.payload);
+      console.log('AppContext - Current selectedCell:', state.selectedCell);
+      const newCellState = { ...state, selectedCell: action.payload };
+      console.log('AppContext - New selectedCell:', newCellState.selectedCell);
+      return newCellState;
     case 'ADD_CONTENT_ITEM':
       console.log('AppContext - ADD_CONTENT_ITEM action received:', action.payload.id);
       console.log('AppContext - Current contentItems count:', state.contentItems.length);

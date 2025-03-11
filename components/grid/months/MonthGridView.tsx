@@ -174,11 +174,13 @@ function MonthGridView({
             }
             
             return (
-              <MonthCluster 
-                key={cluster.year} 
-                year={cluster.year} 
+              <MonthCluster
+                key={`month-cluster-${item.rowIndex}-${colIndex}`}
+                year={cluster.year}
                 isCurrent={cluster.isCurrent}
-                onPress={(position) => onClusterPress(cluster.year, position)}
+                onPress={(position) => {
+                  onClusterPress(cluster.year, position);
+                }}
                 onCellPress={(month: number) => onCellPress(cluster.year, month)}
                 onLongPress={(month: number, position: { x: number, y: number }) => 
                   onLongPress(cluster.year, month, undefined, position)

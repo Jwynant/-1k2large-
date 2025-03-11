@@ -24,11 +24,13 @@ export function useGridNavigation() {
   
   // Handle cell press
   const handleCellPress = useCallback((year: number, month?: number, week?: number) => {
+    console.log('useGridNavigation: handleCellPress called with year:', year, 'month:', month, 'week:', week);
     // Handle cell press in all view modes
     dispatch({ 
       type: 'SELECT_CELL', 
       payload: { year, month, week } 
     });
+    console.log('useGridNavigation: Cell selected, payload:', { year, month, week });
   }, [dispatch]);
   
   // Handle view mode change

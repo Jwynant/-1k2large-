@@ -31,8 +31,10 @@ function MonthCluster({
   }, [onCellPress]);
 
   const handlePress = useCallback(() => {
+    console.log('MonthCluster pressed for year:', year);
     if (onPress && clusterRef.current) {
       clusterRef.current.measure((x, y, width, height, pageX, pageY) => {
+        console.log('MonthCluster position measured:', { x: pageX, y: pageY, width, height });
         onPress({
           x: pageX,
           y: pageY,
@@ -41,7 +43,7 @@ function MonthCluster({
         });
       });
     }
-  }, [onPress]);
+  }, [onPress, year]);
 
   const handleLongPress = useCallback((event: any) => {
     if (onLongPress) {

@@ -137,7 +137,7 @@ export default function MonthExpandedView({ year, onClose, onMonthPress }: Month
           </TouchableOpacity>
           <Animated.View 
             style={styles.titleContainer}
-            entering={FadeIn.delay(100).duration(300)}
+            entering={FadeIn.delay(50).duration(300)}
           >
             <Text style={styles.yearTitle}>{year}</Text>
             <Text style={styles.ageTitle}>Age {age}</Text>
@@ -168,7 +168,7 @@ export default function MonthExpandedView({ year, onClose, onMonthPress }: Month
                     cellStyle = styles.pastCell;
                     textStyle = styles.pastCellText;
                   } else if (month.isCurrent) {
-                    // Current month - transparent with blue border and white text
+                    // Current month - blue fill with white text
                     cellStyle = styles.currentCell;
                     textStyle = styles.currentCellText;
                   } else {
