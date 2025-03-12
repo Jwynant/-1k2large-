@@ -29,6 +29,10 @@ export default function GridHeader({ preciseAge, currentMode, onModeChange }: Gr
         colors={isDark ? ['#1C1C1E', '#2C2C2E'] : ['#F2F2F7', '#FFFFFF']}
         start={{ x: 0, y: 0 }}
         end={{ x: 0, y: 1 }}
+        style={[
+          styles.headerGradient,
+          { paddingTop: spacing.xxl }
+        ]}
       >
         <View style={[styles.header, { paddingTop: spacing.xs, paddingBottom: spacing.xs }]}>
           <View 
@@ -108,6 +112,9 @@ export default function GridHeader({ preciseAge, currentMode, onModeChange }: Gr
 }
 
 const styles = StyleSheet.create({
+  headerGradient: {
+    width: '100%',
+  },
   header: {
     alignItems: 'center',
     paddingHorizontal: 16,

@@ -28,19 +28,19 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 // Define priority level colors outside the component to avoid recreation
 const PRIORITY_COLORS = {
   essential: {
-    main: '#34C759', // More vibrant green
-    background: 'rgba(52, 199, 89, 0.1)',
-    border: 'rgba(52, 199, 89, 0.3)',
+    main: '#FFD700', // Gold
+    background: 'rgba(255, 215, 0, 0.1)',
+    border: 'rgba(255, 215, 0, 0.3)',
   },
   important: {
-    main: '#007AFF', // iOS blue
-    background: 'rgba(0, 122, 255, 0.1)',
-    border: 'rgba(0, 122, 255, 0.3)',
+    main: '#C0C0C0', // Silver
+    background: 'rgba(192, 192, 192, 0.1)',
+    border: 'rgba(192, 192, 192, 0.3)',
   },
   supplemental: {
-    main: '#FF9500', // iOS orange
-    background: 'rgba(255, 149, 0, 0.1)',
-    border: 'rgba(255, 149, 0, 0.3)',
+    main: '#CD7F32', // Bronze
+    background: 'rgba(205, 127, 50, 0.1)',
+    border: 'rgba(205, 127, 50, 0.3)',
   },
 };
 
@@ -311,7 +311,7 @@ export default function SimplifiedFocusAreas() {
     <View style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerTitleContainer}>
-          <Ionicons name="compass" size={22} color="#34C759" style={styles.headerIcon} />
+          <Ionicons name="compass" size={22} color="#FFD700" style={styles.headerIcon} />
           <Text style={styles.headerTitle}>Focus Areas</Text>
         </View>
       </View>

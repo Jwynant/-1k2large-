@@ -58,14 +58,42 @@ export default function LessonCard({
       style={styles.container}
       onPress={onPress}
     >
-      {/* Header */}
+      {/* Header - Title only now */}
       <View style={styles.header}>
-        <View style={styles.titleContainer}>
-          <Text style={styles.title} numberOfLines={2}>
-            {lesson.title}
-          </Text>
+        <Text style={styles.title} numberOfLines={3}>
+          {lesson.title}
+        </Text>
+      </View>
+      
+      {/* Notes */}
+      {lesson.notes && lesson.notes.trim() !== '' && (
+        <Text style={styles.notes} numberOfLines={3}>
+          {lesson.notes}
+        </Text>
+      )}
+      
+      {/* Footer */}
+      <View style={styles.footer}>
+        <View style={styles.footerInfo}>
+          <View style={styles.dateContainer}>
+            <Ionicons name="calendar-outline" size={14} color="#8E8E93" />
+            <Text style={styles.dateText}>
+              {format(new Date(lesson.date), 'MMM d, yyyy')}
+            </Text>
+          </View>
+          
+          {reminderText && (
+            <View style={styles.reminderContainer}>
+              <Ionicons name="notifications-outline" size={14} color="#8E8E93" />
+              <Text style={styles.reminderText}>
+                {reminderText}
+                {recurringText && ` (${recurringText})`}
+              </Text>
+            </View>
+          )}
         </View>
         
+        {/* Action buttons now in the footer */}
         <View style={styles.actions}>
           {onEdit && (
             <Pressable 
@@ -88,33 +116,6 @@ export default function LessonCard({
           )}
         </View>
       </View>
-      
-      {/* Notes */}
-      {lesson.notes && lesson.notes.trim() !== '' && (
-        <Text style={styles.notes} numberOfLines={3}>
-          {lesson.notes}
-        </Text>
-      )}
-      
-      {/* Footer */}
-      <View style={styles.footer}>
-        <View style={styles.dateContainer}>
-          <Ionicons name="calendar-outline" size={14} color="#8E8E93" />
-          <Text style={styles.dateText}>
-            {format(new Date(lesson.date), 'MMM d, yyyy')}
-          </Text>
-        </View>
-        
-        {reminderText && (
-          <View style={styles.reminderContainer}>
-            <Ionicons name="notifications-outline" size={14} color="#8E8E93" />
-            <Text style={styles.reminderText}>
-              {reminderText}
-              {recurringText && ` (${recurringText})`}
-            </Text>
-          </View>
-        )}
-      </View>
     </Pressable>
   );
 }
@@ -129,33 +130,13 @@ const styles = StyleSheet.create({
     borderLeftColor: '#FFCC00',
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
     marginBottom: 8,
-  },
-  titleContainer: {
-    flex: 1,
-    marginRight: 8,
   },
   title: {
     fontSize: 16,
     fontWeight: '600',
     color: '#FFFFFF',
     lineHeight: 20,
-  },
-  actions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  actionButton: {
-    width: 28,
-    height: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: 4,
-    borderRadius: 14,
-    backgroundColor: 'rgba(44, 44, 46, 0.6)',
   },
   notes: {
     fontSize: 14,
@@ -166,9 +147,26 @@ const styles = StyleSheet.create({
   },
   footer: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'center',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
     marginTop: 4,
+  },
+  footerInfo: {
+    flex: 1,
+  },
+  actions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 8,
+  },
+  actionButton: {
+    width: 28,
+    height: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 4,
+    borderRadius: 14,
+    backgroundColor: 'rgba(44, 44, 46, 0.6)',
   },
   dateContainer: {
     flexDirection: 'row',

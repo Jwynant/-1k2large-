@@ -514,7 +514,7 @@ export default function GridContainer() {
   }, [detailSheetVisible, selectedCell, handleCellDetailClose, detailViewOverlayAnimatedStyles, fromMonthView, handleBackToMonthView]);
   
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+    <SafeAreaView style={styles.container} edges={['left', 'right']}>
       {/* Use our new GridHeader component */}
       <GridHeader 
         preciseAge={preciseAge}

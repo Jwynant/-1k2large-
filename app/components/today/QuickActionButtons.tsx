@@ -7,7 +7,6 @@ import {
   useColorScheme,
   Dimensions
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -81,12 +80,6 @@ export default function QuickActionButtons(props: QuickActionButtonsProps) {
           end={{ x: 1, y: 1 }}
           style={styles.buttonGradient}
         >
-          <View 
-            style={styles.iconContainer}
-            accessibilityLabel="Memory icon"
-          >
-            <Ionicons name="image" size={18} color="#FFFFFF" />
-          </View>
           <Text style={styles.actionButtonText} numberOfLines={1}>
             Memory
           </Text>
@@ -109,12 +102,6 @@ export default function QuickActionButtons(props: QuickActionButtonsProps) {
           end={{ x: 1, y: 1 }}
           style={styles.buttonGradient}
         >
-          <View 
-            style={styles.iconContainer}
-            accessibilityLabel="Goal icon"
-          >
-            <Ionicons name="flag" size={18} color="#FFFFFF" />
-          </View>
           <Text style={styles.actionButtonText} numberOfLines={1}>
             Goal
           </Text>
@@ -137,12 +124,6 @@ export default function QuickActionButtons(props: QuickActionButtonsProps) {
           end={{ x: 1, y: 1 }}
           style={styles.buttonGradient}
         >
-          <View 
-            style={styles.iconContainer}
-            accessibilityLabel="Lesson icon"
-          >
-            <Ionicons name="school" size={18} color="#FFFFFF" />
-          </View>
           <Text style={styles.actionButtonText} numberOfLines={1}>
             Lesson
           </Text>
@@ -171,23 +152,15 @@ const styles = StyleSheet.create({
   buttonGradient: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     paddingVertical: 10,
     paddingHorizontal: 10,
     borderRadius: 12,
-  },
-  iconContainer: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 6,
   },
   actionButtonText: {
     color: '#FFFFFF',
     fontWeight: '600',
     fontSize: 14,
-    flex: 1,
+    textAlign: 'center',
   }
 }); 

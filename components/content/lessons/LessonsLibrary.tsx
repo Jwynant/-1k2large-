@@ -165,14 +165,6 @@ export default function LessonsLibrary({ onAddLesson, isExpanded = false }: Less
             {renderAddLessonButton()}
           </View>
         )}
-        
-        {/* Add Lesson Button (always visible in the corner) */}
-        <Pressable 
-          style={styles.floatingAddButton}
-          onPress={onAddLesson}
-        >
-          <Ionicons name="add" size={22} color="#FFCC00" />
-        </Pressable>
       </View>
     </View>
   );
@@ -222,17 +214,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(142, 142, 147, 0.2)',
     marginVertical: 8,
     marginHorizontal: 12,
-  },
-  floatingAddButton: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255, 204, 0, 0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   collapsedFooter: {
     paddingVertical: 8,
