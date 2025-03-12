@@ -12,6 +12,8 @@ import Reanimated, {
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { format } from 'date-fns';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import YearGridView from './years/YearGridView';
 import MonthGridView from './months/MonthGridView';
 import WeekGridView from './weeks/WeekGridView';
@@ -24,7 +26,10 @@ import { useGridNavigation } from '../../app/hooks/useGridNavigation';
 import { useContentManagement } from '../../app/hooks/useContentManagement';
 import { useDateCalculations } from '../../app/hooks/useDateCalculations';
 import { useAppContext } from '../../app/context/AppContext';
+import { useTheme } from '../../app/context/ThemeContext';
+import { useResponsiveLayout } from '../../app/hooks/useResponsiveLayout';
 import QuickAddMenu from '../ui/QuickAddMenu';
+import GridHeader from './GridHeader';
 import { ViewMode, ViewState, ClusterPosition, SelectedCell, Cluster, DisplayMode } from '../../app/types';
 
 type Position = {
@@ -56,6 +61,9 @@ export default function GridContainer() {
     getAlignedDate,
     getYearOffset
   } = useDateCalculations();
+  
+  const { colors, isDark } = useTheme();
+  const { spacing, fontSizes, isLandscape } = useResponsiveLayout();
   
   // Local state
   const [detailSheetVisible, setDetailSheetVisible] = useState(false);
@@ -210,8 +218,13 @@ export default function GridContainer() {
   }, [getPreciseAge]);
   
   // Format current date
+  const today = new Date();
   const formattedDate = useMemo(() => {
-    return format(new Date(), 'MMMM d, yyyy');
+    return format(today, 'MMMM d, yyyy');
+  }, []);
+  
+  const dayOfWeek = useMemo(() => {
+    return format(today, 'EEEE');
   }, []);
   
   // Calculate life progress percentage using centralized method
@@ -502,32 +515,12 @@ export default function GridContainer() {
   
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerTopRow}>
-          <Text style={styles.dateText}>{formattedDate}</Text>
-        </View>
-        
-        {/* Age text */}
-        <Text style={styles.ageText}>{preciseAge}</Text>
-        
-        {/* Progress bar */}
-        <View style={styles.progressContainer}>
-          <View style={[styles.progressBar, { width: `${lifeProgressPercentage}%` }]} />
-          <View style={styles.progressBarLabels}>
-            <Text style={styles.progressText}>{Math.round(lifeProgressPercentage)}% of life lived</Text>
-            <Text style={styles.progressLifespan}>80 years</Text>
-          </View>
-        </View>
-        
-        {/* View mode toggle */}
-        <View style={styles.toggleContainer}>
-          <ViewModeToggle 
-            currentMode={viewMode}
-            onModeChange={setViewMode}
-          />
-        </View>
-      </View>
+      {/* Use our new GridHeader component */}
+      <GridHeader 
+        preciseAge={preciseAge}
+        currentMode={viewMode}
+        onModeChange={setViewMode}
+      />
       
       {/* Grid view with fade animation */}
       <Animated.View style={[styles.gridContainer, { opacity: fadeAnim }]}>
@@ -559,74 +552,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#121212', // Dark mode background
   },
-  header: {
-    padding: 8, // Further reduced padding
-    borderBottomWidth: 1,
-    borderBottomColor: '#2C2C2E', // iOS system gray 6
-  },
-  headerTopSection: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4, // Further reduced margin
-  },
-  headerDateAgeContainer: {
-    flex: 1,
-  },
-  headerTopRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    width: '100%',
-    paddingHorizontal: 16,
-  },
-  dateText: {
-    fontSize: 14, 
-    color: '#FFFFFF', // White text
-    fontWeight: '500',
-  },
-  ageText: {
-    fontSize: 28,
-    color: '#FFFFFF',
-    fontWeight: 'bold',
-    marginTop: 4,
-    paddingHorizontal: 16,
-  },
-  progressContainer: {
-    height: 6,
-    backgroundColor: '#2C2C2E',
-    borderRadius: 3,
-    marginTop: 8,
-    marginHorizontal: 16,
-    overflow: 'hidden',
-  },
-  progressBar: {
-    height: '100%',
-    backgroundColor: '#0A84FF',
-    borderRadius: 3,
-  },
-  progressBarLabels: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 4,
-    marginHorizontal: 2,
-  },
-  progressText: {
-    fontSize: 12,
-    color: '#8E8E93',
-  },
-  progressLifespan: {
-    fontSize: 12,
-    color: '#8E8E93',
-  },
-  toggleContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginTop: 8,
-  },
-  displayModeToggleContainer: {
-    alignItems: 'flex-end',
-  },
   gridContainer: {
     flex: 1,
   },
@@ -651,18 +576,21 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     width: '90%',
-    maxHeight: '80%',
-    backgroundColor: '#1C1C1E',
+    maxWidth: 400,
+    backgroundColor: '#2C2C2E',
     borderRadius: 16,
-    overflow: 'hidden',
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    zIndex: 10,
-    borderWidth: 1,
-    borderColor: '#3A3A3C',
+    padding: 20,
+    alignItems: 'center',
+  },
+  expandedViewContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
   },
   detailViewOverlay: {
     backgroundColor: 'rgba(0, 0, 0, 0.7)',
@@ -672,14 +600,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.7)',
     borderRadius: 10,
     padding: 20,
-  },
-  expandedViewContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 1000,
   },
   monthViewOpacity: {
     opacity: 0,

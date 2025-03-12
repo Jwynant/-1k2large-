@@ -61,13 +61,24 @@ describe('Today Tab', () => {
     // Check if quick action buttons are visible
     await expect(element(by.id('quick-action-buttons'))).toBeVisible();
     
-    // Test a quick action button
+    // Verify all three buttons are visible
+    await expect(element(by.id('add-memory-button'))).toBeVisible();
+    await expect(element(by.id('add-goal-button'))).toBeVisible();
+    await expect(element(by.id('add-lesson-button'))).toBeVisible();
+    
+    // Test memory button
     await element(by.id('add-memory-button')).tap();
-    
-    // Verify the memory creation screen appears
     await expect(element(by.id('memory-form'))).toBeVisible();
+    await device.pressBack();
     
-    // Go back to the Today screen
+    // Test goal button
+    await element(by.id('add-goal-button')).tap();
+    await expect(element(by.id('goal-form'))).toBeVisible();
+    await device.pressBack();
+    
+    // Test lesson button
+    await element(by.id('add-lesson-button')).tap();
+    await expect(element(by.id('lesson-form'))).toBeVisible();
     await device.pressBack();
   });
 }); 

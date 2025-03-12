@@ -12,6 +12,7 @@ import LifeProgressCard from '../components/today/LifeProgressCard';
 import GoalsDashboard from '../components/today/GoalsDashboard';
 import FocusAreasCard from '../components/today/FocusAreasCard';
 import ContentLibraryCard from '../components/today/ContentLibraryCard';
+import LessonsLibraryCard from '../components/today/LessonsLibraryCard';
 import QuickActionButtons from '../components/today/QuickActionButtons';
 import ErrorBoundary from '../components/shared/ErrorBoundary';
 
@@ -95,6 +96,10 @@ export default function TodayScreen() {
             <ErrorBoundary fallback={<ComponentErrorFallback componentName="Content Library" />}>
               <ContentLibraryCard />
             </ErrorBoundary>
+            
+            <ErrorBoundary fallback={<ComponentErrorFallback componentName="Lessons Library" />}>
+              <LessonsLibraryCard />
+            </ErrorBoundary>
           </View>
         </View>
       );
@@ -124,6 +129,10 @@ export default function TodayScreen() {
         
         <ErrorBoundary fallback={<ComponentErrorFallback componentName="Content Library" />}>
           <ContentLibraryCard />
+        </ErrorBoundary>
+        
+        <ErrorBoundary fallback={<ComponentErrorFallback componentName="Lessons Library" />}>
+          <LessonsLibraryCard />
         </ErrorBoundary>
       </>
     );

@@ -25,11 +25,23 @@ import { useRouter } from 'expo-router';
 // Get screen dimensions for responsive sizing
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-// Priority level colors - moved outside component to avoid recreation
+// Define priority level colors outside the component to avoid recreation
 const PRIORITY_COLORS = {
-  essential: '#ffd700', // Gold/Amber
-  important: '#47a9ff', // Royal Blue
-  supplemental: '#cd602a', // Bronze/Copper
+  essential: {
+    main: '#34C759', // More vibrant green
+    background: 'rgba(52, 199, 89, 0.1)',
+    border: 'rgba(52, 199, 89, 0.3)',
+  },
+  important: {
+    main: '#007AFF', // iOS blue
+    background: 'rgba(0, 122, 255, 0.1)',
+    border: 'rgba(0, 122, 255, 0.3)',
+  },
+  supplemental: {
+    main: '#FF9500', // iOS orange
+    background: 'rgba(255, 149, 0, 0.1)',
+    border: 'rgba(255, 149, 0, 0.3)',
+  },
 };
 
 // Priority level descriptions - moved outside component to avoid recreation
@@ -56,34 +68,19 @@ const PRIORITY_LABELS = {
 // Priority level styles - for enhanced visual hierarchy
 const PRIORITY_STYLES = {
   essential: {
-    backgroundColor: '#1A1700', // Darker gold background
-    borderColor: PRIORITY_COLORS.essential,
-    borderWidth: 2,
-    shadowColor: PRIORITY_COLORS.essential,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 3,
-    elevation: 5,
+    backgroundColor: PRIORITY_COLORS.essential.background,
+    borderLeftColor: PRIORITY_COLORS.essential.main,
+    borderLeftWidth: 3,
   },
   important: {
-    backgroundColor: '#001A33', // Darker blue background
-    borderColor: PRIORITY_COLORS.important,
-    borderWidth: 1.5,
-    shadowColor: PRIORITY_COLORS.important,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    elevation: 3,
+    backgroundColor: PRIORITY_COLORS.important.background,
+    borderLeftColor: PRIORITY_COLORS.important.main,
+    borderLeftWidth: 3,
   },
   supplemental: {
-    backgroundColor: '#1A0D00', // Darker bronze background
-    borderColor: PRIORITY_COLORS.supplemental,
-    borderWidth: 1,
-    shadowColor: PRIORITY_COLORS.supplemental,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 1,
-    elevation: 2,
+    backgroundColor: PRIORITY_COLORS.supplemental.background,
+    borderLeftColor: PRIORITY_COLORS.supplemental.main,
+    borderLeftWidth: 3,
   }
 };
 
@@ -95,22 +92,23 @@ const FocusAreaCard = memo(({ area, onPress }: { area: FocusArea, onPress: () =>
       style={[
         styles.focusAreaCard,
         PRIORITY_STYLES[area.priorityLevel],
-        { borderColor: area.color }
       ]}
       onPress={onPress}
       activeOpacity={0.7}
     >
-      <View style={[styles.focusColorBar, { backgroundColor: area.color }]} />
-      <Text style={styles.focusName}>
-        {area.name}
-      </Text>
-      {area.description ? (
-        <Text style={styles.focusDescription} numberOfLines={1}>
-          {area.description}
+      <View style={styles.focusAreaContent}>
+        <Text style={styles.focusName}>
+          {area.name}
         </Text>
-      ) : null}
+        {area.description ? (
+          <Text style={styles.focusDescription} numberOfLines={1}>
+            {area.description}
+          </Text>
+        ) : null}
+      </View>
       <View style={styles.priorityIndicator}>
-        <Text style={[styles.priorityIndicatorText, { color: PRIORITY_COLORS[area.priorityLevel] }]}>
+        <View style={[styles.priorityDot, { backgroundColor: PRIORITY_COLORS[area.priorityLevel].main }]} />
+        <Text style={styles.priorityIndicatorText}>
           {PRIORITY_LABELS[area.priorityLevel]}
         </Text>
       </View>
@@ -133,25 +131,13 @@ const PrioritySection = memo(({
   return (
     <View style={styles.prioritySection}>
       <View style={styles.priorityHeader}>
-        <View style={[
-          styles.priorityBadge, 
-          { backgroundColor: PRIORITY_COLORS[priority] + '30' }
-        ]}>
-          <Text style={[
-            styles.priorityBadgeText, 
-            { color: PRIORITY_COLORS[priority] }
-          ]}>
-            {PRIORITY_LABELS[priority]}
-          </Text>
-        </View>
+        <Text style={styles.priorityLabel}>
+          {PRIORITY_LABELS[priority]}
+        </Text>
         <Text style={styles.areaCount}>{areas.length} areas</Text>
       </View>
       
-      <ScrollView 
-        horizontal 
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.areasScrollContent}
-      >
+      <View style={styles.areasContainer}>
         {areas.map((area) => (
           <FocusAreaCard 
             key={area.id} 
@@ -159,7 +145,7 @@ const PrioritySection = memo(({
             onPress={onAreaPress} 
           />
         ))}
-      </ScrollView>
+      </View>
     </View>
   );
 });
@@ -292,8 +278,8 @@ export default function SimplifiedFocusAreas() {
         style={[
           styles.priorityOption,
           newFocusPriority === key && {
-            backgroundColor: PRIORITY_COLORS[key as PriorityLevel] + '30',
-            borderColor: PRIORITY_COLORS[key as PriorityLevel]
+            backgroundColor: PRIORITY_COLORS[key as PriorityLevel].background,
+            borderColor: PRIORITY_COLORS[key as PriorityLevel].border
           }
         ]}
         onPress={() => setNewFocusPriority(key as PriorityLevel)}
@@ -302,7 +288,7 @@ export default function SimplifiedFocusAreas() {
           style={[
             styles.priorityOptionText,
             newFocusPriority === key && {
-              color: PRIORITY_COLORS[key as PriorityLevel],
+              color: PRIORITY_COLORS[key as PriorityLevel].main,
               fontWeight: '600'
             }
           ]}
@@ -323,52 +309,52 @@ export default function SimplifiedFocusAreas() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.sectionHeader}>
-        <View style={styles.sectionTitleContainer}>
-          <Ionicons name="compass" size={20} color="#4CD964" style={styles.sectionIcon} />
-          <Text style={styles.sectionTitle}>Focus Areas</Text>
+      <View style={styles.header}>
+        <View style={styles.headerTitleContainer}>
+          <Ionicons name="compass" size={22} color="#34C759" style={styles.headerIcon} />
+          <Text style={styles.headerTitle}>Focus Areas</Text>
         </View>
       </View>
 
       {orderedFocusAreas.length > 0 ? (
         <View style={styles.contentContainer}>
-          {/* Focus Areas Display - Primary */}
+          {/* Focus Areas Display */}
           <View style={styles.focusAreasContainer}>
             {renderFocusAreasByPriority}
           </View>
           
-          {/* Action Buttons - Secondary */}
+          {/* Action Buttons */}
           <View style={styles.actionsContainer}>
             <TouchableOpacity 
-              style={styles.secondaryButton}
+              style={[styles.actionButton, styles.neutralButton]}
               onPress={openAddFocusModal}
             >
-              <Ionicons name="add-circle-outline" size={18} color="#0A84FF" />
-              <Text style={styles.secondaryButtonText}>Add Focus Area</Text>
+              <Ionicons name="add" size={18} color="#FFFFFF" />
+              <Text style={styles.actionButtonText}>Add Focus</Text>
             </TouchableOpacity>
             
             <TouchableOpacity 
-              style={styles.secondaryButton}
+              style={[styles.actionButton, styles.neutralButton]}
               onPress={navigateToFocusAreas}
             >
-              <Text style={styles.secondaryButtonText}>View All</Text>
-              <Ionicons name="chevron-forward" size={14} color="#0A84FF" />
+              <Ionicons name="list" size={18} color="#FFFFFF" />
+              <Text style={styles.actionButtonText}>View All</Text>
             </TouchableOpacity>
           </View>
         </View>
       ) : (
         <View style={styles.emptyState}>
-          <Ionicons name="compass-outline" size={48} color="#8E8E93" style={styles.emptyIcon} />
+          <Ionicons name="compass-outline" size={40} color="#8E8E93" style={styles.emptyIcon} />
           <Text style={styles.emptyTitle}>No Focus Areas</Text>
           <Text style={styles.emptyDescription}>
             Define what matters most to you by adding focus areas
           </Text>
           <TouchableOpacity 
-            style={styles.addButton}
+            style={[styles.actionButton, styles.neutralButton, styles.emptyStateButton]}
             onPress={openAddFocusModal}
           >
-            <Ionicons name="add" size={20} color="#FFFFFF" />
-            <Text style={styles.addButtonText}>Add Focus Area</Text>
+            <Ionicons name="add" size={18} color="#FFFFFF" />
+            <Text style={styles.actionButtonText}>Add Focus Area</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -431,7 +417,7 @@ export default function SimplifiedFocusAreas() {
                     </Text>
                     
                     <TouchableOpacity
-                      style={styles.saveButton}
+                      style={[styles.saveButton, { backgroundColor: PRIORITY_COLORS[newFocusPriority].main }]}
                       onPress={handleAddFocus}
                     >
                       <Text style={styles.saveButtonText}>Save Focus Area</Text>
@@ -451,20 +437,20 @@ const styles = StyleSheet.create({
   container: {
     width: '100%',
   },
-  sectionHeader: {
+  header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 16,
   },
-  sectionTitleContainer: {
+  headerTitleContainer: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  sectionIcon: {
+  headerIcon: {
     marginRight: 8,
   },
-  sectionTitle: {
+  headerTitle: {
     fontSize: 18,
     fontWeight: '600',
     color: '#FFFFFF',
@@ -478,156 +464,89 @@ const styles = StyleSheet.create({
   actionsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 4,
+    marginTop: 16,
   },
-  secondaryButton: {
+  actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 16,
-    backgroundColor: 'rgba(10, 132, 255, 0.1)',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 8,
+    justifyContent: 'center',
+    flex: 1,
+    maxWidth: '48%',
   },
-  secondaryButtonText: {
-    color: '#0A84FF',
-    fontSize: 14,
+  neutralButton: {
+    backgroundColor: '#3A3A3C', // Neutral dark gray
+  },
+  actionButtonText: {
+    color: '#FFFFFF',
     fontWeight: '500',
-    marginHorizontal: 4,
+    marginHorizontal: 6,
   },
   prioritySection: {
-    marginBottom: 16,
+    marginBottom: 20,
   },
   priorityHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 10,
+    paddingBottom: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
   },
-  priorityBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  priorityBadgeText: {
-    fontSize: 12,
+  priorityLabel: {
+    fontSize: 16,
     fontWeight: '600',
+    color: '#FFFFFF',
+    flex: 1,
   },
   areaCount: {
     fontSize: 12,
     color: '#8E8E93',
   },
-  areasScrollContent: {
-    paddingRight: 16,
+  areasContainer: {
+    width: '100%',
+    gap: 10,
   },
   focusAreaCard: {
-    backgroundColor: '#3A3A3C',
-    borderRadius: 12,
-    padding: 12,
-    marginRight: 12,
-    width: 150,
-    height: 100,
-    justifyContent: 'space-between',
-    position: 'relative',
-    overflow: 'hidden',
+    flexDirection: 'row',
+    padding: 14,
+    borderRadius: 10,
+    marginBottom: 0,
+    alignItems: 'center',
   },
-  focusColorBar: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 4,
-    borderTopLeftRadius: 12,
-    borderTopRightRadius: 12,
+  focusAreaContent: {
+    flex: 1,
   },
   focusName: {
-    color: '#FFFFFF',
+    fontSize: 15,
     fontWeight: '600',
-    fontSize: 16,
+    color: '#FFFFFF',
     marginBottom: 4,
   },
   focusDescription: {
-    color: '#AEAEB2',
-    fontSize: 12,
-    marginBottom: 8,
+    fontSize: 13,
+    color: '#8E8E93',
   },
   priorityIndicator: {
-    position: 'absolute',
-    bottom: 8,
-    right: 8,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 8,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.2)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    alignSelf: 'flex-start',
+  },
+  priorityDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 6,
   },
   priorityIndicatorText: {
-    fontSize: 10,
-    fontWeight: '500',
-  },
-  buttonsContainer: {
-    marginTop: 8,
-    gap: 12,
-  },
-  addFocusButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    backgroundColor: '#0A84FF',
-    borderRadius: 12,
-  },
-  addFocusButtonText: {
+    fontSize: 12,
     color: '#FFFFFF',
-    fontWeight: '600',
-    fontSize: 14,
-    marginLeft: 8,
-  },
-  viewAllButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    backgroundColor: 'rgba(10, 132, 255, 0.1)',
-    borderRadius: 12,
-  },
-  viewAllText: {
-    color: '#0A84FF',
-    fontWeight: '600',
-    fontSize: 14,
-    marginRight: 4,
-  },
-  emptyState: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-  },
-  emptyIcon: {
-    marginBottom: 16,
-  },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#FFFFFF',
-    marginBottom: 8,
-  },
-  emptyDescription: {
-    fontSize: 14,
-    color: '#8E8E93',
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  addButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#0A84FF',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
-  },
-  addButtonText: {
-    color: '#FFFFFF',
-    fontWeight: '600',
-    fontSize: 14,
-    marginLeft: 8,
   },
   modalContainer: {
     flex: 1,
@@ -710,14 +629,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   priorityDescription: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#8E8E93',
-    marginBottom: 20,
-    textAlign: 'center',
-    fontStyle: 'italic',
+    marginTop: 2,
   },
   saveButton: {
-    backgroundColor: '#0A84FF',
+    backgroundColor: '#3A3A3C', // Neutral dark gray instead of blue
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
@@ -727,5 +644,29 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '600',
     fontSize: 16,
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  emptyIcon: {
+    marginBottom: 16,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginBottom: 8,
+  },
+  emptyDescription: {
+    fontSize: 14,
+    color: '#8E8E93',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  emptyStateButton: {
+    maxWidth: '100%',
+    marginTop: 10,
   },
 }); 

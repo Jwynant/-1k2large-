@@ -48,7 +48,7 @@ export interface FocusArea {
 }
 
 // Content Types
-export type ContentType = 'memory' | 'goal';
+export type ContentType = 'memory' | 'goal' | 'lesson';
 
 export interface SubGoal {
   id: string;
@@ -82,7 +82,16 @@ export interface ContentItem {
   // For memories:
   media?: string[];
   
-  // For insights:
+  // For lessons:
+  isFavorite?: boolean;
+  reminder?: {
+    nextReminder: string; // ISO date string
+    recurring: 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly';
+    lastSent?: string; // ISO date string
+  };
+  isTimeless?: boolean; // If true, not tied to a specific date
+  
+  // For insights (deprecated):
   relatedGoalIds?: string[]; // Multiple connections possible
   relatedMemoryIds?: string[]; // Multiple connections possible
   importance?: number; // 1-5 scale
@@ -129,7 +138,15 @@ export interface ContentFormState {
   // Memory-specific fields
   // Removing mediaType, emotion, isSpecialEvent
   
-  // Insight-specific fields
+  // Lesson-specific fields
+  isFavorite?: boolean;
+  reminder?: {
+    nextReminder: Date;
+    recurring: 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly';
+  };
+  isTimeless?: boolean;
+  
+  // Insight-specific fields (deprecated)
   relatedGoalIds?: string[];
   relatedMemoryIds?: string[];
 }

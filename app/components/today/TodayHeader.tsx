@@ -27,8 +27,8 @@ export default function TodayHeader({ preciseAge }: TodayHeaderProps) {
       style={[
         styles.headerGradient,
         {
-          paddingTop: spacing.m,
-          paddingBottom: spacing.m,
+          paddingTop: spacing.xs,
+          paddingBottom: spacing.xs,
         }
       ]}
     >
@@ -52,9 +52,9 @@ export default function TodayHeader({ preciseAge }: TodayHeaderProps) {
             style={[
               styles.dayOfWeek,
               {
-                fontSize: fontSizes.s,
+                fontSize: fontSizes.xs,
                 color: colors.textSecondary,
-                marginBottom: spacing.xs,
+                marginBottom: 2,
               }
             ]}
           >
@@ -64,9 +64,9 @@ export default function TodayHeader({ preciseAge }: TodayHeaderProps) {
             style={[
               styles.date,
               {
-                fontSize: fontSizes.xl,
+                fontSize: fontSizes.l,
                 color: colors.text,
-                marginBottom: isLandscape ? 0 : spacing.s,
+                marginBottom: isLandscape ? 0 : 4,
               }
             ]}
           >
@@ -81,7 +81,8 @@ export default function TodayHeader({ preciseAge }: TodayHeaderProps) {
               {
                 width: spacing.xl * 1.5,
                 backgroundColor: colors.border,
-                marginVertical: spacing.s,
+                marginVertical: 2,
+                height: 0, // Hide the divider
               }
             ]} 
           />
@@ -95,7 +96,7 @@ export default function TodayHeader({ preciseAge }: TodayHeaderProps) {
               paddingHorizontal: spacing.m,
               paddingVertical: spacing.xs,
               borderRadius: spacing.s,
-              marginTop: isLandscape ? 0 : spacing.xs,
+              marginTop: isLandscape ? 0 : 0,
             }
           ]}
         >

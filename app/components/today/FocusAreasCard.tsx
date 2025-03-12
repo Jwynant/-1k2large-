@@ -9,6 +9,7 @@ export default function FocusAreasCard() {
       title="Focus Areas"
       iconName="compass"
       iconColor="#4CD964"
+      hideHeader={true}
     >
       <SimplifiedFocusAreas />
     </Card>

@@ -25,11 +25,15 @@ import Animated, {
   SlideOutDown
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
-import { ContentItem, SelectedCell, ContentType } from '../../app/types';
+import { ContentItem, SelectedCell, ContentType as AppContentType } from '../../app/types';
 import { useContentManagement } from '../../app/hooks/useContentManagement';
 import { useDateCalculations } from '../../app/hooks/useDateCalculations';
 import { useFocusAreas } from '../../app/hooks/useFocusAreas';
 import { BlurView } from 'expo-blur';
+import CellLessonsView from '../content/lessons/CellLessonsView';
+
+// Local extension of ContentType to include 'insight' which is used in this component
+type ContentType = AppContentType | 'insight';
 
 interface CellDetailViewProps {
   selectedCell: SelectedCell | null;
@@ -43,6 +47,7 @@ interface GroupedContent {
   memories: ContentItem[];
   goals: ContentItem[];
   insights: ContentItem[];
+  lessons: ContentItem[];
 }
 
 export default function CellDetailView({ selectedCell, onClose, onBack, showBackButton = false }: CellDetailViewProps) {
@@ -89,13 +94,29 @@ export default function CellDetailView({ selectedCell, onClose, onBack, showBack
     const grouped: GroupedContent = {
       memories: [],
       goals: [],
-      insights: []
+      insights: [],
+      lessons: []
     };
 
     content.forEach(item => {
-      if (item.type === 'memory') grouped.memories.push(item);
-      else if (item.type === 'goal') grouped.goals.push(item);
-      else if (item.type === 'insight') grouped.insights.push(item);
+      // Use a switch statement instead of if-else to avoid type comparison issues
+      switch (item.type) {
+        case 'memory':
+          grouped.memories.push(item);
+          break;
+        case 'goal':
+          grouped.goals.push(item);
+          break;
+        case 'lesson':
+          grouped.lessons.push(item);
+          break;
+        default:
+          // Handle 'insight' and any future types
+          if (item.type === 'insight') {
+            grouped.insights.push(item);
+          }
+          break;
+      }
     });
 
     return grouped;
@@ -114,11 +135,17 @@ export default function CellDetailView({ selectedCell, onClose, onBack, showBack
       // First close the modal, then navigate
       onClose();
       
-      // Use a simpler navigation approach - route to the content tab first
-      router.push("/(tabs)/content");
-      
-      // Could dispatch an action here to set up content creation form
-      // rather than trying to pass cell data through the URL
+      // Navigate to the appropriate content form based on the selected type
+      if (selectedType === 'memory') {
+        router.push("/(tabs)/content/memory" as any);
+      } else if (selectedType === 'goal') {
+        router.push("/(tabs)/content/goal" as any);
+      } else if (selectedType === 'lesson') {
+        router.push("/(tabs)/content/lesson" as any);
+      } else {
+        // Default to content tab
+        router.push("/(tabs)/content" as any);
+      }
     }
   };
 
@@ -177,6 +204,7 @@ export default function CellDetailView({ selectedCell, onClose, onBack, showBack
   const memoriesCount = groupedContent.memories.length;
   const goalsCount = groupedContent.goals.length;
   const insightsCount = groupedContent.insights.length;
+  const lessonsCount = groupedContent.lessons.length;
 
   // Get appropriate empty state message based on content type
   const getEmptyStateMessage = () => {
@@ -193,9 +221,20 @@ export default function CellDetailView({ selectedCell, onClose, onBack, showBack
         return `No goals set for this ${timeText}`;
       case 'insight':
         return `No insights added for this ${timeText}`;
+      case 'lesson':
+        return `No lessons added for this ${timeText}`;
       default:
         return `No content for this ${timeText}`;
     }
+  };
+
+  // Helper function to get icon name based on content type
+  const getIconNameForContentType = (type: ContentType): string => {
+    if (type === 'memory') return 'images-outline';
+    if (type === 'goal') return 'flag-outline';
+    if (type === 'lesson') return 'school-outline';
+    if (type === 'insight') return 'bulb-outline';
+    return 'document-outline'; // Default
   };
 
   return (
@@ -291,7 +330,7 @@ export default function CellDetailView({ selectedCell, onClose, onBack, showBack
                 <TouchableOpacity 
                   style={[
                     styles.tab, 
-                    { minWidth: screenWidth * 0.85 / 3 - 16 },
+                    { minWidth: screenWidth * 0.85 / 4 - 16 },
                     selectedType === 'memory' && styles.activeTab,
                     selectedType === 'memory' && { backgroundColor: getContentTypeColor('memory', 0.9) }
                   ]}
@@ -320,7 +359,7 @@ export default function CellDetailView({ selectedCell, onClose, onBack, showBack
                 <TouchableOpacity 
                   style={[
                     styles.tab, 
-                    { minWidth: screenWidth * 0.85 / 3 - 16 },
+                    { minWidth: screenWidth * 0.85 / 4 - 16 },
                     selectedType === 'goal' && styles.activeTab,
                     selectedType === 'goal' && { backgroundColor: getContentTypeColor('goal', 0.9) }
                   ]}
@@ -349,7 +388,36 @@ export default function CellDetailView({ selectedCell, onClose, onBack, showBack
                 <TouchableOpacity 
                   style={[
                     styles.tab, 
-                    { minWidth: screenWidth * 0.85 / 3 - 16 },
+                    { minWidth: screenWidth * 0.85 / 4 - 16 },
+                    selectedType === 'lesson' && styles.activeTab,
+                    selectedType === 'lesson' && { backgroundColor: getContentTypeColor('lesson', 0.9) }
+                  ]}
+                  onPress={() => handleTabSelect('lesson')}
+                  accessibilityLabel="Lessons tab"
+                  accessibilityState={{ selected: selectedType === 'lesson' }}
+                >
+                  <Ionicons 
+                    name="school-outline" 
+                    size={18} 
+                    color={selectedType === 'lesson' ? '#FFF' : isDarkMode ? '#8E8E93' : '#666'} 
+                  />
+                  <Text style={[
+                    styles.tabText,
+                    selectedType === 'lesson' && styles.activeTabText
+                  ]}>
+                    Lessons
+                  </Text>
+                  {lessonsCount > 0 && (
+                    <View style={styles.badge}>
+                      <Text style={styles.badgeText}>{lessonsCount}</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  style={[
+                    styles.tab, 
+                    { minWidth: screenWidth * 0.85 / 4 - 16 },
                     selectedType === 'insight' && styles.activeTab,
                     selectedType === 'insight' && { backgroundColor: getContentTypeColor('insight', 0.9) }
                   ]}
@@ -387,17 +455,20 @@ export default function CellDetailView({ selectedCell, onClose, onBack, showBack
               </View>
             ) : (
               <View style={styles.contentArea}>
-                {!hasSelectedContent ? (
+                {/* Render CellLessonsView when lessons tab is selected */}
+                {selectedType === 'lesson' ? (
+                  <CellLessonsView 
+                    selectedCell={selectedCell} 
+                    onAddLesson={handleAddContent}
+                  />
+                ) : !hasSelectedContent ? (
                   <Animated.View 
                     entering={FadeIn.duration(300).delay(100).springify()}
                     style={styles.emptyState}
                   >
                     <View style={styles.emptyStateIconContainer}>
                       <Ionicons 
-                        name={
-                          selectedType === 'memory' ? 'images-outline' :
-                          selectedType === 'goal' ? 'flag-outline' : 'bulb-outline'
-                        } 
+                        name={getIconNameForContentType(selectedType)}
                         size={56} 
                         color={getContentTypeColor(selectedType, 0.7)}
                       />
@@ -460,7 +531,7 @@ export default function CellDetailView({ selectedCell, onClose, onBack, showBack
                               onClose();
                               
                               // Navigate to the content tab
-                              router.push("/(tabs)/content");
+                              router.push("/(tabs)/content" as any);
                               
                               // Could dispatch an action here to view the specific content item
                               // rather than trying to pass parameters through the URL
@@ -612,6 +683,8 @@ function getContentTypeColor(type: string, opacity: number = 1): string {
       return `rgba(255, 159, 10, ${opacity})`; // iOS orange
     case 'insight':
       return `rgba(48, 209, 88, ${opacity})`; // iOS green
+    case 'lesson':
+      return `rgba(52, 199, 89, ${opacity})`; // iOS green for lessons
     default:
       return `rgba(142, 142, 147, ${opacity})`; // iOS gray
   }

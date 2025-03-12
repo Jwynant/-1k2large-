@@ -3,7 +3,7 @@ import { useAppContext } from '../context/AppContext';
 import { ContentItem, ContentType, SelectedCell } from '../types';
 
 /**
- * Custom hook for managing content (memories and goals)
+ * Custom hook for managing content (memories, goals, and lessons)
  */
 export function useContentManagement() {
   const { state, dispatch } = useAppContext();
@@ -17,10 +17,19 @@ export function useContentManagement() {
     return state.contentItems.filter(item => item.type === 'goal');
   }, [state.contentItems]);
   
+  const lessons = useMemo(() => {
+    return state.contentItems.filter(item => item.type === 'lesson');
+  }, [state.contentItems]);
+  
   // Get content for a specific cell
   const getCellContent = useCallback((year: number, month?: number, week?: number) => {
     // Filter content items based on date
     return state.contentItems.filter(item => {
+      // Skip timeless lessons when filtering by date
+      if (item.type === 'lesson' && item.isTimeless) {
+        return false;
+      }
+      
       const itemDate = new Date(item.date);
       const itemYear = itemDate.getFullYear();
       
@@ -78,8 +87,17 @@ export function useContentManagement() {
   
   // Get all content of a specific type
   const getContentByType = useCallback((type: ContentType) => {
-    return type === 'memory' ? memories : goals;
-  }, [memories, goals]);
+    switch (type) {
+      case 'memory':
+        return memories;
+      case 'goal':
+        return goals;
+      case 'lesson':
+        return lessons;
+      default:
+        return [];
+    }
+  }, [memories, goals, lessons]);
   
   // Get all memories
   const getMemories = useCallback(() => {
@@ -90,6 +108,26 @@ export function useContentManagement() {
   const getGoals = useCallback(() => {
     return goals;
   }, [goals]);
+  
+  // Get all lessons
+  const getLessons = useCallback(() => {
+    return lessons;
+  }, [lessons]);
+  
+  // Get favorite lessons
+  const getFavoriteLessons = useCallback(() => {
+    return lessons.filter(lesson => lesson.isFavorite);
+  }, [lessons]);
+  
+  // Get timeless lessons (not attributed to a specific date)
+  const getTimelessLessons = useCallback(() => {
+    return lessons.filter(lesson => lesson.isTimeless);
+  }, [lessons]);
+  
+  // Get lessons with upcoming reminders
+  const getLessonsWithReminders = useCallback(() => {
+    return lessons.filter(lesson => lesson.reminder && new Date(lesson.reminder.nextReminder) > new Date());
+  }, [lessons]);
   
   // Check if a cell has any content
   const hasContent = useCallback((year: number, month?: number, week?: number) => {
@@ -106,6 +144,10 @@ export function useContentManagement() {
     getContentByType,
     getMemories,
     getGoals,
+    getLessons,
+    getFavoriteLessons,
+    getTimelessLessons,
+    getLessonsWithReminders,
     hasContent,
   };
 }

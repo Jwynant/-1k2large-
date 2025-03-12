@@ -71,6 +71,8 @@ export default function SimplifiedContentLibrary({
         return '#0A84FF'; // Blue
       case 'memory':
         return '#4CD964'; // Green
+      case 'lesson':
+        return '#50C878'; // Green for lessons
       default:
         return '#8E8E93'; // Gray
     }
@@ -83,6 +85,8 @@ export default function SimplifiedContentLibrary({
         return 'flag';
       case 'memory':
         return 'image';
+      case 'lesson':
+        return 'school';
       default:
         return 'document';
     }
@@ -119,11 +123,13 @@ export default function SimplifiedContentLibrary({
   };
   
   // Navigate to content creation
-  const handleAddContent = (type: 'memory' | 'goal') => {
+  const handleAddContent = (type: 'memory' | 'goal' | 'lesson') => {
     if (type === 'memory') {
       router.push('/content/memory');
-    } else {
+    } else if (type === 'goal') {
       router.push('/content/goal');
+    } else if (type === 'lesson') {
+      router.push('/content/lesson');
     }
   };
   
@@ -203,7 +209,7 @@ export default function SimplifiedContentLibrary({
       />
       <Text style={styles.emptyTitle}>No Content Yet</Text>
       <Text style={styles.emptyDescription}>
-        Start adding memories and goals to build your life library
+        Start adding memories, goals, and lessons to build your life library
       </Text>
       <View style={styles.emptyActionButtons}>
         <TouchableOpacity 
@@ -219,6 +225,13 @@ export default function SimplifiedContentLibrary({
         >
           <Ionicons name="flag" size={20} color="#FFFFFF" />
           <Text style={styles.emptyActionButtonText}>Add Goal</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.emptyActionButton, { backgroundColor: '#50C878' }]}
+          onPress={() => handleAddContent('lesson')}
+        >
+          <Ionicons name="school" size={20} color="#FFFFFF" />
+          <Text style={styles.emptyActionButtonText}>Add Lesson</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -276,6 +289,23 @@ export default function SimplifiedContentLibrary({
             ]}
           >
             Goals
+          </Text>
+        </Pressable>
+        
+        <Pressable
+          style={[
+            styles.filterButton,
+            selectedType === 'lesson' && styles.filterButtonActive
+          ]}
+          onPress={() => setSelectedType('lesson')}
+        >
+          <Text 
+            style={[
+              styles.filterButtonText,
+              selectedType === 'lesson' && styles.filterButtonTextActive
+            ]}
+          >
+            Lessons
           </Text>
         </Pressable>
       </View>

@@ -12,6 +12,7 @@ interface CardProps {
   onHeaderPress?: () => void;
   rightHeaderContent?: ReactNode;
   testID?: string;
+  hideHeader?: boolean;
 }
 
 export default function Card({
@@ -21,7 +22,8 @@ export default function Card({
   children,
   onHeaderPress,
   rightHeaderContent,
-  testID
+  testID,
+  hideHeader = false
 }: CardProps) {
   const { colors } = useTheme();
   const { spacing, fontSizes } = useResponsiveLayout();
@@ -41,45 +43,47 @@ export default function Card({
       accessibilityRole="none"
       accessibilityLabel={`${title} card`}
     >
-      <TouchableOpacity 
-        style={[
-          styles.cardHeader,
-          {
-            paddingHorizontal: spacing.l,
-            paddingVertical: spacing.m,
-            borderBottomWidth: 1,
-            borderBottomColor: colors.border,
-          }
-        ]}
-        onPress={onHeaderPress}
-        activeOpacity={onHeaderPress ? 0.7 : 1}
-        disabled={!onHeaderPress}
-        accessibilityRole={onHeaderPress ? "button" : "header"}
-        accessibilityLabel={`${title} header${onHeaderPress ? ', tap to expand' : ''}`}
-        accessibilityHint={onHeaderPress ? "Toggles expanded view" : undefined}
-      >
-        <View style={styles.cardTitleContainer}>
-          <Ionicons 
-            name={iconName} 
-            size={spacing.xl} 
-            color={iconColor} 
-            style={[styles.cardIcon, { marginRight: spacing.s }]}
-            accessibilityLabel={`${iconName} icon`}
-          />
-          <Text 
-            style={[
-              styles.cardTitle,
-              {
-                fontSize: fontSizes.l,
-                color: colors.text,
-              }
-            ]}
-          >
-            {title}
-          </Text>
-        </View>
-        {rightHeaderContent}
-      </TouchableOpacity>
+      {!hideHeader && (
+        <TouchableOpacity 
+          style={[
+            styles.cardHeader,
+            {
+              paddingHorizontal: spacing.l,
+              paddingVertical: spacing.m,
+              borderBottomWidth: 1,
+              borderBottomColor: colors.border,
+            }
+          ]}
+          onPress={onHeaderPress}
+          activeOpacity={onHeaderPress ? 0.7 : 1}
+          disabled={!onHeaderPress}
+          accessibilityRole={onHeaderPress ? "button" : "header"}
+          accessibilityLabel={`${title} header${onHeaderPress ? ', tap to expand' : ''}`}
+          accessibilityHint={onHeaderPress ? "Toggles expanded view" : undefined}
+        >
+          <View style={styles.cardTitleContainer}>
+            <Ionicons 
+              name={iconName} 
+              size={spacing.xl} 
+              color={iconColor} 
+              style={[styles.cardIcon, { marginRight: spacing.s }]}
+              accessibilityLabel={`${iconName} icon`}
+            />
+            <Text 
+              style={[
+                styles.cardTitle,
+                {
+                  fontSize: fontSizes.l,
+                  color: colors.text,
+                }
+              ]}
+            >
+              {title}
+            </Text>
+          </View>
+          {rightHeaderContent}
+        </TouchableOpacity>
+      )}
       <View 
         style={[
           styles.cardContent,
