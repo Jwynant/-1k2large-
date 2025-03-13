@@ -13,6 +13,7 @@ interface CardProps {
   rightHeaderContent?: ReactNode;
   testID?: string;
   hideHeader?: boolean;
+  borderColor?: string;
 }
 
 export default function Card({
@@ -23,7 +24,8 @@ export default function Card({
   onHeaderPress,
   rightHeaderContent,
   testID,
-  hideHeader = false
+  hideHeader = false,
+  borderColor
 }: CardProps) {
   const { colors } = useTheme();
   const { spacing, fontSizes } = useResponsiveLayout();
@@ -37,6 +39,10 @@ export default function Card({
           borderRadius: spacing.m,
           marginBottom: spacing.l,
           shadowColor: colors.text,
+        },
+        borderColor && {
+          borderWidth: 2,
+          borderColor: borderColor
         }
       ]}
       testID={testID}

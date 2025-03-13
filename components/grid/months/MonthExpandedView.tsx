@@ -311,14 +311,14 @@ const styles = StyleSheet.create({
   },
   // 2. Present cells: enhanced styling for better visibility
   currentCell: {
-    backgroundColor: '#007AFF', // Brighter blue fill
-    borderWidth: 2,
-    borderColor: '#4FC3F7', // Light blue border for glow effect
-    shadowColor: '#4FC3F7',
+    backgroundColor: '#121212', // Dark background
+    borderWidth: 4, // Increased border width
+    borderColor: '#FFD700', // Gold border to match our theme
+    shadowColor: '#FFD700',
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 5,
-    elevation: 6, // For Android
+    shadowOpacity: 1.0,
+    shadowRadius: 8,
+    elevation: 10, // For Android
   },
   currentCellText: {
     color: '#FFFFFF', // White text
@@ -361,8 +361,12 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#FF9500', // Orange dot
-    opacity: 0.9,
+    backgroundColor: '#000000', // Black dot
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 2,
+    elevation: 3,
   },
   noDataText: {
     padding: 20,

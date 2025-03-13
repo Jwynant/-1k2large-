@@ -104,7 +104,7 @@ const styles = StyleSheet.create({
   },
   currentCell: {
     borderWidth: 2,
-    borderColor: '#0366d6', // Accent color
+    borderColor: '#FFD700', // Gold color to match our theme
     backgroundColor: 'transparent',
   },
   birthYearCell: {
@@ -136,7 +136,7 @@ const styles = StyleSheet.create({
     width: 3,
     height: 3,
     borderRadius: 1.5,
-    backgroundColor: '#FF9500', // Orange dot
-    opacity: 0.9,
+    backgroundColor: '#000000', // Black dot
+    opacity: 1.0,
   }
 });

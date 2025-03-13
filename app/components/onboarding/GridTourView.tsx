@@ -14,12 +14,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useOnboarding } from '../../context/OnboardingContext';
 import * as Haptics from 'expo-haptics';
 
-// Tooltip component for explanations
-function Tooltip({ text, position, visible, onClose }: { 
+// Improved explanation card component
+function ExplanationCard({ text, visible }: { 
   text: string; 
-  position: { top: number; left: number }; 
   visible: boolean;
-  onClose: () => void;
 }) {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   
@@ -36,15 +34,12 @@ function Tooltip({ text, position, visible, onClose }: {
   return (
     <Animated.View 
       style={[
-        styles.tooltip, 
-        position,
+        styles.explanationCard, 
         { opacity: fadeAnim }
       ]}
     >
-      <Text style={styles.tooltipText}>{text}</Text>
-      <Pressable style={styles.tooltipCloseButton} onPress={onClose}>
-        <Ionicons name="close-circle" size={24} color="rgba(255,255,255,0.8)" />
-      </Pressable>
+      <Ionicons name="information-circle" size={24} color="#007AFF" style={styles.explanationIcon} />
+      <Text style={styles.explanationText}>{text}</Text>
     </Animated.View>
   );
 }
@@ -113,7 +108,6 @@ function MonthCluster({
         isActive && styles.activeCluster
       ]}
     >
-      <Text style={styles.yearLabel}>{year}</Text>
       <View style={styles.monthsContainer}>
         {renderMonths()}
       </View>
@@ -128,7 +122,7 @@ export default function GridTourView() {
   
   const scrollViewRef = useRef<ScrollView>(null);
   const [currentView, setCurrentView] = useState<'birth' | 'present' | 'future'>('birth');
-  const [showTooltip, setShowTooltip] = useState(true);
+  const [showExplanation, setShowExplanation] = useState(true);
   
   // Calculate years
   const birthYear = state.birthDate.getFullYear();
@@ -195,48 +189,34 @@ export default function GridTourView() {
     // Scroll with animation
     scrollViewRef.current.scrollTo({ y: scrollPosition, animated: true });
     
-    // Show tooltip after scrolling
+    // Show explanation after scrolling
     setTimeout(() => {
-      setShowTooltip(true);
-    }, 1000);
+      setShowExplanation(true);
+    }, 500);
   }, [currentView, birthYear, currentYear, endYear]);
   
-  // Get tooltip text based on current view
-  const getTooltipText = () => {
+  // Get explanation text based on current view
+  const getExplanationText = () => {
     switch (currentView) {
       case 'birth':
         return "Each cell represents one month of your life. A cluster of 12 cells makes up one year.";
       case 'present':
-        return "This is where you are now. Past months are filled, future months are empty.";
+        return "This is where you are now. White cells are your past, empty cells are your future.";
       case 'future':
-        return `By default, we've set your life expectancy to ${state.lifeExpectancy} years (approximately ${state.lifeExpectancy * 12} months).`;
+        return `Based on a life expectancy of ${state.lifeExpectancy} years, you can see your entire life journey at a glance.`;
       default:
         return "";
-    }
-  };
-  
-  // Get tooltip position based on current view
-  const getTooltipPosition = () => {
-    switch (currentView) {
-      case 'birth':
-        return { top: height * 0.3, left: width * 0.1 };
-      case 'present':
-        return { top: height * 0.4, left: width * 0.1 };
-      case 'future':
-        return { top: height * 0.3, left: width * 0.1 };
-      default:
-        return { top: 0, left: 0 };
     }
   };
   
   // Handle continue button press
   const handleContinue = () => {
     if (currentView === 'birth') {
-      setShowTooltip(false);
+      setShowExplanation(false);
       setCurrentView('present');
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     } else if (currentView === 'present') {
-      setShowTooltip(false);
+      setShowExplanation(false);
       setCurrentView('future');
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     } else {
@@ -247,7 +227,7 @@ export default function GridTourView() {
   };
   
   return (
-    <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <Animated.View 
         style={[
           styles.header,
@@ -271,6 +251,11 @@ export default function GridTourView() {
               ? `You've lived ${(currentYear - birthYear)} years so far`
               : "Plan for a long and fulfilling life"}
         </Text>
+        
+        <ExplanationCard 
+          text={getExplanationText()}
+          visible={showExplanation}
+        />
       </Animated.View>
       
       <View style={styles.gridContainer}>
@@ -308,22 +293,15 @@ export default function GridTourView() {
         </ScrollView>
       </View>
       
-      <Tooltip 
-        text={getTooltipText()}
-        position={getTooltipPosition()}
-        visible={showTooltip}
-        onClose={() => setShowTooltip(false)}
-      />
-      
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 16) }]}>
         <Pressable 
           style={styles.backButton}
           onPress={() => {
             if (currentView === 'present') {
-              setShowTooltip(false);
+              setShowExplanation(false);
               setCurrentView('birth');
             } else if (currentView === 'future') {
-              setShowTooltip(false);
+              setShowExplanation(false);
               setCurrentView('present');
             } else {
               setCurrentStep(1);
@@ -341,6 +319,12 @@ export default function GridTourView() {
           <Text style={styles.continueButtonText}>
             {currentView === 'future' ? 'Continue' : 'Next'}
           </Text>
+          <Ionicons 
+            name="arrow-forward" 
+            size={18} 
+            color="#FFFFFF" 
+            style={styles.continueButtonIcon} 
+          />
         </Pressable>
       </View>
     </View>
@@ -357,7 +341,7 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
   },
   title: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: 'bold',
     color: '#FFFFFF',
     marginBottom: 8,
@@ -368,6 +352,25 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.7)',
     marginBottom: 20,
     textAlign: 'center',
+  },
+  explanationCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 122, 255, 0.1)',
+    borderRadius: 12,
+    padding: 16,
+    marginVertical: 16,
+    borderLeftWidth: 3,
+    borderLeftColor: '#007AFF',
+  },
+  explanationIcon: {
+    marginRight: 12,
+  },
+  explanationText: {
+    flex: 1,
+    color: '#FFFFFF',
+    fontSize: 15,
+    lineHeight: 22,
   },
   gridContainer: {
     flex: 1,
@@ -401,22 +404,14 @@ const styles = StyleSheet.create({
   monthCluster: {
     width: 65,
     margin: 1,
-    padding: 3,
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    padding: 4,
+    backgroundColor: 'rgba(30, 30, 30, 0.5)',
     borderRadius: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
   },
   activeCluster: {
+    borderWidth: 1,
     borderColor: '#007AFF',
-    backgroundColor: 'rgba(0,122,255,0.1)',
-  },
-  yearLabel: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 4,
-    textAlign: 'center',
+    backgroundColor: 'rgba(0, 122, 255, 0.05)',
   },
   monthsContainer: {
     width: '100%',
@@ -432,61 +427,55 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     margin: 1,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: 'transparent',
   },
   pastCell: {
-    backgroundColor: 'rgba(255,255,255,0.3)',
-    borderColor: 'rgba(255,255,255,0.3)',
+    backgroundColor: '#FFFFFF',
+    borderColor: '#FFFFFF',
   },
   currentCell: {
-    backgroundColor: '#007AFF',
-    borderColor: '#007AFF',
-  },
-  tooltip: {
-    position: 'absolute',
-    backgroundColor: 'rgba(0,0,0,0.8)',
-    borderRadius: 12,
-    padding: 16,
-    maxWidth: 250,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
-    zIndex: 100,
-  },
-  tooltipText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  tooltipCloseButton: {
-    position: 'absolute',
-    top: -10,
-    right: -10,
+    backgroundColor: 'transparent',
+    borderWidth: 2,
+    borderColor: '#FFD700',
   },
   footer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    padding: 20,
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    backgroundColor: 'rgba(18, 18, 18, 0.95)',
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.1)',
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
   },
   backButton: {
     paddingVertical: 16,
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
   },
   backButtonText: {
-    fontSize: 18,
-    color: 'rgba(255,255,255,0.7)',
+    fontSize: 17,
+    color: 'rgba(255, 255, 255, 0.7)',
   },
   continueButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#007AFF',
     paddingVertical: 16,
-    paddingHorizontal: 32,
+    paddingHorizontal: 24,
     borderRadius: 100,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
   },
   continueButtonText: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '600',
     color: '#FFFFFF',
+  },
+  continueButtonIcon: {
+    marginLeft: 8,
   },
 }); 

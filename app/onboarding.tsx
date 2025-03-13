@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, StyleSheet } from 'react-native';
+import { Stack } from 'expo-router';
 import { OnboardingProvider, useOnboarding } from './context/OnboardingContext';
 import { 
   SplashScreen, 
@@ -8,6 +9,7 @@ import {
 import GridTourView from './components/onboarding/GridTourView';
 import LifespanCustomizationScreen from './components/onboarding/LifespanCustomizationScreen';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { StatusBar } from 'expo-status-bar';
 
 // Onboarding content component
 function OnboardingContent() {
@@ -40,6 +42,11 @@ function OnboardingContent() {
 export default function OnboardingScreen() {
   return (
     <SafeAreaProvider>
+      <StatusBar style="light" />
+      <Stack.Screen options={{ 
+        headerShown: false,
+        animation: 'fade',
+      }} />
       <OnboardingProvider>
         <OnboardingContent />
       </OnboardingProvider>

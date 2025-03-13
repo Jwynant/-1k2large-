@@ -479,7 +479,8 @@ export default function GridContainer() {
       <Reanimated.View 
         style={[
           styles.expandedViewContainer,
-          weekExpandedViewAnimatedStyles
+          weekExpandedViewAnimatedStyles,
+          { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }
         ]}
       >
         <WeekExpandedView 
@@ -591,6 +592,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 1000,
+    backgroundColor: '#121212', // Add background color to fully cover the screen
+    width: '100%',
+    height: '100%',
   },
   detailViewOverlay: {
     backgroundColor: 'rgba(0, 0, 0, 0.7)',

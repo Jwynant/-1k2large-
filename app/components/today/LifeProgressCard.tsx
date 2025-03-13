@@ -71,6 +71,7 @@ export default function LifeProgressCard({ lifeProgressPercentage }: LifeProgres
       title="Life Progress"
       iconName="hourglass"
       iconColor={colors.warning}
+      borderColor={colors.warning}
     >
       <View 
         style={[

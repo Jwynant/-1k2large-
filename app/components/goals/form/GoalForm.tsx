@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { ContentItem, FocusArea } from '../../../types';
+import { ContentItem, FocusArea, SubGoal } from '../../../types';
 import { useContentManagement } from '../../../hooks/useContentManagement';
 import { useFocusAreas } from '../../../hooks/useFocusAreas';
 import GoalBasicsStep from './GoalBasicsStep';
@@ -194,7 +194,7 @@ export default function GoalForm({
         id: m.id,
         title: m.title,
         isCompleted: m.isCompleted
-      }))
+      })) as SubGoal[]
     };
     
     if (isEditing && formState.id) {

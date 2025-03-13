@@ -49,7 +49,26 @@ export function useContentForm({
     }
   }, [errors]);
   
-  // Validate the form
+  // Validate the form without updating state (for external checks)
+  const checkFormValidity = useCallback(() => {
+    // Title is required
+    if (!formState.title.trim()) {
+      return false;
+    }
+    
+    // Date is required
+    if (!formState.date) {
+      return false;
+    }
+    
+    if (type === 'goal' && !formState.focusAreaId) {
+      return false;
+    }
+    
+    return true;
+  }, [formState.title, formState.date, formState.focusAreaId, type]);
+  
+  // Validate the form and update errors state
   const validateForm = useCallback(() => {
     const newErrors: ContentFormErrors = {};
     
@@ -162,7 +181,7 @@ export function useContentForm({
     addMedia,
     removeMedia,
     validateForm,
-    isValid: validateForm,
+    isValid: checkFormValidity,
   };
 }
 

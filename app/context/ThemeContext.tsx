@@ -67,13 +67,11 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   const systemColorScheme = useColorScheme();
   const [theme, setThemeState] = useState<ThemeMode>(state.theme || 'system');
   
-  // Determine if dark mode is active
-  const isDark = theme === 'system' 
-    ? systemColorScheme === 'dark' 
-    : theme === 'dark';
+  // Always use dark mode regardless of system or user preference
+  const isDark = true;
   
-  // Get colors based on current theme
-  const colors = isDark ? COLORS.dark : COLORS.light;
+  // Always use dark mode colors
+  const colors = COLORS.dark;
   
   // Set theme and persist to storage
   const setTheme = async (newTheme: ThemeMode) => {

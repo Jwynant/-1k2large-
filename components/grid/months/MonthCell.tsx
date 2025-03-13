@@ -110,11 +110,13 @@ const styles = StyleSheet.create({
     width: 3,
     height: 3,
     borderRadius: 1.5,
-    backgroundColor: '#FF9500', // Orange dot
-    opacity: 0.9,
+    backgroundColor: '#000000', // Black dot
+    opacity: 1.0,
   },
   current: {
-    backgroundColor: '#4A90E2',
+    backgroundColor: '#121212',
+    borderWidth: 2,
+    borderColor: '#FFD700',
   },
 });
 

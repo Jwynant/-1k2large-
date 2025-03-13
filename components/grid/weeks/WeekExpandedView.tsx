@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, useWindowDimensions, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, useWindowDimensions, ScrollView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useContentManagement } from '../../../app/hooks/useContentManagement';
 import { useDateCalculations } from '../../../app/hooks/useDateCalculations';
@@ -149,8 +150,7 @@ export default function WeekExpandedView({ year, onClose, onWeekPress }: WeekExp
       style={styles.container}
       entering={FadeIn.duration(300)}
     >
-      <SafeAreaView style={{ flex: 1 }}>
-        <View style={styles.topBuffer} />
+      <SafeAreaView style={{ flex: 1 }} edges={['top', 'left', 'right', 'bottom']}>
         <View style={styles.content}>
           <View style={styles.header}>
             <TouchableOpacity 
@@ -225,9 +225,14 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#121212',
-  },
-  topBuffer: {
-    height: 30,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: '100%',
+    height: '100%',
+    zIndex: 1000,
   },
   content: {
     flex: 1,
@@ -295,14 +300,14 @@ const styles = StyleSheet.create({
   },
   // Current cells: enhanced styling for better visibility
   currentCell: {
-    backgroundColor: '#007AFF', // Bright blue fill instead of transparent
-    borderWidth: 2,
-    borderColor: '#4FC3F7', // Light blue border for glow effect
-    shadowColor: '#4FC3F7',
+    backgroundColor: '#121212', // Dark background
+    borderWidth: 4, // Increased border width for better visibility
+    borderColor: '#FFD700', // Gold accent color for border
+    shadowColor: '#FFD700',
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 4,
-    elevation: 5, // For Android
+    shadowOpacity: 1.0, // Increased shadow opacity for better visibility
+    shadowRadius: 8, // Increased shadow radius
+    elevation: 10, // Increased elevation for Android
   },
   // Future cells: transparent with white border
   futureCell: {
@@ -314,10 +319,14 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 3,
     right: 3,
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: '#FF9500', // Orange dot
-    opacity: 0.9,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#000000', // Black color for content indicators
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 2,
+    elevation: 3,
   },
 }); 

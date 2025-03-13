@@ -7,6 +7,7 @@ import AddGoalButton from '../goals/AddGoalButton';
 import Card from '../shared/Card';
 import { useToast } from '../../context/ToastContext';
 import { format, isToday, isTomorrow, differenceInDays } from 'date-fns';
+import GoalDetailModal from '../goals/detail/GoalDetailModal';
 
 interface GoalsDashboardProps {
   activeGoals: ContentItem[];
@@ -17,6 +18,10 @@ export default function GoalsDashboard({ activeGoals, focusAreas }: GoalsDashboa
   const [isExpanded, setIsExpanded] = useState(false);
   const router = useRouter();
   const { showToast } = useToast();
+  
+  // State for the goal detail modal
+  const [selectedGoal, setSelectedGoal] = useState<ContentItem | null>(null);
+  const [isDetailModalVisible, setIsDetailModalVisible] = useState(false);
   
   // Get upcoming goals sorted by deadline
   const upcomingGoals = useMemo(() => {
@@ -63,12 +68,14 @@ export default function GoalsDashboard({ activeGoals, focusAreas }: GoalsDashboa
   };
   
   const handleGoalPress = (goal: ContentItem) => {
-    // Navigate to the goal detail/edit view
-    router.push({
-      pathname: `/content/${goal.type}`,
-      params: { id: goal.id, edit: 'true' }
-    });
-    showToast('Viewing goal details', 'info');
+    // Show the goal detail modal instead of navigating
+    setSelectedGoal(goal);
+    setIsDetailModalVisible(true);
+  };
+  
+  const handleCloseDetailModal = () => {
+    setIsDetailModalVisible(false);
+    setSelectedGoal(null);
   };
   
   const handleAddGoal = () => {
@@ -94,191 +101,206 @@ export default function GoalsDashboard({ activeGoals, focusAreas }: GoalsDashboa
     />
   );
   
+  // Goal section color
+  const goalColor = '#0A84FF';
+  
   return (
-    <Card
-      title="Goals at a Glance"
-      iconName="flag"
-      iconColor="#0A84FF"
-      onHeaderPress={toggleExpand}
-      rightHeaderContent={toggleIcon}
-      testID="goals-dashboard"
-    >
-      {!isExpanded ? (
-        // Compact View - Actionable Information
-        <View>
-          {activeGoals.length > 0 ? (
-            <>
-              {nextDeadline ? (
-                <View style={styles.nextDeadlineContainer}>
-                  <View style={styles.deadlineHeader}>
-                    <Text style={styles.nextDeadlineLabel}>Next Deadline</Text>
-                    <Text 
-                      style={[
-                        styles.deadlineDate, 
-                        isToday(new Date(nextDeadline.deadline || '')) && styles.urgentDeadline
-                      ]}
-                    >
-                      {formatDeadline(nextDeadline.deadline || '')}
-                    </Text>
-                  </View>
-                  
-                  <TouchableOpacity 
-                    style={[
-                      styles.goalCard, 
-                      { borderLeftColor: getFocusAreaColor(nextDeadline.focusAreaId) }
-                    ]}
-                    onPress={() => handleGoalPress(nextDeadline)}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={styles.goalTitle} numberOfLines={2}>
-                      {nextDeadline.title}
-                    </Text>
-                    
-                    {nextDeadline.progress !== undefined && (
-                      <View style={styles.goalProgressContainer}>
-                        <View style={styles.progressBarContainer}>
-                          <View 
-                            style={[
-                              styles.progressFill, 
-                              { 
-                                width: `${nextDeadline.progress}%`,
-                                backgroundColor: getFocusAreaColor(nextDeadline.focusAreaId)
-                              }
-                            ]} 
-                          />
-                        </View>
-                        <Text style={styles.progressText}>{nextDeadline.progress}%</Text>
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                <View style={styles.noDeadlinesContainer}>
-                  <Text style={styles.noDeadlinesText}>No upcoming deadlines</Text>
-                </View>
-              )}
-              
-              {upcomingGoals.length > 1 && (
-                <View style={styles.otherGoalsContainer}>
-                  <Text style={styles.otherGoalsLabel}>
-                    {upcomingGoals.length > 1 ? 'Other Upcoming Goals' : 'Other Goals'}
-                  </Text>
-                  
-                  {upcomingGoals.slice(1).map(goal => (
-                    <TouchableOpacity 
-                      key={goal.id}
-                      style={styles.otherGoalItem}
-                      onPress={() => handleGoalPress(goal)}
-                      activeOpacity={0.7}
-                    >
-                      <View 
-                        style={[
-                          styles.goalColorIndicator, 
-                          { backgroundColor: getFocusAreaColor(goal.focusAreaId) }
-                        ]} 
-                      />
-                      <Text style={styles.otherGoalTitle} numberOfLines={1}>
-                        {goal.title}
-                      </Text>
+    <>
+      <Card
+        title="Goals at a Glance"
+        iconName="flag"
+        iconColor={goalColor}
+        onHeaderPress={toggleExpand}
+        rightHeaderContent={toggleIcon}
+        testID="goals-dashboard"
+        borderColor={goalColor}
+      >
+        {!isExpanded ? (
+          // Compact View - Actionable Information
+          <View>
+            {activeGoals.length > 0 ? (
+              <>
+                {nextDeadline ? (
+                  <View style={styles.nextDeadlineContainer}>
+                    <View style={styles.deadlineHeader}>
+                      <Text style={styles.nextDeadlineLabel}>Next Deadline</Text>
                       <Text 
                         style={[
-                          styles.otherGoalDeadline,
-                          isToday(new Date(goal.deadline || '')) && styles.urgentDeadline
+                          styles.deadlineDate, 
+                          isToday(new Date(nextDeadline.deadline || '')) && styles.urgentDeadline
                         ]}
                       >
-                        {formatDeadline(goal.deadline || '')}
+                        {formatDeadline(nextDeadline.deadline || '')}
                       </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              )}
-              
-              <TouchableOpacity 
-                style={styles.viewAllButton}
-                onPress={toggleExpand}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.viewAllText}>
-                  View All {activeGoals.length} Goals
-                </Text>
-                <Ionicons name="chevron-down" size={14} color="#0A84FF" />
-              </TouchableOpacity>
-            </>
-          ) : (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyStateText}>No active goals</Text>
-              <AddGoalButton />
-            </View>
-          )}
-        </View>
-      ) : (
-        // Expanded View
-        <View>
-          {activeGoals.length > 0 ? (
-            <>
-              <View style={styles.expandedSection}>
-                <Text style={styles.expandedSectionTitle}>All Goals ({activeGoals.length})</Text>
-                
-                {activeGoals.map(goal => {
-                  const hasDeadline = !!goal.deadline;
-                  const deadlineText = hasDeadline ? formatDeadline(goal.deadline || '') : 'No deadline';
-                  
-                  return (
+                    </View>
+                    
                     <TouchableOpacity 
-                      key={goal.id}
                       style={[
-                        styles.expandedGoalCard, 
-                        { borderLeftColor: getFocusAreaColor(goal.focusAreaId) }
+                        styles.goalCard, 
+                        { borderLeftColor: getFocusAreaColor(nextDeadline.focusAreaId) }
                       ]}
-                      onPress={() => handleGoalPress(goal)}
+                      onPress={() => handleGoalPress(nextDeadline)}
                       activeOpacity={0.7}
                     >
-                      <View style={styles.expandedGoalHeader}>
-                        <Text style={styles.expandedGoalTitle} numberOfLines={2}>
-                          {goal.title}
-                        </Text>
-                        {hasDeadline && (
-                          <Text 
-                            style={[
-                              styles.expandedGoalDeadline,
-                              isToday(new Date(goal.deadline || '')) && styles.urgentDeadline
-                            ]}
-                          >
-                            {deadlineText}
-                          </Text>
-                        )}
-                      </View>
+                      <Text style={styles.goalTitle} numberOfLines={2}>
+                        {nextDeadline.title}
+                      </Text>
                       
-                      {goal.progress !== undefined && (
+                      {nextDeadline.progress !== undefined && (
                         <View style={styles.goalProgressContainer}>
                           <View style={styles.progressBarContainer}>
                             <View 
                               style={[
                                 styles.progressFill, 
                                 { 
-                                  width: `${goal.progress}%`,
-                                  backgroundColor: getFocusAreaColor(goal.focusAreaId)
+                                  width: `${nextDeadline.progress}%`,
+                                  backgroundColor: getFocusAreaColor(nextDeadline.focusAreaId)
                                 }
                               ]} 
                             />
                           </View>
-                          <Text style={styles.progressText}>{goal.progress}%</Text>
+                          <Text style={styles.progressText}>{nextDeadline.progress}%</Text>
                         </View>
                       )}
                     </TouchableOpacity>
-                  );
-                })}
+                  </View>
+                ) : (
+                  <View style={styles.noDeadlinesContainer}>
+                    <Text style={styles.noDeadlinesText}>No upcoming deadlines</Text>
+                  </View>
+                )}
+                
+                {upcomingGoals.length > 1 && (
+                  <View style={styles.otherGoalsContainer}>
+                    <Text style={styles.otherGoalsLabel}>
+                      {upcomingGoals.length > 1 ? 'Other Upcoming Goals' : 'Other Goals'}
+                    </Text>
+                    
+                    {upcomingGoals.slice(1).map(goal => (
+                      <TouchableOpacity 
+                        key={goal.id}
+                        style={styles.otherGoalItem}
+                        onPress={() => handleGoalPress(goal)}
+                        activeOpacity={0.7}
+                      >
+                        <View 
+                          style={[
+                            styles.goalColorIndicator, 
+                            { backgroundColor: getFocusAreaColor(goal.focusAreaId) }
+                          ]} 
+                        />
+                        <Text style={styles.otherGoalTitle} numberOfLines={1}>
+                          {goal.title}
+                        </Text>
+                        <Text 
+                          style={[
+                            styles.otherGoalDeadline,
+                            isToday(new Date(goal.deadline || '')) && styles.urgentDeadline
+                          ]}
+                        >
+                          {formatDeadline(goal.deadline || '')}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+                
+                <TouchableOpacity 
+                  style={styles.viewAllButton}
+                  onPress={toggleExpand}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.viewAllText, { color: goalColor }]}>
+                    View All {activeGoals.length} Goals
+                  </Text>
+                  <Ionicons name="chevron-down" size={14} color={goalColor} />
+                </TouchableOpacity>
+              </>
+            ) : (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyStateText}>No active goals</Text>
+                <AddGoalButton />
               </View>
-            </>
-          ) : (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyStateText}>No active goals</Text>
-              <AddGoalButton />
-            </View>
-          )}
-        </View>
+            )}
+          </View>
+        ) : (
+          // Expanded View
+          <View>
+            {activeGoals.length > 0 ? (
+              <>
+                <View style={styles.expandedSection}>
+                  <Text style={styles.expandedSectionTitle}>All Goals ({activeGoals.length})</Text>
+                  
+                  {activeGoals.map(goal => {
+                    const hasDeadline = !!goal.deadline;
+                    const deadlineText = hasDeadline ? formatDeadline(goal.deadline || '') : 'No deadline';
+                    
+                    return (
+                      <TouchableOpacity 
+                        key={goal.id}
+                        style={[
+                          styles.expandedGoalCard, 
+                          { borderLeftColor: getFocusAreaColor(goal.focusAreaId) }
+                        ]}
+                        onPress={() => handleGoalPress(goal)}
+                        activeOpacity={0.7}
+                      >
+                        <View style={styles.expandedGoalHeader}>
+                          <Text style={styles.expandedGoalTitle} numberOfLines={2}>
+                            {goal.title}
+                          </Text>
+                          {hasDeadline && (
+                            <Text 
+                              style={[
+                                styles.expandedGoalDeadline,
+                                isToday(new Date(goal.deadline || '')) && styles.urgentDeadline
+                              ]}
+                            >
+                              {deadlineText}
+                            </Text>
+                          )}
+                        </View>
+                        
+                        {goal.progress !== undefined && (
+                          <View style={styles.goalProgressContainer}>
+                            <View style={styles.progressBarContainer}>
+                              <View 
+                                style={[
+                                  styles.progressFill, 
+                                  { 
+                                    width: `${goal.progress}%`,
+                                    backgroundColor: getFocusAreaColor(goal.focusAreaId)
+                                  }
+                                ]} 
+                              />
+                            </View>
+                            <Text style={styles.progressText}>{goal.progress}%</Text>
+                          </View>
+                        )}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </>
+            ) : (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyStateText}>No active goals</Text>
+                <AddGoalButton />
+              </View>
+            )}
+          </View>
+        )}
+      </Card>
+      
+      {/* Goal Detail Modal */}
+      {selectedGoal && (
+        <GoalDetailModal
+          isVisible={isDetailModalVisible}
+          onClose={handleCloseDetailModal}
+          goal={selectedGoal}
+        />
       )}
-    </Card>
+    </>
   );
 }
 

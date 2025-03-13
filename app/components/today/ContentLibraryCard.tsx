@@ -6,6 +6,7 @@ import Card from '../shared/Card';
 
 export default function ContentLibraryCard() {
   const [isExpanded, setIsExpanded] = useState(false);
+  const contentLibraryColor = '#5856D6'; // Purple color for content library
 
   const toggleIcon = (
     <TouchableOpacity onPress={() => setIsExpanded(!isExpanded)}>
@@ -21,7 +22,8 @@ export default function ContentLibraryCard() {
     <Card
       title="Content Library"
       iconName="library"
-      iconColor="#5856D6"
+      iconColor={contentLibraryColor}
+      borderColor={contentLibraryColor}
       rightHeaderContent={toggleIcon}
     >
       <SimplifiedContentLibrary 

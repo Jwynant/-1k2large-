@@ -82,7 +82,7 @@ const styles = StyleSheet.create({
     borderColor: '#444', // Darker border for dark mode
   },
   current: {
-    borderColor: '#007AFF', // iOS blue
+    borderColor: '#FFD700', // Gold color to match our theme
     borderWidth: 2,
   },
   pressed: {
@@ -95,8 +95,8 @@ const styles = StyleSheet.create({
     width: 3,
     height: 3,
     borderRadius: 1.5,
-    backgroundColor: '#FF9500', // Orange dot
-    opacity: 0.9,
+    backgroundColor: '#000000', // Black dot
+    opacity: 1.0,
   },
 });
 

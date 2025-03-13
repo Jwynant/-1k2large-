@@ -3,17 +3,16 @@ import { View, Text, StyleSheet, ScrollView, Pressable, Switch, Image } from 're
 import { Ionicons } from '@expo/vector-icons';
 import { useAppContext } from '../context/AppContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useColorScheme } from 'react-native';
 import { useRouter } from 'expo-router';
-import { BirthDateModal, LifeExpectancyModal, ThemeModal } from '../components/profile';
+import { BirthDateModal, LifeExpectancyModal } from '../components/profile';
 import * as Haptics from 'expo-haptics';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useTheme } from '../context/ThemeContext';
 
 export default function ProfileScreen() {
   const { state, dispatch } = useAppContext();
   const { userSettings } = state;
-  const colorScheme = useColorScheme();
-  const isDark = state.theme === 'system' ? colorScheme === 'dark' : state.theme === 'dark';
+  const { colors, isDark } = useTheme();
   const router = useRouter();
 
   // State for settings toggles
@@ -30,7 +29,6 @@ export default function ProfileScreen() {
   // State for modals
   const [birthDateModalVisible, setBirthDateModalVisible] = useState(false);
   const [lifeExpectancyModalVisible, setLifeExpectancyModalVisible] = useState(false);
-  const [themeModalVisible, setThemeModalVisible] = useState(false);
   
   // Local state for user data
   const [name, setName] = useState('Jamie Smith');
@@ -113,53 +111,48 @@ export default function ProfileScreen() {
     });
   };
   
-  // Handle theme change
-  const handleThemeChange = (theme: 'dark' | 'light' | 'system') => {
-    dispatch({ type: 'SET_THEME', payload: theme });
-  };
-  
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Header with user info */}
-        <View style={styles.header}>
+        <View style={[styles.header, { borderBottomColor: colors.border }]}>
           <View style={styles.profileImageContainer}>
-            <View style={styles.profileImage}>
-              <Ionicons name="person" size={60} color="#FFFFFF" />
+            <View style={[styles.profileImage, { backgroundColor: colors.cardAlt, borderColor: colors.primary }]}>
+              <Ionicons name="person" size={60} color={colors.text} />
             </View>
-            <View style={styles.editProfileButton}>
-              <Ionicons name="pencil" size={16} color="#FFFFFF" />
+            <View style={[styles.editProfileButton, { backgroundColor: colors.primary, borderColor: colors.background }]}>
+              <Ionicons name="pencil" size={16} color={colors.text} />
             </View>
           </View>
           
-          <Text style={styles.userName}>{name}</Text>
-          <Text style={styles.userEmail}>{email}</Text>
+          <Text style={[styles.userName, { color: colors.text }]}>{name}</Text>
+          <Text style={[styles.userEmail, { color: colors.textSecondary }]}>{email}</Text>
           
           <View style={styles.statsContainer}>
             <View style={styles.statItem}>
-              <Text style={styles.statValue}>{calculateAge(birthDate)}</Text>
-              <Text style={styles.statLabel}>Age</Text>
+              <Text style={[styles.statValue, { color: colors.text }]}>{calculateAge(birthDate)}</Text>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Age</Text>
             </View>
             
-            <View style={styles.statDivider} />
+            <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
             
             <View style={styles.statItem}>
-              <Text style={styles.statValue}>{calculateLifeProgress()}%</Text>
-              <Text style={styles.statLabel}>Life Journey</Text>
+              <Text style={[styles.statValue, { color: colors.text }]}>{calculateLifeProgress()}%</Text>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Life Journey</Text>
             </View>
             
-            <View style={styles.statDivider} />
+            <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
             
             <View style={styles.statItem}>
-              <Text style={styles.statValue}>{state.contentItems.length}</Text>
-              <Text style={styles.statLabel}>Items</Text>
+              <Text style={[styles.statValue, { color: colors.text }]}>{state.contentItems.length}</Text>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Items</Text>
             </View>
           </View>
         </View>
         
         {/* Settings sections */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Personal</Text>
+        <View style={[styles.section, { borderBottomColor: colors.border }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Personal</Text>
           
           <Pressable 
             style={styles.settingItem}
@@ -168,12 +161,12 @@ export default function ProfileScreen() {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
             }}
           >
-            <Ionicons name="calendar" size={24} color="#0A84FF" style={styles.settingIcon} />
+            <Ionicons name="calendar" size={24} color={colors.primary} style={styles.settingIcon} />
             <View style={styles.settingContent}>
-              <Text style={styles.settingLabel}>Birthdate</Text>
-              <Text style={styles.settingValue}>{formattedBirthDate}</Text>
+              <Text style={[styles.settingLabel, { color: colors.text }]}>Birthdate</Text>
+              <Text style={[styles.settingValue, { color: colors.textSecondary }]}>{formattedBirthDate}</Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color="#8E8E93" />
+            <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
           </Pressable>
           
           <Pressable 
@@ -185,41 +178,20 @@ export default function ProfileScreen() {
           >
             <Ionicons name="hourglass" size={24} color="#FF9500" style={styles.settingIcon} />
             <View style={styles.settingContent}>
-              <Text style={styles.settingLabel}>Life Expectancy</Text>
-              <Text style={styles.settingValue}>{lifeExpectancy} years</Text>
+              <Text style={[styles.settingLabel, { color: colors.text }]}>Life Expectancy</Text>
+              <Text style={[styles.settingValue, { color: colors.textSecondary }]}>{lifeExpectancy} years</Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color="#8E8E93" />
-          </Pressable>
-          
-          <Pressable 
-            style={styles.settingItem}
-            onPress={() => {
-              setThemeModalVisible(true);
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            }}
-          >
-            <Ionicons name="color-palette" size={24} color="#4CD964" style={styles.settingIcon} />
-            <View style={styles.settingContent}>
-              <Text style={styles.settingLabel}>Theme</Text>
-              <Text style={styles.settingValue}>
-                {state.theme === 'system' 
-                  ? 'System' 
-                  : state.theme === 'dark' 
-                    ? 'Dark' 
-                    : 'Light'}
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#8E8E93" />
+            <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
           </Pressable>
         </View>
         
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Preferences</Text>
+        <View style={[styles.section, { borderBottomColor: colors.border }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Preferences</Text>
           
           <View style={styles.settingItem}>
             <Ionicons name="notifications" size={24} color="#5856D6" style={styles.settingIcon} />
             <View style={styles.settingContent}>
-              <Text style={styles.settingLabel}>Notifications</Text>
+              <Text style={[styles.settingLabel, { color: colors.text }]}>Notifications</Text>
             </View>
             <Switch
               value={notificationsEnabled}
@@ -232,7 +204,7 @@ export default function ProfileScreen() {
           <View style={styles.settingItem}>
             <Ionicons name="checkbox" size={24} color="#0A84FF" style={styles.settingIcon} />
             <View style={styles.settingContent}>
-              <Text style={styles.settingLabel}>Show Completed Goals</Text>
+              <Text style={[styles.settingLabel, { color: colors.text }]}>Show Completed Goals</Text>
             </View>
             <Switch
               value={showCompletedGoals}
@@ -245,7 +217,7 @@ export default function ProfileScreen() {
           <View style={styles.settingItem}>
             <Ionicons name="calendar" size={24} color="#FF9500" style={styles.settingIcon} />
             <View style={styles.settingContent}>
-              <Text style={styles.settingLabel}>Week Starts on Monday</Text>
+              <Text style={[styles.settingLabel, { color: colors.text }]}>Week Starts on Monday</Text>
             </View>
             <Switch
               value={weekStartsOnMonday}
@@ -256,46 +228,46 @@ export default function ProfileScreen() {
           </View>
         </View>
         
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>App</Text>
+        <View style={[styles.section, { borderBottomColor: colors.border }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>App</Text>
           
           <Pressable style={styles.settingItem}>
             <Ionicons name="share-social" size={24} color="#64D2FF" style={styles.settingIcon} />
             <View style={styles.settingContent}>
-              <Text style={styles.settingLabel}>Share App</Text>
+              <Text style={[styles.settingLabel, { color: colors.text }]}>Share App</Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color="#8E8E93" />
+            <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
           </Pressable>
           
           <Pressable style={styles.settingItem}>
             <Ionicons name="star" size={24} color="#FF9500" style={styles.settingIcon} />
             <View style={styles.settingContent}>
-              <Text style={styles.settingLabel}>Rate App</Text>
+              <Text style={[styles.settingLabel, { color: colors.text }]}>Rate App</Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color="#8E8E93" />
+            <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
           </Pressable>
           
           <Pressable style={styles.settingItem}>
             <Ionicons name="information-circle" size={24} color="#0A84FF" style={styles.settingIcon} />
             <View style={styles.settingContent}>
-              <Text style={styles.settingLabel}>About</Text>
-              <Text style={styles.settingValue}>Version 1.0.0</Text>
+              <Text style={[styles.settingLabel, { color: colors.text }]}>About</Text>
+              <Text style={[styles.settingValue, { color: colors.textSecondary }]}>Version 1.0.0</Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color="#8E8E93" />
+            <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
           </Pressable>
         </View>
         
-        <View style={[styles.section, { marginTop: 30 }]}>
-          <Text style={styles.sectionTitle}>Developer Options</Text>
+        <View style={[styles.section, { marginTop: 30, borderBottomColor: colors.border }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Developer Options</Text>
           
           <Pressable 
             style={styles.debugButton}
             onPress={navigateToDebug}
           >
-            <Ionicons name="bug-outline" size={24} color="#FFFFFF" />
-            <Text style={styles.debugButtonText}>Debug Menu</Text>
+            <Ionicons name="bug-outline" size={24} color={colors.text} />
+            <Text style={[styles.debugButtonText, { color: colors.text }]}>Debug Menu</Text>
             <View style={styles.debugButtonIconContainer}>
-              <Ionicons name="chevron-forward" size={20} color="#999" />
+              <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
             </View>
           </Pressable>
         </View>
@@ -319,13 +291,6 @@ export default function ProfileScreen() {
         currentLifeExpectancy={lifeExpectancy}
         onSave={handleLifeExpectancyChange}
       />
-      
-      <ThemeModal
-        visible={themeModalVisible}
-        onClose={() => setThemeModalVisible(false)}
-        currentTheme={state.theme || 'system'}
-        onSave={handleThemeChange}
-      />
     </SafeAreaView>
   );
 }
@@ -333,7 +298,6 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#121212', // Dark mode background
   },
   scrollContent: {
     paddingBottom: 40,
@@ -342,7 +306,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 24,
     borderBottomWidth: 1,
-    borderBottomColor: '#2C2C2E',
   },
   profileImageContainer: {
     position: 'relative',
@@ -353,8 +316,6 @@ const styles = StyleSheet.create({
     height: 100,
     borderRadius: 50,
     borderWidth: 3,
-    borderColor: '#0A84FF',
-    backgroundColor: '#2C2C2E',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -362,24 +323,20 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 0,
     right: 0,
-    backgroundColor: '#0A84FF',
     width: 32,
     height: 32,
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: '#121212',
   },
   userName: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#FFFFFF',
     marginBottom: 4,
   },
   userEmail: {
     fontSize: 16,
-    color: '#8E8E93',
     marginBottom: 24,
   },
   statsContainer: {
@@ -395,27 +352,22 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#FFFFFF',
     marginBottom: 4,
   },
   statLabel: {
     fontSize: 14,
-    color: '#8E8E93',
   },
   statDivider: {
     width: 1,
     height: 40,
-    backgroundColor: '#2C2C2E',
   },
   section: {
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#2C2C2E',
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#FFFFFF',
     marginBottom: 16,
   },
   settingItem: {
@@ -431,11 +383,9 @@ const styles = StyleSheet.create({
   },
   settingLabel: {
     fontSize: 16,
-    color: '#FFFFFF',
   },
   settingValue: {
     fontSize: 14,
-    color: '#8E8E93',
     marginTop: 2,
   },
   logoutButton: {

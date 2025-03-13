@@ -8,6 +8,7 @@ import LessonsLibrary from '../../../components/content/lessons/LessonsLibrary';
 export default function LessonsLibraryCard() {
   const router = useRouter();
   const [expanded, setExpanded] = useState(false);
+  const lessonsColor = '#FFCC00'; // Yellow color for lessons
   
   const handleAddLesson = () => {
     router.push('/content/lesson');
@@ -30,7 +31,8 @@ export default function LessonsLibraryCard() {
     <Card
       title="Lessons"
       iconName="school"
-      iconColor="#FFCC00"
+      iconColor={lessonsColor}
+      borderColor={lessonsColor}
       rightHeaderContent={toggleIcon}
     >
       <LessonsLibrary 

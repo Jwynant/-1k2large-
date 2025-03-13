@@ -4,11 +4,14 @@ import SimplifiedFocusAreas from '../focus/SimplifiedFocusAreas';
 import Card from '../shared/Card';
 
 export default function FocusAreasCard() {
+  const focusAreaColor = '#FFD700'; // Gold color for focus areas
+  
   return (
     <Card
       title="Focus Areas"
       iconName="compass"
-      iconColor="#FFD700"
+      iconColor={focusAreaColor}
+      borderColor={focusAreaColor}
       hideHeader={true}
     >
       <SimplifiedFocusAreas />

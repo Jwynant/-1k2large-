@@ -10,7 +10,8 @@ import {
   KeyboardAvoidingView,
   Platform,
   TouchableWithoutFeedback,
-  TouchableOpacity
+  TouchableOpacity,
+  Easing
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
@@ -26,33 +27,59 @@ export default function PersonalInfoScreen() {
   const [date, setDate] = useState(state.birthDate);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [nameError, setNameError] = useState('');
+  const [isReady, setIsReady] = useState(false);
   
   const nameInputRef = useRef<TextInput>(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(20)).current;
+  const datePickerFade = useRef(new Animated.Value(0)).current;
   
-  // Animate in on mount
+  // Prepare content before animation
   useEffect(() => {
+    // Short delay to ensure everything is loaded
+    const timer = setTimeout(() => {
+      setIsReady(true);
+    }, 100);
+    
+    return () => clearTimeout(timer);
+  }, []);
+  
+  // Animate in on mount, but only after content is ready
+  useEffect(() => {
+    if (!isReady) return;
+    
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
-        duration: 600,
+        duration: 400,
+        easing: Easing.out(Easing.ease),
         useNativeDriver: true,
       }),
       Animated.timing(slideAnim, {
         toValue: 0,
-        duration: 600,
+        duration: 400,
+        easing: Easing.out(Easing.ease),
         useNativeDriver: true,
       }),
-    ]).start();
-    
-    // Focus the name input after a short delay
-    const timer = setTimeout(() => {
+    ]).start(() => {
+      // Focus the name input after animation completes
       nameInputRef.current?.focus();
-    }, 500);
-    
-    return () => clearTimeout(timer);
-  }, []);
+    });
+  }, [isReady]);
+  
+  // Animate date picker
+  useEffect(() => {
+    if (showDatePicker) {
+      Animated.timing(datePickerFade, {
+        toValue: 1,
+        duration: 200,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }).start();
+    } else {
+      datePickerFade.setValue(0);
+    }
+  }, [showDatePicker]);
   
   // Handle date change
   const handleDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
@@ -92,6 +119,12 @@ export default function PersonalInfoScreen() {
     month: 'long',
     day: 'numeric',
   });
+  
+  if (!isReady) {
+    return (
+      <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]} />
+    );
+  }
   
   return (
     <KeyboardAvoidingView
@@ -154,16 +187,28 @@ export default function PersonalInfoScreen() {
                 </TouchableOpacity>
                 
                 {showDatePicker && (
-                  <DateTimePicker
-                    value={date}
-                    mode="date"
-                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                    onChange={handleDateChange}
-                    maximumDate={new Date()}
-                    minimumDate={new Date(1900, 0, 1)}
-                    textColor="#FFFFFF" // For iOS
-                    themeVariant="dark" // For iOS dark mode
-                  />
+                  <Animated.View style={{ opacity: datePickerFade }}>
+                    <DateTimePicker
+                      value={date}
+                      mode="date"
+                      display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                      onChange={handleDateChange}
+                      maximumDate={new Date()}
+                      minimumDate={new Date(1900, 0, 1)}
+                      textColor="#FFFFFF" // For iOS
+                      themeVariant="dark" // For iOS dark mode
+                    />
+                    
+                    {/* Add a prominent continue button below the date picker */}
+                    <TouchableOpacity
+                      style={styles.datePickerContinueButton}
+                      onPress={handleContinue}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={styles.datePickerContinueText}>Continue</Text>
+                      <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
+                    </TouchableOpacity>
+                  </Animated.View>
                 )}
               </View>
             </View>
@@ -254,6 +299,21 @@ const styles = StyleSheet.create({
   dateButtonText: {
     fontSize: 18,
     color: '#FFFFFF',
+  },
+  datePickerContinueButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#007AFF',
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 20,
+  },
+  datePickerContinueText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginRight: 8,
   },
   errorText: {
     color: '#FF453A',

@@ -26,10 +26,9 @@ export default function ThemeModal({
   currentTheme, 
   onSave 
 }: ThemeModalProps) {
-  // Theme options
+  // Theme options - removed light mode option
   const themeOptions: { value: ThemeOption; label: string; icon: string }[] = [
     { value: 'dark', label: 'Dark', icon: 'moon' },
-    { value: 'light', label: 'Light', icon: 'sunny' },
     { value: 'system', label: 'System', icon: 'settings' },
   ];
 
@@ -89,7 +88,7 @@ export default function ThemeModal({
           <View style={styles.infoContainer}>
             <Ionicons name="information-circle-outline" size={20} color="rgba(255,255,255,0.7)" />
             <Text style={styles.infoText}>
-              The system option will automatically switch between light and dark mode based on your device settings.
+              The app currently only supports dark mode. The system option will still use dark mode regardless of your device settings.
             </Text>
           </View>
         </View>
