@@ -1,13 +1,22 @@
-import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, Text } from 'react-native';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { View, StyleSheet, Text, Dimensions, useWindowDimensions } from 'react-native';
 import { memo, useMemo } from 'react';
+import { FlashList } from '@shopify/flash-list';
 import WeekCluster from './WeekCluster';
 import { useDateCalculations } from '../../../app/hooks/useDateCalculations';
 import { useAppContext } from '../../../app/context/AppContext';
-import WeekExpandedView from './WeekExpandedView';
+import { useResponsiveLayout } from '../../../app/hooks/useResponsiveLayout';
 
 // Define a cluster type for better type safety
 type Cluster = { year: number; isCurrent: boolean } | null;
+
+// Define a row item type for FlashList
+type RowItem = {
+  id: string;
+  clusters: Cluster[];
+  rowIndex: number;
+  ageLabel: string;
+};
 
 export type WeekGridViewProps = {
   clusters: { year: number; isCurrent: boolean }[];
@@ -24,12 +33,22 @@ function WeekGridView({
   onClusterPress,
   hasContent
 }: WeekGridViewProps) {
-  const { getAgeForYear } = useDateCalculations();
+  const { getAgeForYear, getBirthDate } = useDateCalculations();
   const { state } = useAppContext();
-  const [expandedCluster, setExpandedCluster] = useState<number | null>(null);
+  const { horizontalPadding } = useResponsiveLayout();
+  const { height: windowHeight } = useWindowDimensions();
+  
+  // Create a ref for the FlashList
+  const flashListRef = useRef<FlashList<RowItem>>(null);
+  
+  // Track if initial scroll has been performed
+  const hasScrolledRef = useRef(false);
   
   // Always use exactly 5 clusters per row
   const CLUSTERS_PER_ROW = 5;
+  
+  // Define the estimated row height for calculations
+  const estimatedItemSize = 188; // Height of a row
   
   // Group clusters into rows with exactly 5 clusters in each row
   const clusterRows = useMemo(() => {
@@ -79,94 +98,170 @@ function WeekGridView({
     });
   }, [clusterRows, getAgeForYear]);
 
-  const handleClusterPress = (year: number, position: { x: number, y: number, width: number, height: number }) => {
-    onClusterPress(year, position);
-    setExpandedCluster(year);
-  };
-  
-  const handleCloseExpanded = () => {
-    setExpandedCluster(null);
-  };
-  
-  const handleWeekPress = (week: number) => {
-    if (expandedCluster !== null) {
-      onCellPress(expandedCluster, undefined, week);
-      setExpandedCluster(null);
-    }
-  };
+  // Create a flat data structure for FlashList
+  const rowData = useMemo(() => {
+    return clusterRows.map((row, index) => ({
+      id: `row-${index}`,
+      clusters: row,
+      rowIndex: index,
+      ageLabel: ageLabels[index] || ""
+    }));
+  }, [clusterRows, ageLabels]);
 
-  if (expandedCluster !== null) {
+  // Find the index of the row containing the current year
+  const currentRowIndex = useMemo(() => {
+    return findCurrentYearIndex(rowData);
+  }, [rowData]);
+
+  // Calculate the offset to center the current row
+  const calculateCenteredOffset = useCallback(() => {
+    // Get the header height (approximate)
+    const headerHeight = 150; // Adjust based on your actual header height
+    
+    // Calculate the available viewport height
+    const viewportHeight = windowHeight - headerHeight;
+    
+    // Calculate how many rows can fit in half the viewport
+    const halfViewportRows = Math.floor(viewportHeight / (estimatedItemSize * 2));
+    
+    // Calculate the offset to center the current row
+    // If currentRowIndex is less than halfViewportRows, we don't need to scroll
+    if (currentRowIndex < halfViewportRows) {
+      return 0;
+    }
+    
+    // Calculate the offset to center the current row
+    const offset = (currentRowIndex - halfViewportRows) * estimatedItemSize;
+    
+    return offset;
+  }, [currentRowIndex, windowHeight, estimatedItemSize]);
+
+  // Scroll to center the current row after initial render
+  useEffect(() => {
+    if (flashListRef.current && rowData.length > 0 && !hasScrolledRef.current) {
+      // Use a small timeout to ensure the list is fully rendered before scrolling
+      const timer = setTimeout(() => {
+        const offset = calculateCenteredOffset();
+        flashListRef.current?.scrollToOffset({ offset, animated: false });
+        hasScrolledRef.current = true;
+      }, 50);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [rowData, calculateCenteredOffset]);
+
+  // Reset scroll flag when data changes significantly
+  useEffect(() => {
+    hasScrolledRef.current = false;
+  }, [clusters.length]);
+
+  // Handle cluster press to open expanded view
+  const handleClusterPress = useCallback((year: number, position: { x: number, y: number, width: number, height: number }) => {
+    // Call the onClusterPress prop which will be handled by GridContainer
+    onClusterPress(year, position);
+  }, [onClusterPress]);
+  
+  // Handle week press in expanded view - this is now handled by GridContainer
+  const handleWeekPress = useCallback((week: number) => {
+    // This is now handled by GridContainer
+  }, []);
+  
+  // Handle close expanded view - this is now handled by GridContainer
+  const handleCloseExpanded = useCallback(() => {
+    // This is now handled by GridContainer
+  }, []);
+
+  // Render a row item for FlashList
+  const renderRow = useCallback(({ item }: { item: RowItem }) => {
     return (
-      <WeekExpandedView 
-        year={expandedCluster}
-        onClose={handleCloseExpanded}
-        onWeekPress={handleWeekPress}
-      />
+      <View style={styles.rowContainer}>
+        {/* Age label */}
+        <Text style={styles.ageLabel}>
+          {item.ageLabel}
+        </Text>
+        
+        {/* Clusters in this row */}
+        <View style={[
+          styles.row,
+          // Reduce bottom margin for the last row
+          item.rowIndex === clusterRows.length - 1 && styles.lastRow
+        ]}>
+          {item.clusters.map((cluster: Cluster, colIndex: number) => {
+            if (cluster === null) {
+              // Render an empty placeholder to maintain grid structure
+              return <View key={`empty-${item.rowIndex}-${colIndex}`} style={styles.emptyCluster} />;
+            }
+            
+            return (
+              <WeekCluster 
+                key={cluster.year} 
+                year={cluster.year} 
+                isCurrent={cluster.isCurrent}
+                onPress={(position) => handleClusterPress(cluster.year, position)}
+                onCellPress={(week: number) => onCellPress(cluster.year, undefined, week)}
+                onLongPress={(week: number, position: { x: number, y: number }) => 
+                  onLongPress(cluster.year, undefined, week, position)
+                }
+                hasContent={hasContent}
+                getBirthDate={getBirthDate}
+              />
+            );
+          })}
+        </View>
+      </View>
     );
-  }
+  }, [clusterRows.length, handleClusterPress, onCellPress, onLongPress, hasContent, getBirthDate]);
+
+  // Key extractor for FlashList
+  const keyExtractor = useCallback((item: RowItem) => item.id, []);
 
   // Fallback if no rows were calculated
-  if (clusterRows.length === 0) {
+  if (rowData.length === 0) {
     return (
-      <ScrollView style={styles.container}>
+      <View style={styles.container}>
         <View style={styles.grid}>
           <Text style={styles.emptyText}>No weeks available</Text>
         </View>
-      </ScrollView>
+      </View>
     );
   }
 
   return (
-    <ScrollView 
-      style={styles.container}
-      contentContainerStyle={styles.scrollContentContainer}
-    >
-      <View style={styles.contentContainer}>
-        {/* Age labels column */}
-        <View style={styles.ageLabelsContainer}>
-          {ageLabels.map((label, index) => (
-            <Text key={index} style={styles.ageLabel}>
-              {label}
-            </Text>
-          ))}
-        </View>
-        
-        {/* Grid content */}
-        <View style={styles.gridContainer}>
-          <View style={styles.grid}>
-            {clusterRows.map((row, rowIndex) => (
-              <View key={`row-${rowIndex}`} style={[
-                styles.row,
-                // Reduce bottom margin for the last row
-                rowIndex === clusterRows.length - 1 && styles.lastRow
-              ]}>
-                {row.map((cluster: Cluster, colIndex: number) => {
-                  if (cluster === null) {
-                    // Render an empty placeholder to maintain grid structure
-                    return <View key={`empty-${rowIndex}-${colIndex}`} style={styles.emptyCluster} />;
-                  }
-                  
-                  return (
-                    <WeekCluster 
-                      key={cluster.year} 
-                      year={cluster.year} 
-                      isCurrent={cluster.isCurrent}
-                      onPress={(position) => handleClusterPress(cluster.year, position)}
-                      onCellPress={(week: number) => onCellPress(cluster.year, undefined, week)}
-                      onLongPress={(week: number, position: { x: number, y: number }) => 
-                        onLongPress(cluster.year, undefined, week, position)
-                      }
-                      hasContent={hasContent}
-                    />
-                  );
-                })}
-              </View>
-            ))}
-          </View>
-        </View>
-      </View>
-    </ScrollView>
+    <View style={styles.container}>
+      <FlashList
+        ref={flashListRef}
+        data={rowData}
+        renderItem={renderRow}
+        keyExtractor={keyExtractor}
+        estimatedItemSize={estimatedItemSize}
+        showsVerticalScrollIndicator={true}
+        contentContainerStyle={styles.scrollContentContainer}
+        maintainVisibleContentPosition={{
+          minIndexForVisible: 0,
+        }}
+        overrideItemLayout={(layout, item) => {
+          layout.size = estimatedItemSize;
+        }}
+      />
+    </View>
   );
+}
+
+// Helper function to find the index of the row containing the current year
+function findCurrentYearIndex(rowData: RowItem[]): number {
+  const currentYear = new Date().getFullYear();
+  
+  for (let i = 0; i < rowData.length; i++) {
+    const currentRow = rowData[i].clusters;
+    for (const cluster of currentRow) {
+      if (cluster && cluster.isCurrent) {
+        return i;
+      }
+    }
+  }
+  
+  // Default to the middle if current year not found
+  return Math.floor(rowData.length / 2);
 }
 
 const styles = StyleSheet.create({
@@ -177,44 +272,36 @@ const styles = StyleSheet.create({
   scrollContentContainer: {
     paddingBottom: 5, // Minimal bottom padding
   },
-  contentContainer: {
+  rowContainer: {
     flexDirection: 'row',
-    flex: 1,
-  },
-  ageLabelsContainer: {
-    width: 30,
-    paddingTop: 60, // Match the grid padding
     alignItems: 'center',
   },
   ageLabel: {
     fontSize: 14,
     color: '#aaa', // Light gray for dark mode
     fontWeight: '500',
-    height: 188, // Height to match a row of clusters
-    textAlignVertical: 'center',
-    lineHeight: 50, // Center text vertically
-  },
-  gridContainer: {
-    flex: 1,
-  },
-  grid: {
-    flexDirection: 'column',
-    justifyContent: 'flex-start',
-    padding: 10,
+    width: 30,
+    textAlign: 'center',
   },
   row: {
     flexDirection: 'row',
     marginBottom: 20,
     justifyContent: 'flex-start',
     alignItems: 'center',
+    flex: 1,
   },
   lastRow: {
     marginBottom: 5, // Minimal margin for the last row
   },
   emptyCluster: {
-    width: 90, // Match the width of WeekCluster
-    height: 90, // Match the height of WeekCluster
-    margin: 5,
+    width: 59, // Match the width of WeekCluster
+    height: 166, // Match the height of WeekCluster
+    margin: 1,
+  },
+  grid: {
+    flexDirection: 'column',
+    justifyContent: 'flex-start',
+    padding: 10,
   },
   emptyText: {
     color: '#ffffff',

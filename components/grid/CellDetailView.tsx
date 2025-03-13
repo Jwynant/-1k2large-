@@ -13,33 +13,48 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { MotiView } from 'moti';
+import Animated, { 
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withSpring,
+  Easing,
+  FadeIn,
+  FadeOut,
+  SlideInDown,
+  SlideOutDown
+} from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
-import { ContentItem, SelectedCell } from '../../app/types';
+import { ContentItem, SelectedCell, ContentType as AppContentType } from '../../app/types';
 import { useContentManagement } from '../../app/hooks/useContentManagement';
 import { useDateCalculations } from '../../app/hooks/useDateCalculations';
+import { useFocusAreas } from '../../app/hooks/useFocusAreas';
 import { BlurView } from 'expo-blur';
+import CellLessonsView from '../content/lessons/CellLessonsView';
+
+// Local extension of ContentType to include 'insight' which is used in this component
+type ContentType = AppContentType | 'insight';
 
 interface CellDetailViewProps {
   selectedCell: SelectedCell | null;
   onClose: () => void;
+  onBack?: () => void;
+  showBackButton?: boolean;
 }
-
-// Content type definition for the tabs
-type ContentType = 'memory' | 'lesson' | 'goal' | 'reflection';
 
 // Group content by type for better organization
 interface GroupedContent {
   memories: ContentItem[];
-  lessons: ContentItem[];
   goals: ContentItem[];
-  reflections: ContentItem[];
+  insights: ContentItem[];
+  lessons: ContentItem[];
 }
 
-export default function CellDetailView({ selectedCell, onClose }: CellDetailViewProps) {
+export default function CellDetailView({ selectedCell, onClose, onBack, showBackButton = false }: CellDetailViewProps) {
   const router = useRouter();
   const { getContentForCell } = useContentManagement();
   const { formatDateFromCell, isWeekInPast, isMonthInPast, isYearInPast, isCurrentWeek, isCurrentMonth, isCurrentYear } = useDateCalculations();
+  const { focusAreas } = useFocusAreas();
   const [content, setContent] = useState<ContentItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedType, setSelectedType] = useState<ContentType>('memory');
@@ -48,6 +63,21 @@ export default function CellDetailView({ selectedCell, onClose }: CellDetailView
   
   // Get screen dimensions
   const { width: screenWidth } = Dimensions.get('window');
+
+  // Animation values for content items
+  const contentOpacity = useSharedValue(0);
+  const contentTranslateY = useSharedValue(10);
+  
+  // Animate content when it changes
+  useEffect(() => {
+    if (!isLoading) {
+      contentOpacity.value = 0;
+      contentTranslateY.value = 10;
+      
+      contentOpacity.value = withTiming(1, { duration: 300, easing: Easing.out(Easing.ease) });
+      contentTranslateY.value = withTiming(0, { duration: 300, easing: Easing.out(Easing.ease) });
+    }
+  }, [isLoading, content, selectedType]);
 
   useEffect(() => {
     if (selectedCell) {
@@ -63,16 +93,30 @@ export default function CellDetailView({ selectedCell, onClose }: CellDetailView
   const groupedContent = useMemo(() => {
     const grouped: GroupedContent = {
       memories: [],
-      lessons: [],
       goals: [],
-      reflections: []
+      insights: [],
+      lessons: []
     };
 
     content.forEach(item => {
-      if (item.type === 'memory') grouped.memories.push(item);
-      else if (item.type === 'lesson') grouped.lessons.push(item);
-      else if (item.type === 'goal') grouped.goals.push(item);
-      else if (item.type === 'reflection') grouped.reflections.push(item);
+      // Use a switch statement instead of if-else to avoid type comparison issues
+      switch (item.type) {
+        case 'memory':
+          grouped.memories.push(item);
+          break;
+        case 'goal':
+          grouped.goals.push(item);
+          break;
+        case 'lesson':
+          grouped.lessons.push(item);
+          break;
+        default:
+          // Handle 'insight' and any future types
+          if (item.type === 'insight') {
+            grouped.insights.push(item);
+          }
+          break;
+      }
     });
 
     return grouped;
@@ -88,16 +132,28 @@ export default function CellDetailView({ selectedCell, onClose }: CellDetailView
   const handleAddContent = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     if (selectedCell) {
-      // Navigate to the appropriate content creation screen
-      router.push({
-        pathname: `/content/${selectedType}`,
-        params: {
-          year: selectedCell.year,
-          month: selectedCell.month,
-          week: selectedCell.week,
-        },
-      });
+      // First close the modal, then navigate
       onClose();
+      
+      // Navigate to the appropriate content form based on the selected type
+      if (selectedType === 'memory') {
+        router.push("/(tabs)/content/memory" as any);
+      } else if (selectedType === 'goal') {
+        router.push("/(tabs)/content/goal" as any);
+      } else if (selectedType === 'lesson') {
+        router.push("/(tabs)/content/lesson" as any);
+      } else {
+        // Default to content tab
+        router.push("/(tabs)/content" as any);
+      }
+    }
+  };
+
+  // Handle back button press
+  const handleBackPress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (onBack && showBackButton) {
+      onBack();
     }
   };
 
@@ -129,6 +185,12 @@ export default function CellDetailView({ selectedCell, onClose }: CellDetailView
     return 'future';
   };
 
+  // Get focus area info for a content item
+  const getFocusAreaInfo = (focusAreaId?: string) => {
+    if (!focusAreaId) return null;
+    return focusAreas.find(area => area.id === focusAreaId);
+  };
+
   // Get styling based on cell state - only for present cells special accent
   const cellState = getCellState();
   
@@ -140,9 +202,9 @@ export default function CellDetailView({ selectedCell, onClose }: CellDetailView
 
   // Content counts for badges
   const memoriesCount = groupedContent.memories.length;
-  const lessonsCount = groupedContent.lessons.length;
   const goalsCount = groupedContent.goals.length;
-  const reflectionsCount = groupedContent.reflections.length;
+  const insightsCount = groupedContent.insights.length;
+  const lessonsCount = groupedContent.lessons.length;
 
   // Get appropriate empty state message based on content type
   const getEmptyStateMessage = () => {
@@ -155,22 +217,31 @@ export default function CellDetailView({ selectedCell, onClose }: CellDetailView
     switch (selectedType) {
       case 'memory':
         return `No memories recorded for this ${timeText}`;
-      case 'lesson':
-        return `No lessons learned during this ${timeText}`;
       case 'goal':
         return `No goals set for this ${timeText}`;
-      case 'reflection':
-        return `No reflections added for this ${timeText}`;
+      case 'insight':
+        return `No insights added for this ${timeText}`;
+      case 'lesson':
+        return `No lessons added for this ${timeText}`;
       default:
         return `No content for this ${timeText}`;
     }
+  };
+
+  // Helper function to get icon name based on content type
+  const getIconNameForContentType = (type: ContentType): string => {
+    if (type === 'memory') return 'images-outline';
+    if (type === 'goal') return 'flag-outline';
+    if (type === 'lesson') return 'school-outline';
+    if (type === 'insight') return 'bulb-outline';
+    return 'document-outline'; // Default
   };
 
   return (
     <Modal
       visible={true}
       transparent={true}
-      animationType="fade"
+      animationType="none" // We'll handle animations ourselves
       onRequestClose={onClose}
       statusBarTranslucent={true}
     >
@@ -181,10 +252,9 @@ export default function CellDetailView({ selectedCell, onClose }: CellDetailView
           onClose();
         }}
       >
-        <MotiView
-          from={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ type: 'timing', duration: 250 } as any}
+        <Animated.View
+          entering={FadeIn.duration(250).springify()}
+          exiting={FadeOut.duration(200)}
           style={[
             styles.modalContainer,
             { width: screenWidth * 0.85 },
@@ -198,7 +268,22 @@ export default function CellDetailView({ selectedCell, onClose }: CellDetailView
           >
             {/* Header */}
             <View style={styles.header}>
-              <View style={styles.dateContainer}>
+              {showBackButton && (
+                <TouchableOpacity 
+                  onPress={handleBackPress} 
+                  style={styles.backButton}
+                  accessibilityLabel="Back to month view"
+                  accessibilityHint="Returns to the month grid view"
+                >
+                  <Ionicons 
+                    name="chevron-back" 
+                    size={24} 
+                    color={isDarkMode ? '#FFF' : '#333'} 
+                  />
+                </TouchableOpacity>
+              )}
+              
+              <View style={[styles.dateContainer, showBackButton ? { flex: 1 } : {}]}>
                 <Text 
                   style={[
                     styles.dateTitle,
@@ -209,6 +294,7 @@ export default function CellDetailView({ selectedCell, onClose }: CellDetailView
                   {formattedDate}
                 </Text>
               </View>
+              
               <TouchableOpacity 
                 onPress={() => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -228,14 +314,12 @@ export default function CellDetailView({ selectedCell, onClose }: CellDetailView
 
             {/* Content Type Tabs */}
             <View style={styles.tabsContainer}>
-              <MotiView 
+              <Animated.View 
+                entering={FadeIn.duration(300)}
                 style={[
                   styles.tabsBackground,
                   isDarkMode ? { backgroundColor: 'rgba(30, 30, 30, 0.8)' } : { backgroundColor: '#F2F2F7' }
                 ]}
-                from={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ type: 'timing', duration: 300 } as any}
               />
               
               <ScrollView 
@@ -248,7 +332,7 @@ export default function CellDetailView({ selectedCell, onClose }: CellDetailView
                     styles.tab, 
                     { minWidth: screenWidth * 0.85 / 4 - 16 },
                     selectedType === 'memory' && styles.activeTab,
-                    selectedType === 'memory' && { backgroundColor: 'rgba(10, 132, 255, 0.9)' }
+                    selectedType === 'memory' && { backgroundColor: getContentTypeColor('memory', 0.9) }
                   ]}
                   onPress={() => handleTabSelect('memory')}
                   accessibilityLabel="Memories tab"
@@ -276,37 +360,8 @@ export default function CellDetailView({ selectedCell, onClose }: CellDetailView
                   style={[
                     styles.tab, 
                     { minWidth: screenWidth * 0.85 / 4 - 16 },
-                    selectedType === 'lesson' && styles.activeTab,
-                    selectedType === 'lesson' && { backgroundColor: 'rgba(48, 209, 88, 0.9)' }
-                  ]}
-                  onPress={() => handleTabSelect('lesson')}
-                  accessibilityLabel="Lessons tab"
-                  accessibilityState={{ selected: selectedType === 'lesson' }}
-                >
-                  <Ionicons 
-                    name="bulb-outline" 
-                    size={18} 
-                    color={selectedType === 'lesson' ? '#FFF' : isDarkMode ? '#8E8E93' : '#666'} 
-                  />
-                  <Text style={[
-                    styles.tabText,
-                    selectedType === 'lesson' && styles.activeTabText
-                  ]}>
-                    Lessons
-                  </Text>
-                  {lessonsCount > 0 && (
-                    <View style={styles.badge}>
-                      <Text style={styles.badgeText}>{lessonsCount}</Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
-                
-                <TouchableOpacity 
-                  style={[
-                    styles.tab, 
-                    { minWidth: screenWidth * 0.85 / 4 - 16 },
                     selectedType === 'goal' && styles.activeTab,
-                    selectedType === 'goal' && { backgroundColor: 'rgba(255, 159, 10, 0.9)' }
+                    selectedType === 'goal' && { backgroundColor: getContentTypeColor('goal', 0.9) }
                   ]}
                   onPress={() => handleTabSelect('goal')}
                   accessibilityLabel="Goals tab"
@@ -334,27 +389,56 @@ export default function CellDetailView({ selectedCell, onClose }: CellDetailView
                   style={[
                     styles.tab, 
                     { minWidth: screenWidth * 0.85 / 4 - 16 },
-                    selectedType === 'reflection' && styles.activeTab,
-                    selectedType === 'reflection' && { backgroundColor: 'rgba(191, 90, 242, 0.9)' }
+                    selectedType === 'lesson' && styles.activeTab,
+                    selectedType === 'lesson' && { backgroundColor: getContentTypeColor('lesson', 0.9) }
                   ]}
-                  onPress={() => handleTabSelect('reflection')}
-                  accessibilityLabel="Reflections tab"
-                  accessibilityState={{ selected: selectedType === 'reflection' }}
+                  onPress={() => handleTabSelect('lesson')}
+                  accessibilityLabel="Lessons tab"
+                  accessibilityState={{ selected: selectedType === 'lesson' }}
                 >
                   <Ionicons 
-                    name="journal-outline" 
+                    name="school-outline" 
                     size={18} 
-                    color={selectedType === 'reflection' ? '#FFF' : isDarkMode ? '#8E8E93' : '#666'} 
+                    color={selectedType === 'lesson' ? '#FFF' : isDarkMode ? '#8E8E93' : '#666'} 
                   />
                   <Text style={[
                     styles.tabText,
-                    selectedType === 'reflection' && styles.activeTabText
+                    selectedType === 'lesson' && styles.activeTabText
                   ]}>
-                    Reflections
+                    Lessons
                   </Text>
-                  {reflectionsCount > 0 && (
+                  {lessonsCount > 0 && (
                     <View style={styles.badge}>
-                      <Text style={styles.badgeText}>{reflectionsCount}</Text>
+                      <Text style={styles.badgeText}>{lessonsCount}</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  style={[
+                    styles.tab, 
+                    { minWidth: screenWidth * 0.85 / 4 - 16 },
+                    selectedType === 'insight' && styles.activeTab,
+                    selectedType === 'insight' && { backgroundColor: getContentTypeColor('insight', 0.9) }
+                  ]}
+                  onPress={() => handleTabSelect('insight')}
+                  accessibilityLabel="Insights tab"
+                  accessibilityState={{ selected: selectedType === 'insight' }}
+                >
+                  <Ionicons 
+                    name="bulb-outline" 
+                    size={18} 
+                    color={selectedType === 'insight' ? '#FFF' : isDarkMode ? '#8E8E93' : '#666'} 
+                  />
+                  <Text style={[
+                    styles.tabText,
+                    selectedType === 'insight' && styles.activeTabText
+                  ]}>
+                    Insights
+                  </Text>
+                  {insightsCount > 0 && (
+                    <View style={styles.badge}>
+                      <Text style={styles.badgeText}>{insightsCount}</Text>
                     </View>
                   )}
                 </TouchableOpacity>
@@ -371,20 +455,20 @@ export default function CellDetailView({ selectedCell, onClose }: CellDetailView
               </View>
             ) : (
               <View style={styles.contentArea}>
-                {!hasSelectedContent ? (
-                  <MotiView 
+                {/* Render CellLessonsView when lessons tab is selected */}
+                {selectedType === 'lesson' ? (
+                  <CellLessonsView 
+                    selectedCell={selectedCell} 
+                    onAddLesson={handleAddContent}
+                  />
+                ) : !hasSelectedContent ? (
+                  <Animated.View 
+                    entering={FadeIn.duration(300).delay(100).springify()}
                     style={styles.emptyState}
-                    from={{ opacity: 0, translateY: 10 }}
-                    animate={{ opacity: 1, translateY: 0 }}
-                    transition={{ type: 'timing', duration: 300, delay: 100 } as any}
                   >
                     <View style={styles.emptyStateIconContainer}>
                       <Ionicons 
-                        name={
-                          selectedType === 'memory' ? 'images-outline' :
-                          selectedType === 'lesson' ? 'school-outline' :
-                          selectedType === 'goal' ? 'trophy-outline' : 'book-outline'
-                        } 
+                        name={getIconNameForContentType(selectedType)}
                         size={56} 
                         color={getContentTypeColor(selectedType, 0.7)}
                       />
@@ -395,124 +479,178 @@ export default function CellDetailView({ selectedCell, onClose }: CellDetailView
                     ]}>
                       {getEmptyStateMessage()}
                     </Text>
-                    <TouchableOpacity
+                    <TouchableOpacity 
                       style={[
                         styles.emptyStateButton,
-                        { backgroundColor: getContentTypeColor(selectedType) }
+                        { backgroundColor: getContentTypeColor(selectedType, 0.9) }
                       ]}
                       onPress={handleAddContent}
-                      accessibilityLabel={`Add a new ${selectedType}`}
-                      accessibilityHint={`Creates a new ${selectedType} for this time period`}
+                      accessibilityLabel={`Add ${selectedType}`}
+                      accessibilityHint={`Create new ${selectedType} content`}
                     >
                       <Text style={styles.emptyStateButtonText}>
-                        {`Add ${selectedType === 'memory' ? 'a' : selectedType === 'lesson' ? 'a' : selectedType === 'reflection' ? 'a' : 'a'} ${selectedType}`}
+                        {`Add ${selectedType}`}
                       </Text>
                     </TouchableOpacity>
-                  </MotiView>
+                  </Animated.View>
                 ) : (
                   <ScrollView 
-                    style={styles.contentScrollView}
+                    contentContainerStyle={styles.contentList}
                     showsVerticalScrollIndicator={false}
-                    contentContainerStyle={{ paddingBottom: 70 }}
                   >
-                    {contentForSelectedType.map((item, index) => (
-                      <MotiView
-                        key={item.id}
-                        from={{ opacity: 0, translateY: 10 }}
-                        animate={{ opacity: 1, translateY: 0 }}
-                        transition={{ 
-                          type: 'timing', 
-                          duration: 250, 
-                          delay: index * 50 
-                        } as any}
-                        style={[
-                          styles.contentItem,
-                          isDarkMode ? styles.darkModeContentItem : styles.lightModeContentItem,
-                          { 
-                            shadowColor: getContentTypeColor(selectedType),
-                            shadowOffset: { width: 0, height: 2 },
-                            shadowOpacity: 0.1,
-                            shadowRadius: 4,
-                            elevation: 2
-                          }
-                        ]}
-                      >
-                        <TouchableOpacity 
-                          onPress={() => {
-                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                            router.push({
-                              pathname: `/content/view`,
-                              params: { id: item.id }
-                            });
-                            onClose();
-                          }}
-                          style={styles.contentItemTouchable}
-                          accessibilityLabel={`View ${item.title}`}
-                          accessibilityHint={`Opens the detail view for ${item.title}`}
+                    {contentForSelectedType.map((item, index) => {
+                      const itemAnimationStyle = useAnimatedStyle(() => {
+                        return {
+                          opacity: contentOpacity.value,
+                          transform: [{ translateY: contentTranslateY.value }]
+                        };
+                      });
+                      
+                      return (
+                        <Animated.View
+                          key={item.id}
+                          style={[
+                            styles.contentItem,
+                            isDarkMode ? styles.darkModeContentItem : styles.lightModeContentItem,
+                            { 
+                              shadowColor: getContentTypeColor(selectedType),
+                              shadowOffset: { width: 0, height: 2 },
+                              shadowOpacity: 0.1,
+                              shadowRadius: 4,
+                              elevation: 2
+                            },
+                            itemAnimationStyle
+                          ]}
+                          entering={FadeIn.duration(250).delay(index * 50).springify()
+                            .withInitialValues({ transform: [{ translateY: 10 }] })}
                         >
-                          <View style={styles.contentItemHeader}>
-                            <Text style={[
-                              styles.contentTitle,
-                              isDarkMode ? styles.darkModeText : styles.lightModeText
-                            ]}>
-                              {item.title}
-                            </Text>
+                          <TouchableOpacity 
+                            onPress={() => {
+                              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                              // First close the modal, then navigate
+                              onClose();
+                              
+                              // Navigate to the content tab
+                              router.push("/(tabs)/content" as any);
+                              
+                              // Could dispatch an action here to view the specific content item
+                              // rather than trying to pass parameters through the URL
+                            }}
+                            style={styles.contentItemTouchable}
+                            accessibilityLabel={`View ${item.title}`}
+                            accessibilityHint={`Opens the detail view for ${item.title}`}
+                          >
+                            <View style={styles.contentItemHeader}>
+                              <Text style={[
+                                styles.contentTitle,
+                                isDarkMode ? styles.darkModeText : styles.lightModeText
+                              ]}>
+                                {item.title}
+                              </Text>
+                              
+                              {item.emoji && (
+                                <Text style={styles.contentEmoji}>{item.emoji}</Text>
+                              )}
+                            </View>
                             
-                            {item.emoji && (
-                              <Text style={styles.contentEmoji}>{item.emoji}</Text>
+                            {item.notes && (
+                              <Text 
+                                style={[
+                                  styles.contentNotes,
+                                  isDarkMode ? styles.darkModeNotes : styles.lightModeNotes
+                                ]}
+                                numberOfLines={2}
+                                ellipsizeMode="tail"
+                              >
+                                {item.notes}
+                              </Text>
                             )}
-                          </View>
-                          
-                          {item.notes && (
-                            <Text 
-                              style={[
-                                styles.contentNotes,
-                                isDarkMode ? styles.darkModeNotes : styles.lightModeNotes
-                              ]}
-                              numberOfLines={2}
-                              ellipsizeMode="tail"
-                            >
-                              {item.notes}
-                            </Text>
-                          )}
-                          
-                          <View style={styles.contentFooter}>
-                            <Text style={[
-                              styles.viewDetailsText,
-                              { color: getContentTypeColor(selectedType) }
-                            ]}>
-                              View Details
-                            </Text>
                             
-                            {item.media && item.media.length > 0 && (
-                              <View style={styles.mediaIndicator}>
-                                <Ionicons 
-                                  name="images-outline" 
-                                  size={14} 
-                                  color={isDarkMode ? '#AEAEB2' : '#8E8E93'}
-                                />
-                                <Text style={[
-                                  styles.mediaCount,
-                                  isDarkMode ? styles.darkModeText : styles.lightModeText
-                                ]}>
-                                  {item.media.length}
-                                </Text>
-                              </View>
-                            )}
-                          </View>
-                        </TouchableOpacity>
-                      </MotiView>
-                    ))}
+                            <View style={styles.contentFooter}>
+                              {/* For goals with focus areas */}
+                              {item.type === 'goal' && item.focusAreaId && (
+                                <View style={styles.focusAreaIndicator}>
+                                  <View 
+                                    style={[
+                                      styles.focusAreaDot, 
+                                      { backgroundColor: getFocusAreaInfo(item.focusAreaId)?.color || '#8E8E93' }
+                                    ]} 
+                                  />
+                                  <Text style={styles.focusAreaName}>
+                                    {getFocusAreaInfo(item.focusAreaId)?.name}
+                                  </Text>
+                                </View>
+                              )}
+
+                              {/* For goals with progress */}
+                              {item.type === 'goal' && item.progress !== undefined && (
+                                <View style={styles.progressContainer}>
+                                  <View 
+                                    style={[
+                                      styles.progressBar, 
+                                      { 
+                                        width: `${item.progress}%`,
+                                        backgroundColor: getFocusAreaInfo(item.focusAreaId)?.color || getContentTypeColor('goal')
+                                      }
+                                    ]} 
+                                  />
+                                </View>
+                              )}
+                              
+                              {/* For memories with media */}
+                              {item.type === 'memory' && item.media && item.media.length > 0 && (
+                                <View style={styles.mediaIndicator}>
+                                  <Ionicons 
+                                    name="images-outline" 
+                                    size={14} 
+                                    color={isDarkMode ? '#AEAEB2' : '#8E8E93'}
+                                  />
+                                  <Text style={[
+                                    styles.mediaCount,
+                                    isDarkMode ? styles.darkModeText : styles.lightModeText
+                                  ]}>
+                                    {item.media.length}
+                                  </Text>
+                                </View>
+                              )}
+                              
+                              {/* For insights with importance rating */}
+                              {item.type === 'insight' && item.importance !== undefined && (
+                                <View style={styles.importanceContainer}>
+                                  {Array.from({ length: 5 }).map((_, i) => (
+                                    <View 
+                                      key={i}
+                                      style={[
+                                        styles.importanceDot,
+                                        { 
+                                          backgroundColor: i < item.importance! ? getContentTypeColor('insight') : '#3A3A3C' 
+                                        }
+                                      ]}
+                                    />
+                                  ))}
+                                </View>
+                              )}
+                              
+                              <Text style={[
+                                styles.viewDetailsText,
+                                { color: getContentTypeColor(item.type) }
+                              ]}>
+                                View Details
+                              </Text>
+                            </View>
+                          </TouchableOpacity>
+                        </Animated.View>
+                      );
+                    })}
                   </ScrollView>
                 )}
               </View>
             )}
 
             {/* Add Button */}
-            <MotiView
-              from={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ type: 'spring', stiffness: 150, damping: 15 } as any}
+            <Animated.View
+              entering={FadeIn.delay(200).duration(300).springify()
+                .withInitialValues({ transform: [{ scale: 0.8 }] })}
               style={[
                 styles.addButtonContainer
               ]}
@@ -528,9 +666,9 @@ export default function CellDetailView({ selectedCell, onClose }: CellDetailView
               >
                 <Ionicons name="add" size={24} color="#FFFFFF" />
               </TouchableOpacity>
-            </MotiView>
+            </Animated.View>
           </Pressable>
-        </MotiView>
+        </Animated.View>
       </Pressable>
     </Modal>
   );
@@ -541,12 +679,12 @@ function getContentTypeColor(type: string, opacity: number = 1): string {
   switch (type) {
     case 'memory':
       return `rgba(10, 132, 255, ${opacity})`; // iOS blue
-    case 'lesson':
-      return `rgba(48, 209, 88, ${opacity})`; // iOS green
     case 'goal':
       return `rgba(255, 159, 10, ${opacity})`; // iOS orange
-    case 'reflection':
-      return `rgba(191, 90, 242, ${opacity})`; // iOS purple
+    case 'insight':
+      return `rgba(48, 209, 88, ${opacity})`; // iOS green
+    case 'lesson':
+      return `rgba(52, 199, 89, ${opacity})`; // iOS green for lessons
     default:
       return `rgba(142, 142, 147, ${opacity})`; // iOS gray
   }
@@ -577,7 +715,7 @@ const styles = StyleSheet.create({
   // Dark/Light mode styles
   darkModeView: {
     backgroundColor: '#121212',
-    borderColor: '#FFFFFF',
+    borderColor: '#2C2C2E',
     borderWidth: 1,
   },
   lightModeView: {
@@ -724,8 +862,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: 14,
   },
-  contentScrollView: {
-    flex: 1,
+  contentList: {
+    paddingBottom: 70,
   },
   contentItem: {
     borderRadius: 14,
@@ -733,7 +871,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   darkModeContentItem: {
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: 'rgba(44, 44, 46, 0.8)',
     borderColor: 'rgba(255, 255, 255, 0.1)',
     borderWidth: 1,
   },
@@ -775,6 +913,36 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
   },
+  // Focus area indicator
+  focusAreaIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  focusAreaDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginRight: 4,
+  },
+  focusAreaName: {
+    fontSize: 12,
+    color: '#8E8E93',
+  },
+  // Progress indicator for goals
+  progressContainer: {
+    width: 60,
+    height: 6,
+    backgroundColor: '#3A3A3C',
+    borderRadius: 3,
+    overflow: 'hidden',
+    marginRight: 8,
+  },
+  progressBar: {
+    height: '100%',
+    backgroundColor: '#0A84FF',
+  },
+  // Media indicator for memories
   mediaIndicator: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -786,6 +954,17 @@ const styles = StyleSheet.create({
   mediaCount: {
     fontSize: 12,
     marginLeft: 4,
+  },
+  // Importance indicator for insights
+  importanceContainer: {
+    flexDirection: 'row',
+    marginRight: 8,
+  },
+  importanceDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginHorizontal: 1,
   },
   // Add button
   addButtonContainer: {
@@ -805,5 +984,12 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.3,
     shadowRadius: 4.65,
+  },
+  backButton: {
+    padding: 8,
+    borderRadius: 20,
+    marginRight: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 }); 

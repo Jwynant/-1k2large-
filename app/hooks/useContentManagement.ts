@@ -1,22 +1,42 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { ContentItem, ContentType, SelectedCell } from '../types';
 
 /**
- * Custom hook for managing content (memories, lessons, goals, reflections)
+ * Custom hook for managing content (memories, goals, and lessons)
  */
 export function useContentManagement() {
   const { state, dispatch } = useAppContext();
+  
+  // Memoize content by type for better performance
+  const memories = useMemo(() => {
+    return state.contentItems.filter(item => item.type === 'memory');
+  }, [state.contentItems]);
+  
+  const goals = useMemo(() => {
+    return state.contentItems.filter(item => item.type === 'goal');
+  }, [state.contentItems]);
+  
+  const lessons = useMemo(() => {
+    return state.contentItems.filter(item => item.type === 'lesson');
+  }, [state.contentItems]);
   
   // Get content for a specific cell
   const getCellContent = useCallback((year: number, month?: number, week?: number) => {
     // Filter content items based on date
     return state.contentItems.filter(item => {
+      // Skip timeless lessons when filtering by date
+      if (item.type === 'lesson' && item.isTimeless) {
+        return false;
+      }
+      
       const itemDate = new Date(item.date);
       const itemYear = itemDate.getFullYear();
       
       // If we're looking for a specific year
-      if (year !== itemYear) return false;
+      if (year !== itemYear) {
+        return false;
+      }
       
       // If we're looking for a specific month
       if (month !== undefined) {
@@ -52,7 +72,6 @@ export function useContentManagement() {
     };
     
     dispatch({ type: 'ADD_CONTENT_ITEM', payload: newItem });
-    
     return newItem;
   }, [dispatch]);
   
@@ -68,32 +87,52 @@ export function useContentManagement() {
   
   // Get all content of a specific type
   const getContentByType = useCallback((type: ContentType) => {
-    return state.contentItems.filter(item => item.type === type);
-  }, [state.contentItems]);
+    switch (type) {
+      case 'memory':
+        return memories;
+      case 'goal':
+        return goals;
+      case 'lesson':
+        return lessons;
+      default:
+        return [];
+    }
+  }, [memories, goals, lessons]);
   
   // Get all memories
   const getMemories = useCallback(() => {
-    return getContentByType('memory');
-  }, [getContentByType]);
-  
-  // Get all lessons
-  const getLessons = useCallback(() => {
-    return getContentByType('lesson');
-  }, [getContentByType]);
+    return memories;
+  }, [memories]);
   
   // Get all goals
   const getGoals = useCallback(() => {
-    return getContentByType('goal');
-  }, [getContentByType]);
+    return goals;
+  }, [goals]);
   
-  // Get all reflections
-  const getReflections = useCallback(() => {
-    return getContentByType('reflection');
-  }, [getContentByType]);
+  // Get all lessons
+  const getLessons = useCallback(() => {
+    return lessons;
+  }, [lessons]);
+  
+  // Get favorite lessons
+  const getFavoriteLessons = useCallback(() => {
+    return lessons.filter(lesson => lesson.isFavorite);
+  }, [lessons]);
+  
+  // Get timeless lessons (not attributed to a specific date)
+  const getTimelessLessons = useCallback(() => {
+    return lessons.filter(lesson => lesson.isTimeless);
+  }, [lessons]);
+  
+  // Get lessons with upcoming reminders
+  const getLessonsWithReminders = useCallback(() => {
+    return lessons.filter(lesson => lesson.reminder && new Date(lesson.reminder.nextReminder) > new Date());
+  }, [lessons]);
   
   // Check if a cell has any content
   const hasContent = useCallback((year: number, month?: number, week?: number) => {
-    return getCellContent(year, month, week).length > 0;
+    const content = getCellContent(year, month, week);
+    return content.length > 0;
   }, [getCellContent]);
   
   return {
@@ -104,12 +143,14 @@ export function useContentManagement() {
     deleteContentItem,
     getContentByType,
     getMemories,
-    getLessons,
     getGoals,
-    getReflections,
+    getLessons,
+    getFavoriteLessons,
+    getTimelessLessons,
+    getLessonsWithReminders,
     hasContent,
   };
 }
 
-// Default export for Expo Router
+// Default export for Expo Router compatibility
 export default useContentManagement; 

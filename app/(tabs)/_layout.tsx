@@ -40,31 +40,30 @@ export default function TabLayout() {
         tabBarInactiveTintColor: isDarkMode ? '#8E8E93' : '#8E8E93', // iOS gray for both modes
       }}>
       <Tabs.Screen
-        name="home"
-        options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <Ionicons name="home" size={24} color={color} />,
-        }}
-      />
-      <Tabs.Screen
         name="index"
         options={{
-          title: 'Life Grid',
-          tabBarIcon: ({ color }) => <Ionicons name="grid" size={24} color={color} />,
+          title: 'Home',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? "home" : "home-outline"} size={24} color={color} />
+          ),
         }}
       />
       <Tabs.Screen
-        name="timeline"
+        name="today"
         options={{
-          title: 'Timeline',
-          tabBarIcon: ({ color }) => <Ionicons name="time" size={24} color={color} />,
+          title: 'Today',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? "today" : "today-outline"} size={24} color={color} />
+          ),
         }}
       />
       <Tabs.Screen
-        name="more"
+        name="profile"
         options={{
-          title: 'More',
-          tabBarIcon: ({ color }) => <Ionicons name="ellipsis-horizontal" size={24} color={color} />,
+          title: 'Profile',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? "person" : "person-outline"} size={24} color={color} />
+          ),
         }}
       />
     </Tabs>

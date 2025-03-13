@@ -189,6 +189,11 @@ export const goals: Goal[] = [
   },
 ];
 
-// Default export for Expo Router
-const mockData = { priorities, goals };
+// Mock data collection with all exported data
+const mockData = {
+  priorities,
+  goals
+};
+
+// Default export for Expo Router compatibility
 export default mockData; 

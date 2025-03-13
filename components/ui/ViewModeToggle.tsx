@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, Pressable, Animated } from 'react-native';
 import { ViewMode } from '../../app/types';
 import { useRef, useEffect } from 'react';
+import * as Haptics from 'expo-haptics';
 
 type ViewModeToggleProps = {
   currentMode: ViewMode;
@@ -35,6 +36,15 @@ export default function ViewModeToggle({ currentMode, onModeChange }: ViewModeTo
     outputRange: [0, 90, 180] // Adjust these values based on your toggle width
   });
   
+  // Handle mode change with haptic feedback
+  const handleModeChange = (mode: ViewMode) => {
+    if (mode !== currentMode) {
+      // Provide haptic feedback when changing modes
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      onModeChange(mode);
+    }
+  };
+  
   return (
     <View style={styles.container}>
       <View style={styles.toggleContainer}>
@@ -49,7 +59,7 @@ export default function ViewModeToggle({ currentMode, onModeChange }: ViewModeTo
         {/* Toggle buttons */}
         <Pressable 
           style={[styles.toggleButton, styles.leftButton]}
-          onPress={() => onModeChange('weeks')}
+          onPress={() => handleModeChange('weeks')}
         >
           <Text 
             style={[
@@ -63,7 +73,7 @@ export default function ViewModeToggle({ currentMode, onModeChange }: ViewModeTo
         
         <Pressable 
           style={[styles.toggleButton, styles.middleButton]}
-          onPress={() => onModeChange('months')}
+          onPress={() => handleModeChange('months')}
         >
           <Text 
             style={[
@@ -77,7 +87,7 @@ export default function ViewModeToggle({ currentMode, onModeChange }: ViewModeTo
         
         <Pressable 
           style={[styles.toggleButton, styles.rightButton]}
-          onPress={() => onModeChange('years')}
+          onPress={() => handleModeChange('years')}
         >
           <Text 
             style={[

@@ -56,11 +56,7 @@ export type GoalStats = {
   highImpactGoals: number;
 };
 
-// Default export for Expo Router
-import React from 'react';
-
+// Dummy component for Expo Router compatibility
 export default function IntentionTypes() {
-  // This is a dummy component that satisfies Expo Router's requirement
-  // for having a React component as the default export
   return null;
 } 

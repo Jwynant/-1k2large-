@@ -13,9 +13,10 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { ContentType } from '../../app/context/AppContext';
+import { ContentType } from '../../app/types';
 import { useContentManagement } from '../../app/hooks/useContentManagement';
 import { useDateCalculations } from '../../app/hooks/useDateCalculations';
+import { CategorySelector } from '../../app/components/shared/CategorySelector';
 
 type ContentFormProps = {
   contentType: ContentType;
@@ -25,7 +26,7 @@ type ContentFormProps = {
 
 export default function ContentForm({ contentType, selectedCell, onSuccess }: ContentFormProps) {
   const router = useRouter();
-  const { addContent } = useContentManagement();
+  const { addContentItem } = useContentManagement();
   const { formatDate } = useDateCalculations();
   
   // Form state
@@ -34,6 +35,7 @@ export default function ContentForm({ contentType, selectedCell, onSuccess }: Co
   const [emoji, setEmoji] = useState('');
   const [date, setDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [categoryIds, setCategoryIds] = useState<string[]>([]);
   
   // Get timeframe string for display
   const getTimeframeString = () => {
@@ -102,14 +104,18 @@ export default function ContentForm({ contentType, selectedCell, onSuccess }: Co
     // Format date for storage
     const formattedDate = date.toISOString().split('T')[0];
     
-    // Add content
-    const newContent = addContent(
-      contentType,
-      title,
-      formattedDate,
-      notes,
-      emoji
-    );
+    // Create content item object
+    const contentItem = {
+      title: title.trim(),
+      type: contentType,
+      date: formattedDate,
+      notes: notes.trim() || undefined,
+      emoji: emoji || undefined,
+      categoryIds: categoryIds.length > 0 ? categoryIds : undefined
+    };
+    
+    // Add content using addContentItem
+    const newContent = addContentItem(contentItem);
     
     if (newContent) {
       // Show success message
@@ -120,7 +126,13 @@ export default function ContentForm({ contentType, selectedCell, onSuccess }: Co
           { 
             text: 'OK', 
             onPress: () => {
-              // Call success callback if provided
+              // Clear form
+              setTitle('');
+              setNotes('');
+              setEmoji('');
+              setCategoryIds([]);
+              
+              // Call onSuccess callback if provided
               if (onSuccess) {
                 onSuccess();
               }
@@ -206,6 +218,15 @@ export default function ContentForm({ contentType, selectedCell, onSuccess }: Co
               textAlignVertical="top"
             />
           </View>
+          
+          <Text style={styles.label}>Categories</Text>
+          <CategorySelector
+            selectedIds={categoryIds}
+            onChange={setCategoryIds}
+            multiSelect={true}
+            showCreate={true}
+            contextText={`${title} ${notes}`}
+          />
         </View>
       </ScrollView>
       

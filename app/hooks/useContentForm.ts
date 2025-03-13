@@ -26,8 +26,8 @@ export function useContentForm({
     notes: initialData.notes || '',
     date: initialData.date || new Date(),
     emoji: initialData.emoji || '',
-    importance: initialData.importance || 3,
     media: initialData.media || [],
+    categoryIds: initialData.categoryIds || [],
   });
   
   // Form errors state
@@ -49,7 +49,26 @@ export function useContentForm({
     }
   }, [errors]);
   
-  // Validate the form
+  // Validate the form without updating state (for external checks)
+  const checkFormValidity = useCallback(() => {
+    // Title is required
+    if (!formState.title.trim()) {
+      return false;
+    }
+    
+    // Date is required
+    if (!formState.date) {
+      return false;
+    }
+    
+    if (type === 'goal' && !formState.focusAreaId) {
+      return false;
+    }
+    
+    return true;
+  }, [formState.title, formState.date, formState.focusAreaId, type]);
+  
+  // Validate the form and update errors state
   const validateForm = useCallback(() => {
     const newErrors: ContentFormErrors = {};
     
@@ -63,31 +82,66 @@ export function useContentForm({
       newErrors.date = 'Date is required';
     }
     
+    if (type === 'goal' && !formState.focusAreaId) {
+      newErrors.focusAreaId = 'Please select a focus area';
+    }
+    
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  }, [formState]);
+  }, [formState, type]);
   
   // Handle form submission
   const handleSubmit = useCallback(() => {
+    console.log('useContentForm - handleSubmit called with type:', type);
+    console.log('useContentForm - current formState:', JSON.stringify(formState, null, 2));
+    
+    // Validate form before submission
     if (!validateForm()) {
-      return null;
+      console.error('useContentForm - form validation failed:', errors);
+      return false;
     }
     
-    // Create content item
-    const newItem = {
-      id: nanoid(),
+    // Prepare content data
+    const contentData: Omit<ContentItem, 'id'> = {
       title: formState.title,
-      date: formState.date.toISOString(),
-      type,
-      notes: formState.notes || undefined,
-      emoji: formState.emoji || undefined,
-      importance: type === 'lesson' ? formState.importance : undefined,
-      media: formState.media.length > 0 ? formState.media : undefined,
+      date: formState.date.toISOString().split('T')[0],
+      type: type,
+      notes: formState.notes,
+      emoji: formState.emoji,
+      categoryIds: formState.categoryIds,
     };
     
-    // Add the item
-    return addContentItem(newItem);
-  }, [formState, type, validateForm, addContentItem]);
+    console.log('useContentForm - prepared contentData:', JSON.stringify(contentData, null, 2));
+    
+    // Add type-specific fields
+    if (type === 'goal') {
+      contentData.focusAreaId = formState.focusAreaId;
+      contentData.progress = 0;
+      contentData.isCompleted = false;
+      
+      if (formState.deadline) {
+        contentData.deadline = formState.deadline.toISOString().split('T')[0];
+      }
+      
+      if (formState.milestones && formState.milestones.length > 0) {
+        contentData.milestones = formState.milestones;
+      }
+    } else if (type === 'memory') {
+      contentData.media = formState.media;
+      console.log('useContentForm - added media to memory:', formState.media);
+    }
+    
+    // Add content item and return it
+    try {
+      console.log('useContentForm - calling addContentItem with:', JSON.stringify(contentData, null, 2));
+      const result = addContentItem(contentData);
+      console.log('useContentForm - addContentItem result:', result);
+      return result;
+    } catch (error) {
+      console.error('useContentForm - error in addContentItem:', error);
+      return false;
+    }
+  }, [formState, type, addContentItem, validateForm, errors]);
   
   // Reset the form
   const resetForm = useCallback(() => {
@@ -96,8 +150,8 @@ export function useContentForm({
       notes: '',
       date: new Date(),
       emoji: '',
-      importance: 3,
       media: [],
+      categoryIds: [],
     });
     setErrors({});
   }, []);
@@ -126,9 +180,10 @@ export function useContentForm({
     resetForm,
     addMedia,
     removeMedia,
-    isValid: validateForm,
+    validateForm,
+    isValid: checkFormValidity,
   };
 }
 
-// Default export for Expo Router
-export default useContentForm;
+// Default export for Expo Router compatibility
+export default useContentForm; 

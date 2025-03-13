@@ -22,6 +22,7 @@ The app provides an intuitive visual timeline that integrates memories, lessons,
 - **Data Storage**: AsyncStorage for local persistence
 - **Navigation**: Expo Router
 - **UI Components**: Custom components with React Native components
+- **Testing**: Jest for unit tests, Detox for end-to-end testing
 
 ## Project Structure
 
@@ -39,6 +40,12 @@ components/
   └── ui/               # Reusable UI components
 assets/
   └── images/           # App images
+e2e/                    # End-to-end tests
+  ├── helpers/          # Test helper functions
+  ├── tests/            # Test suites
+  ├── setup.js          # Test setup
+  └── jest.config.js    # Jest configuration for E2E tests
+__tests__/              # Unit and integration tests
 ```
 
 ## Getting Started
@@ -48,6 +55,7 @@ assets/
 - Node.js (v14 or later)
 - npm or yarn
 - Expo CLI
+- For E2E testing: iOS Simulator or Android Emulator
 
 ### Installation
 
@@ -66,6 +74,45 @@ assets/
    ```
    npm run dev
    ```
+
+## Testing
+
+### Unit and Integration Tests
+
+Run unit and integration tests with Jest:
+
+```
+npm test
+```
+
+Run tests with coverage report:
+
+```
+npm run test:coverage
+```
+
+### End-to-End Tests
+
+The app uses Detox for end-to-end testing. To run the tests:
+
+1. Install Detox CLI globally:
+   ```
+   npm install -g detox-cli
+   ```
+
+2. Build the app for testing:
+   ```
+   npm run e2e:build:ios   # For iOS
+   npm run e2e:build:android   # For Android
+   ```
+
+3. Run the tests:
+   ```
+   npm run e2e:test:ios   # For iOS
+   npm run e2e:test:android   # For Android
+   ```
+
+For more information about the end-to-end testing setup, see the [E2E Testing README](e2e/README.md).
 
 ## Architecture
 
@@ -96,6 +143,14 @@ The app uses several custom hooks to encapsulate business logic:
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
+
+### Development Workflow
+
+1. Create a feature branch from `main`
+2. Make your changes
+3. Add or update tests as needed
+4. Ensure all tests pass
+5. Submit a pull request
 
 ## License
 

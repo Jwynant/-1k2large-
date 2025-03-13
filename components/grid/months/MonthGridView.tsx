@@ -1,11 +1,21 @@
-import { View, StyleSheet, ScrollView, Text } from 'react-native';
-import { memo, useMemo } from 'react';
+import { View, StyleSheet, Text, useWindowDimensions } from 'react-native';
+import { memo, useMemo, useCallback, useRef, useEffect, useState } from 'react';
+import { FlashList } from '@shopify/flash-list';
 import MonthCluster from './MonthCluster';
 import { useDateCalculations } from '../../../app/hooks/useDateCalculations';
 import { useAppContext } from '../../../app/context/AppContext';
+import { useResponsiveLayout } from '../../../app/hooks/useResponsiveLayout';
 
 // Define a cluster type for better type safety
 type Cluster = { year: number; isCurrent: boolean } | null;
+
+// Define a row item type for FlashList
+type RowItem = {
+  id: string;
+  clusters: Cluster[];
+  rowIndex: number;
+  ageLabel: string;
+};
 
 export type MonthGridViewProps = {
   clusters: { year: number; isCurrent: boolean }[];
@@ -24,9 +34,20 @@ function MonthGridView({
 }: MonthGridViewProps) {
   const { getYearLabel, getAgeForYear } = useDateCalculations();
   const { state } = useAppContext();
+  const { horizontalPadding } = useResponsiveLayout();
+  const { height: windowHeight } = useWindowDimensions();
+  
+  // Create a ref for the FlashList
+  const flashListRef = useRef<FlashList<RowItem>>(null);
+  
+  // Track if initial scroll has been performed
+  const hasScrolledRef = useRef(false);
   
   // Always use exactly 5 clusters per row
   const CLUSTERS_PER_ROW = 5;
+  
+  // Define the estimated row height for calculations
+  const estimatedItemSize = 100; // Height of a row
   
   // Group clusters into rows with exactly 5 clusters in each row
   const clusterRows = useMemo(() => {
@@ -76,64 +97,153 @@ function MonthGridView({
     });
   }, [clusterRows, getAgeForYear]);
 
-  // Fallback if no rows were calculated
-  if (clusterRows.length === 0) {
+  // Create a flat data structure for FlashList
+  const rowData = useMemo(() => {
+    return clusterRows.map((row, index) => ({
+      id: `row-${index}`,
+      clusters: row,
+      rowIndex: index,
+      ageLabel: ageLabels[index] || ""
+    }));
+  }, [clusterRows, ageLabels]);
+
+  // Find the index of the row containing the current year
+  const currentRowIndex = useMemo(() => {
+    return findCurrentYearIndex(rowData);
+  }, [rowData]);
+
+  // Calculate the offset to center the current row, but shifted one row down
+  const calculateCenteredOffset = useCallback(() => {
+    // Get the header height (approximate)
+    const headerHeight = 150; // Adjust based on your actual header height
+    
+    // Calculate the available viewport height
+    const viewportHeight = windowHeight - headerHeight;
+    
+    // Calculate how many rows can fit in half the viewport
+    const halfViewportRows = Math.floor(viewportHeight / (estimatedItemSize * 2));
+    
+    // Calculate the offset to center the current row
+    // If currentRowIndex is less than halfViewportRows, we don't need to scroll
+    if (currentRowIndex < halfViewportRows) {
+      return 0;
+    }
+    
+    // Calculate the offset to center the current row, but shifted one row down
+    // Add one row height to the calculated offset
+    const offset = (currentRowIndex - halfViewportRows) * estimatedItemSize + estimatedItemSize;
+    
+    // Ensure we don't scroll to a negative offset
+    return Math.max(0, offset);
+  }, [currentRowIndex, windowHeight, estimatedItemSize]);
+
+  // Set initial scroll position immediately without animation
+  useEffect(() => {
+    if (flashListRef.current && rowData.length > 0 && !hasScrolledRef.current) {
+      // Use a small timeout to ensure the list is fully rendered before scrolling
+      const timer = setTimeout(() => {
+        const offset = calculateCenteredOffset();
+        flashListRef.current?.scrollToOffset({ offset, animated: false });
+        hasScrolledRef.current = true;
+      }, 50);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [rowData, calculateCenteredOffset]);
+
+  // Reset scroll flag when data changes significantly
+  useEffect(() => {
+    hasScrolledRef.current = false;
+  }, [clusters.length]);
+
+  // Render a row item for FlashList
+  const renderRow = useCallback(({ item }: { item: RowItem }) => {
     return (
-      <ScrollView style={styles.container}>
+      <View style={styles.rowContainer}>
+        {/* Age label */}
+        <Text style={styles.ageLabel}>
+          {item.ageLabel}
+        </Text>
+        
+        {/* Clusters in this row */}
+        <View style={styles.row}>
+          {item.clusters.map((cluster: Cluster, colIndex: number) => {
+            if (cluster === null) {
+              // Render an empty placeholder to maintain grid structure
+              return <View key={`empty-${item.rowIndex}-${colIndex}`} style={styles.emptyCluster} />;
+            }
+            
+            return (
+              <MonthCluster
+                key={`month-cluster-${item.rowIndex}-${colIndex}`}
+                year={cluster.year}
+                isCurrent={cluster.isCurrent}
+                onPress={(position) => {
+                  onClusterPress(cluster.year, position);
+                }}
+                onCellPress={(month: number) => onCellPress(cluster.year, month)}
+                onLongPress={(month: number, position: { x: number, y: number }) => 
+                  onLongPress(cluster.year, month, undefined, position)
+                }
+                hasContent={hasContent}
+              />
+            );
+          })}
+        </View>
+      </View>
+    );
+  }, [onClusterPress, onCellPress, onLongPress, hasContent]);
+
+  // Key extractor for FlashList
+  const keyExtractor = useCallback((item: RowItem) => item.id, []);
+
+  // Fallback if no rows were calculated
+  if (rowData.length === 0) {
+    return (
+      <View style={styles.container}>
         <View style={styles.grid}>
           <Text style={styles.emptyText}>No months available</Text>
         </View>
-      </ScrollView>
+      </View>
     );
   }
 
   return (
-    <ScrollView 
-      style={styles.container}
-      contentContainerStyle={styles.scrollContentContainer}
-    >
-      <View style={styles.contentContainer}>
-        {/* Age labels column */}
-        <View style={styles.ageLabelsContainer}>
-          {ageLabels.map((label, index) => (
-            <Text key={index} style={styles.ageLabel}>
-              {label}
-            </Text>
-          ))}
-        </View>
-        
-        {/* Grid content */}
-        <View style={styles.gridContainer}>
-          <View style={styles.grid}>
-            {clusterRows.map((row, rowIndex) => (
-              <View key={`row-${rowIndex}`} style={styles.row}>
-                {row.map((cluster: Cluster, colIndex: number) => {
-                  if (cluster === null) {
-                    // Render an empty placeholder to maintain grid structure
-                    return <View key={`empty-${rowIndex}-${colIndex}`} style={styles.emptyCluster} />;
-                  }
-                  
-                  return (
-                    <MonthCluster 
-                      key={cluster.year} 
-                      year={cluster.year} 
-                      isCurrent={cluster.isCurrent}
-                      onPress={(position) => onClusterPress(cluster.year, position)}
-                      onCellPress={(month: number) => onCellPress(cluster.year, month)}
-                      onLongPress={(month: number, position: { x: number, y: number }) => 
-                        onLongPress(cluster.year, month, undefined, position)
-                      }
-                      hasContent={hasContent}
-                    />
-                  );
-                })}
-              </View>
-            ))}
-          </View>
-        </View>
-      </View>
-    </ScrollView>
+    <View style={styles.container}>
+      <FlashList
+        ref={flashListRef}
+        data={rowData}
+        renderItem={renderRow}
+        keyExtractor={keyExtractor}
+        estimatedItemSize={estimatedItemSize}
+        showsVerticalScrollIndicator={true}
+        contentContainerStyle={styles.scrollContentContainer}
+        maintainVisibleContentPosition={{
+          minIndexForVisible: 0,
+        }}
+        overrideItemLayout={(layout, item) => {
+          layout.size = estimatedItemSize;
+        }}
+      />
+    </View>
   );
+}
+
+// Helper function to find the index of the row containing the current year
+function findCurrentYearIndex(rowData: RowItem[]): number {
+  const currentYear = new Date().getFullYear();
+  
+  for (let i = 0; i < rowData.length; i++) {
+    const currentRow = rowData[i].clusters;
+    for (const cluster of currentRow) {
+      if (cluster && cluster.isCurrent) {
+        return i;
+      }
+    }
+  }
+  
+  // Default to the middle if current year not found
+  return Math.floor(rowData.length / 2);
 }
 
 const styles = StyleSheet.create({
@@ -144,41 +254,33 @@ const styles = StyleSheet.create({
   scrollContentContainer: {
     paddingBottom: 5, // Minimal bottom padding
   },
-  contentContainer: {
+  rowContainer: {
     flexDirection: 'row',
-    flex: 1,
-  },
-  ageLabelsContainer: {
-    width: 20,
-    paddingTop: 40, // Match the grid padding
     alignItems: 'center',
   },
   ageLabel: {
     fontSize: 14,
     color: '#aaa', // Light gray for dark mode
     fontWeight: '500',
-    height: 100, // Increased height to match a row of clusters
-    textAlignVertical: 'center',
-    lineHeight: 30, // Center text vertically
-  },
-  gridContainer: {
-    flex: 1,
-  },
-  grid: {
-    flexDirection: 'column',
-    justifyContent: 'flex-start',
-    padding: 10,
+    width: 20,
+    textAlign: 'center',
   },
   row: {
     flexDirection: 'row',
     marginBottom: 8,
     justifyContent: 'flex-start',
     alignItems: 'center',
+    flex: 1,
   },
   emptyCluster: {
     width: 90, // Match the width of MonthCluster
     height: 90, // Match the height of MonthCluster
     margin: 5,
+  },
+  grid: {
+    flexDirection: 'column',
+    justifyContent: 'flex-start',
+    padding: 10,
   },
   emptyText: {
     color: '#ffffff',

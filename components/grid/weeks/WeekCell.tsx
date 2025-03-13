@@ -3,7 +3,6 @@ import { useState, useCallback, memo } from 'react';
 import { MotiView } from 'moti';
 import { useDateCalculations } from '../../../app/hooks/useDateCalculations';
 import { useContentManagement } from '../../../app/hooks/useContentManagement';
-import CellContentIndicator from '../CellContentIndicator';
 
 type WeekCellProps = {
   year: number;
@@ -58,10 +57,7 @@ function WeekCell({ year, week, onPress, onLongPress }: WeekCellProps) {
         ]} 
       >
         {contentExists && (
-          <CellContentIndicator 
-            content={cellContent} 
-            size="small" 
-          />
+          <View style={styles.contentDot} />
         )}
       </MotiView>
     </Pressable>
@@ -86,17 +82,21 @@ const styles = StyleSheet.create({
     borderColor: '#444', // Darker border for dark mode
   },
   current: {
-    borderColor: '#007AFF', // iOS blue
+    borderColor: '#FFD700', // Gold color to match our theme
     borderWidth: 2,
   },
   pressed: {
     opacity: 0.7,
   },
-  contentIndicator: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: '#007AFF', // iOS blue
+  contentDot: {
+    position: 'absolute',
+    top: 1,
+    right: 1,
+    width: 3,
+    height: 3,
+    borderRadius: 1.5,
+    backgroundColor: '#000000', // Black dot
+    opacity: 1.0,
   },
 });
 
