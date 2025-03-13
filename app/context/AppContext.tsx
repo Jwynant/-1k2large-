@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useReducer, ReactNode, useEffect, useRef } from 'react';
 import { StorageService } from '../services/StorageService';
+import { NotificationService } from '../services/NotificationService';
 import { 
   AppState, 
   AppAction, 
@@ -109,21 +110,29 @@ function appReducer(state: AppState, action: AppAction): AppState {
       console.log('AppContext - New selectedCell:', newCellState.selectedCell);
       return newCellState;
     case 'ADD_CONTENT_ITEM':
-      console.log('AppContext - ADD_CONTENT_ITEM action received:', action.payload.id);
-      console.log('AppContext - Current contentItems count:', state.contentItems.length);
-      const newState = { 
-        ...state, 
-        contentItems: [...state.contentItems, action.payload] 
-      };
-      console.log('AppContext - New contentItems count:', newState.contentItems.length);
-      return newState;
+      const newContentItems = [...state.contentItems, action.payload];
+      // Schedule notifications for the new content item
+      if (action.payload.type === 'goal' && action.payload.deadline) {
+        NotificationService.scheduleGoalDeadlineNotification(action.payload);
+      } else if (action.payload.type === 'lesson' && action.payload.reminder?.nextReminder) {
+        NotificationService.scheduleLessonReminder(action.payload);
+      }
+      return { ...state, contentItems: newContentItems };
     case 'UPDATE_CONTENT_ITEM':
-      return { 
-        ...state, 
-        contentItems: state.contentItems.map(item => 
-          item.id === action.payload.id ? action.payload : item
-        ) 
-      };
+      const updatedContentItems = state.contentItems.map(item => 
+        item.id === action.payload.id ? action.payload : item
+      );
+      // Update notifications for the updated content item
+      if (action.payload.type === 'goal') {
+        // Cancel any existing notifications for this goal
+        // Then schedule a new one if needed
+        if (action.payload.deadline && !action.payload.isCompleted) {
+          NotificationService.scheduleGoalDeadlineNotification(action.payload);
+        }
+      } else if (action.payload.type === 'lesson' && action.payload.reminder?.nextReminder) {
+        NotificationService.scheduleLessonReminder(action.payload);
+      }
+      return { ...state, contentItems: updatedContentItems };
     case 'DELETE_CONTENT_ITEM':
       return { 
         ...state, 
@@ -195,13 +204,16 @@ function appReducer(state: AppState, action: AppAction): AppState {
         categories: action.payload
       };
     case 'UPDATE_USER_SETTINGS':
-      return {
-        ...state,
-        userSettings: {
-          ...state.userSettings,
-          ...action.payload
-        }
-      };
+      const updatedSettings = { ...state.userSettings, ...action.payload };
+      // If notification settings changed, reschedule notifications
+      if (action.payload.notificationsEnabled !== undefined || 
+          action.payload.notifications !== undefined) {
+        // Use setTimeout to avoid blocking the UI
+        setTimeout(() => {
+          NotificationService.rescheduleAllNotifications();
+        }, 0);
+      }
+      return { ...state, userSettings: updatedSettings };
     case 'SET_THEME':
       return {
         ...state,
@@ -233,12 +245,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(appReducer, initialState);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const prevStateRef = useRef<AppState>(initialState);
+  const isInitialMount = useRef(true);
   
   // Load data from storage on initial render - optimized to load in parallel
   useEffect(() => {
     async function loadData() {
       try {
-        console.log('Loading app data...');
+        dispatch({ type: 'SET_LOADING', payload: true });
         
         // Load all data in parallel for better performance
         const [
@@ -264,6 +277,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
         if (needsFocusAreaMigration(focusAreas)) {
           processedFocusAreas = migrateFocusAreas(focusAreas);
           await StorageService.saveFocusAreas(processedFocusAreas);
+        }
+        
+        // Initialize notifications
+        if (userSettings?.notificationsEnabled) {
+          await NotificationService.requestPermissions();
+          await NotificationService.rescheduleAllNotifications();
         }
         
         // Batch all state updates into a single dispatch
@@ -356,6 +375,28 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
     };
   }, [state]);
+  
+  // Set up notification listeners
+  useEffect(() => {
+    const cleanup = NotificationService.setNotificationListeners(
+      (notification) => {
+        console.log('Received notification:', notification);
+      },
+      (response) => {
+        const data = response.notification.request.content.data;
+        console.log('Notification response:', data);
+        
+        // Handle notification response
+        if (data.contentId) {
+          // Navigate to the content item
+          // This would typically be handled by a navigation service
+          console.log('Navigate to content item:', data.contentId);
+        }
+      }
+    );
+    
+    return cleanup;
+  }, []);
   
   return (
     <AppContext.Provider value={{ state, dispatch }}>

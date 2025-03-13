@@ -4,56 +4,74 @@ import {
   Text, 
   StyleSheet, 
   TouchableOpacity, 
-  useColorScheme,
-  Image,
-  Alert
+  Alert,
+  useColorScheme
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
+import { MediaService } from '../../services/MediaService';
 
 interface MediaUploadFieldProps {
   label: string;
   onAddMedia: (uri: string) => void;
+  onAddMultipleMedia?: (uris: string[]) => void;
   mediaCount: number;
   required?: boolean;
+  maxSelection?: number;
 }
 
 export default function MediaUploadField({ 
   label, 
   onAddMedia,
+  onAddMultipleMedia,
   mediaCount,
-  required = false
+  required = false,
+  maxSelection = 10
 }: MediaUploadFieldProps) {
   const colorScheme = useColorScheme();
   const isDarkMode = colorScheme === 'dark';
   
-  const handleAddMedia = async () => {
+  const handlePickImage = async () => {
     try {
-      // Request permission to access the photo library
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      // Use the MediaService to pick images
+      const mediaItems = await MediaService.pickImage({
+        allowsMultipleSelection: !!onAddMultipleMedia,
+        maxSelection,
+        allowsEditing: !onAddMultipleMedia,
+      });
       
-      if (status !== 'granted') {
-        Alert.alert('Permission Required', 'Please allow access to your photo library to add photos.');
+      if (mediaItems.length === 0) {
         return;
       }
       
-      // Launch the image picker
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [4, 3],
-        quality: 0.8,
-      });
-      
-      if (!result.canceled && result.assets && result.assets.length > 0) {
-        // Add the selected image to the form state
-        onAddMedia(result.assets[0].uri);
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      // Handle single or multiple selection
+      if (mediaItems.length === 1) {
+        onAddMedia(mediaItems[0].uri);
+      } else if (onAddMultipleMedia) {
+        onAddMultipleMedia(mediaItems.map(item => item.uri));
       }
+      
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (error) {
       console.error('Error picking image:', error);
       Alert.alert('Error', 'Failed to add photo. Please try again.');
+    }
+  };
+  
+  const handleTakePhoto = async () => {
+    try {
+      // Use the MediaService to take a photo
+      const mediaItem = await MediaService.takePhoto();
+      
+      if (!mediaItem) {
+        return;
+      }
+      
+      onAddMedia(mediaItem.uri);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (error) {
+      console.error('Error taking photo:', error);
+      Alert.alert('Error', 'Failed to take photo. Please try again.');
     }
   };
   
@@ -74,26 +92,52 @@ export default function MediaUploadField({
         )}
       </View>
       
-      <TouchableOpacity 
-        style={[
-          styles.uploadButton,
-          isDarkMode ? styles.darkUploadButton : styles.lightUploadButton
-        ]}
-        onPress={handleAddMedia}
-      >
-        <Ionicons 
-          name="camera" 
-          size={24} 
-          color={isDarkMode ? "#FFFFFF" : "#000000"} 
-          style={styles.uploadIcon}
-        />
-        <Text style={[
-          styles.uploadText,
-          isDarkMode ? styles.darkUploadText : styles.lightUploadText
-        ]}>
-          Choose from Library
-        </Text>
-      </TouchableOpacity>
+      <View style={styles.buttonContainer}>
+        <TouchableOpacity 
+          style={[
+            styles.uploadButton,
+            isDarkMode ? styles.darkUploadButton : styles.lightUploadButton
+          ]}
+          onPress={handlePickImage}
+          accessibilityLabel="Choose photos from library"
+        >
+          <Ionicons 
+            name="images" 
+            size={24} 
+            color={isDarkMode ? "#FFFFFF" : "#000000"} 
+            style={styles.uploadIcon}
+          />
+          <Text style={[
+            styles.uploadText,
+            isDarkMode ? styles.darkUploadText : styles.lightUploadText
+          ]}>
+            {onAddMultipleMedia ? 'Choose Multiple Photos' : 'Choose from Library'}
+          </Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity 
+          style={[
+            styles.uploadButton,
+            isDarkMode ? styles.darkUploadButton : styles.lightUploadButton,
+            { marginTop: 8 }
+          ]}
+          onPress={handleTakePhoto}
+          accessibilityLabel="Take a photo with camera"
+        >
+          <Ionicons 
+            name="camera" 
+            size={24} 
+            color={isDarkMode ? "#FFFFFF" : "#000000"} 
+            style={styles.uploadIcon}
+          />
+          <Text style={[
+            styles.uploadText,
+            isDarkMode ? styles.darkUploadText : styles.lightUploadText
+          ]}>
+            Take Photo
+          </Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -125,6 +169,9 @@ const styles = StyleSheet.create({
   mediaCount: {
     fontSize: 14,
     color: '#8E8E93',
+  },
+  buttonContainer: {
+    flexDirection: 'column',
   },
   uploadButton: {
     flexDirection: 'row',
