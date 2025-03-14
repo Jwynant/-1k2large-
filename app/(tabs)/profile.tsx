@@ -5,15 +5,20 @@ import { useAppContext } from '../context/AppContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { BirthDateModal, LifeExpectancyModal } from '../components/profile';
+import NotificationSettingsModal from '../components/profile/NotificationSettingsModal';
+import NotificationBadge from '../components/shared/NotificationBadge';
 import * as Haptics from 'expo-haptics';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
+import { UserSettings } from '../types';
+import { useDateCalculations } from '../hooks/useDateCalculations';
 
 export default function ProfileScreen() {
   const { state, dispatch } = useAppContext();
   const { userSettings } = state;
   const { colors, isDark } = useTheme();
   const router = useRouter();
+  const { getLifeProgress } = useDateCalculations();
 
   // State for settings toggles
   const [notificationsEnabled, setNotificationsEnabled] = useState(
@@ -22,13 +27,11 @@ export default function ProfileScreen() {
   const [showCompletedGoals, setShowCompletedGoals] = useState(
     userSettings?.showCompletedGoals ?? true
   );
-  const [weekStartsOnMonday, setWeekStartsOnMonday] = useState(
-    userSettings?.weekStartsOnMonday ?? false
-  );
   
   // State for modals
   const [birthDateModalVisible, setBirthDateModalVisible] = useState(false);
   const [lifeExpectancyModalVisible, setLifeExpectancyModalVisible] = useState(false);
+  const [notificationSettingsModalVisible, setNotificationSettingsModalVisible] = useState(false);
   
   // Local state for user data
   const [name, setName] = useState('Jamie Smith');
@@ -75,20 +78,8 @@ export default function ProfileScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
   
-  const handleToggleWeekStart = (value: boolean) => {
-    setWeekStartsOnMonday(value);
-    dispatch({
-      type: 'UPDATE_USER_SETTINGS',
-      payload: { ...userSettings, weekStartsOnMonday: value }
-    });
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-  };
-  
-  // Calculate life progress
-  const calculateLifeProgress = () => {
-    const age = calculateAge(birthDate);
-    return Math.min(Math.round((age / lifeExpectancy) * 100), 100);
-  };
+  // Calculate life progress using the same method as the today page
+  const lifeProgressPercentage = getLifeProgress(lifeExpectancy);
 
   // Navigate to debug screen
   const navigateToDebug = () => {
@@ -111,20 +102,24 @@ export default function ProfileScreen() {
     });
   };
   
+  // Handle notification settings update
+  const handleUpdateNotificationSettings = (settings: Partial<UserSettings>) => {
+    dispatch({
+      type: 'UPDATE_USER_SETTINGS',
+      payload: settings
+    });
+    
+    // Update local state if master toggle changed
+    if (settings.notificationsEnabled !== undefined) {
+      setNotificationsEnabled(settings.notificationsEnabled);
+    }
+  };
+  
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Header with user info */}
         <View style={[styles.header, { borderBottomColor: colors.border }]}>
-          <View style={styles.profileImageContainer}>
-            <View style={[styles.profileImage, { backgroundColor: colors.cardAlt, borderColor: colors.primary }]}>
-              <Ionicons name="person" size={60} color={colors.text} />
-            </View>
-            <View style={[styles.editProfileButton, { backgroundColor: colors.primary, borderColor: colors.background }]}>
-              <Ionicons name="pencil" size={16} color={colors.text} />
-            </View>
-          </View>
-          
           <Text style={[styles.userName, { color: colors.text }]}>{name}</Text>
           <Text style={[styles.userEmail, { color: colors.textSecondary }]}>{email}</Text>
           
@@ -137,7 +132,7 @@ export default function ProfileScreen() {
             <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
             
             <View style={styles.statItem}>
-              <Text style={[styles.statValue, { color: colors.text }]}>{calculateLifeProgress()}%</Text>
+              <Text style={[styles.statValue, { color: colors.text }]}>{Math.round(lifeProgressPercentage)}%</Text>
               <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Life Journey</Text>
             </View>
             
@@ -188,18 +183,33 @@ export default function ProfileScreen() {
         <View style={[styles.section, { borderBottomColor: colors.border }]}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Preferences</Text>
           
-          <View style={styles.settingItem}>
+          <Pressable 
+            style={styles.settingItem}
+            onPress={() => setNotificationSettingsModalVisible(true)}
+          >
             <Ionicons name="notifications" size={24} color="#5856D6" style={styles.settingIcon} />
             <View style={styles.settingContent}>
               <Text style={[styles.settingLabel, { color: colors.text }]}>Notifications</Text>
+              <View style={styles.notificationBadges}>
+                <NotificationBadge 
+                  enabled={notificationsEnabled && userSettings.notifications.goalDeadlines} 
+                  type="goal"
+                  size="small"
+                />
+                <NotificationBadge 
+                  enabled={notificationsEnabled && userSettings.notifications.priorityReminders} 
+                  type="lesson"
+                  size="small"
+                />
+                <NotificationBadge 
+                  enabled={notificationsEnabled && userSettings.notifications.memoryCapture} 
+                  type="reflection"
+                  size="small"
+                />
+              </View>
             </View>
-            <Switch
-              value={notificationsEnabled}
-              onValueChange={handleToggleNotifications}
-              trackColor={{ false: '#3A3A3C', true: '#5856D6' }}
-              thumbColor="#FFFFFF"
-            />
-          </View>
+            <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+          </Pressable>
           
           <View style={styles.settingItem}>
             <Ionicons name="checkbox" size={24} color="#0A84FF" style={styles.settingIcon} />
@@ -210,19 +220,6 @@ export default function ProfileScreen() {
               value={showCompletedGoals}
               onValueChange={handleToggleCompletedGoals}
               trackColor={{ false: '#3A3A3C', true: '#0A84FF' }}
-              thumbColor="#FFFFFF"
-            />
-          </View>
-          
-          <View style={styles.settingItem}>
-            <Ionicons name="calendar" size={24} color="#FF9500" style={styles.settingIcon} />
-            <View style={styles.settingContent}>
-              <Text style={[styles.settingLabel, { color: colors.text }]}>Week Starts on Monday</Text>
-            </View>
-            <Switch
-              value={weekStartsOnMonday}
-              onValueChange={handleToggleWeekStart}
-              trackColor={{ false: '#3A3A3C', true: '#FF9500' }}
               thumbColor="#FFFFFF"
             />
           </View>
@@ -291,6 +288,14 @@ export default function ProfileScreen() {
         currentLifeExpectancy={lifeExpectancy}
         onSave={handleLifeExpectancyChange}
       />
+      
+      {/* Notification Settings Modal */}
+      <NotificationSettingsModal
+        visible={notificationSettingsModalVisible}
+        onClose={() => setNotificationSettingsModalVisible(false)}
+        userSettings={userSettings}
+        onUpdateSettings={handleUpdateNotificationSettings}
+      />
     </SafeAreaView>
   );
 }
@@ -305,30 +310,8 @@ const styles = StyleSheet.create({
   header: {
     alignItems: 'center',
     padding: 24,
+    paddingTop: 32,
     borderBottomWidth: 1,
-  },
-  profileImageContainer: {
-    position: 'relative',
-    marginBottom: 16,
-  },
-  profileImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    borderWidth: 3,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  editProfileButton: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
   },
   userName: {
     fontSize: 24,
@@ -337,7 +320,7 @@ const styles = StyleSheet.create({
   },
   userEmail: {
     fontSize: 16,
-    marginBottom: 24,
+    marginBottom: 32,
   },
   statsContainer: {
     flexDirection: 'row',
@@ -417,5 +400,10 @@ const styles = StyleSheet.create({
   },
   debugButtonIconContainer: {
     marginLeft: 'auto',
+  },
+  notificationBadges: {
+    flexDirection: 'row',
+    marginTop: 4,
+    gap: 8,
   },
 }); 

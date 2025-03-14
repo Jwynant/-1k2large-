@@ -117,7 +117,11 @@ export interface UserSettings {
   // Added properties for profile settings
   notificationsEnabled: boolean;
   showCompletedGoals: boolean;
-  weekStartsOnMonday: boolean;
+  // Add daily reflection time
+  dailyReflectionTime?: {
+    hour: number;
+    minute: number;
+  };
 }
 
 // Form Types

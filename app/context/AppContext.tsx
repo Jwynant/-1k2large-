@@ -45,7 +45,6 @@ const AppContext = createContext<{
       },
       notificationsEnabled: true,
       showCompletedGoals: true,
-      weekStartsOnMonday: false,
     },
     theme: 'dark',
   },
@@ -77,7 +76,6 @@ const initialState: AppState = {
     },
     notificationsEnabled: true,
     showCompletedGoals: true,
-    weekStartsOnMonday: false,
   },
   theme: 'dark',
 };

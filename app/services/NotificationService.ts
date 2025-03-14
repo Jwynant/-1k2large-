@@ -62,10 +62,10 @@ export class NotificationService {
     return true;
   }
 
-  // Schedule a notification
-  static async scheduleNotification(
+  // Schedule a notification with a date trigger
+  static async scheduleNotificationWithDate(
     notification: NotificationData,
-    trigger: Notifications.NotificationTriggerInput
+    date: Date
   ): Promise<string> {
     if (!await this.requestPermissions()) {
       console.log('Notification permissions not granted');
@@ -83,10 +83,49 @@ export class NotificationService {
             ...notification.data,
           },
         },
-        trigger,
+        trigger: {
+          seconds: Math.floor((date.getTime() - Date.now()) / 1000),
+        },
       });
 
       console.log(`Scheduled notification with ID: ${id}`);
+      return id;
+    } catch (error) {
+      console.error('Error scheduling notification:', error);
+      return '';
+    }
+  }
+
+  // Schedule a notification with a daily trigger
+  static async scheduleNotificationWithDaily(
+    notification: NotificationData,
+    hour: number,
+    minute: number
+  ): Promise<string> {
+    if (!await this.requestPermissions()) {
+      console.log('Notification permissions not granted');
+      return '';
+    }
+
+    try {
+      const id = await Notifications.scheduleNotificationAsync({
+        content: {
+          title: notification.title,
+          body: notification.body,
+          data: {
+            type: notification.type,
+            contentId: notification.contentId,
+            ...notification.data,
+          },
+        },
+        trigger: {
+          hour,
+          minute,
+          repeats: true,
+        },
+      });
+
+      console.log(`Scheduled daily notification with ID: ${id}`);
       return id;
     } catch (error) {
       console.error('Error scheduling notification:', error);
@@ -110,14 +149,14 @@ export class NotificationService {
       return '';
     }
 
-    return this.scheduleNotification(
+    return this.scheduleNotificationWithDate(
       {
         type: 'goalDeadline',
         contentId: goal.id,
         title: 'Goal Deadline Approaching',
         body: `Your goal "${goal.title}" is due tomorrow.`,
       },
-      { date: notificationDate }
+      notificationDate
     );
   }
 
@@ -134,30 +173,27 @@ export class NotificationService {
       return '';
     }
 
-    return this.scheduleNotification(
+    return this.scheduleNotificationWithDate(
       {
         type: 'lessonReminder',
         contentId: lesson.id,
         title: 'Lesson Reminder',
         body: `Remember your lesson: "${lesson.title}"`,
       },
-      { date: reminderDate }
+      reminderDate
     );
   }
 
   // Schedule a daily reflection notification
   static async scheduleDailyReflection(time: { hour: number, minute: number }): Promise<string> {
-    return this.scheduleNotification(
+    return this.scheduleNotificationWithDaily(
       {
         type: 'dailyReflection',
         title: 'Daily Reflection',
         body: 'Take a moment to reflect on your day and capture a memory.',
       },
-      {
-        hour: time.hour,
-        minute: time.minute,
-        repeats: true,
-      }
+      time.hour,
+      time.minute
     );
   }
 
@@ -240,7 +276,11 @@ export class NotificationService {
 
     // Schedule daily reflection if enabled
     if (userData?.userSettings?.notifications?.memoryCapture) {
-      await this.scheduleDailyReflection({ hour: 20, minute: 0 }); // 8:00 PM
+      // Default to 8:00 PM if not specified
+      const hour = userData?.userSettings?.dailyReflectionTime?.hour ?? 20;
+      const minute = userData?.userSettings?.dailyReflectionTime?.minute ?? 0;
+      
+      await this.scheduleDailyReflection({ hour, minute });
     }
   }
 } 
